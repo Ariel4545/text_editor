@@ -1,3 +1,4 @@
+import tkinter.messagebox
 from tkinter import *
 from tkinter import filedialog
 from tkinter import font
@@ -204,7 +205,9 @@ def print_file():
                                         , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                      ('Python Files', '*.py')))
     if file2p:
-        win32api.ShellExecute(0, 'print', file2p, None, '.', 0)
+        tkinter.messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?')
+        if YES:
+            win32api.ShellExecute(0, 'print', file2p, None, '.', 0)
 
 
 # select all func
