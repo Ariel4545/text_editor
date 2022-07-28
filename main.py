@@ -3,15 +3,14 @@ from tkinter import filedialog
 from tkinter import font
 from tkinter import colorchooser
 from tkinter import ttk
-import os
-import sys
 import win32print
 import win32api
 
 root = Tk()
 root.geometry('1280x790')
 root.title('Egon Text editor')
-root.iconbitmap('txt.png')
+root.resizable(False, False)
+# root.iconbitmap('txt.png')
 
 global open_status_name
 open_status_name = False
@@ -20,7 +19,7 @@ global selected
 selected = False
 
 chosen_font = 'arial'
-chosen_size = 16
+chosen_size = 14
 
 
 # create file func
@@ -242,6 +241,8 @@ def night_on():
     align_left_button.config(bg=second_color, fg=_text_color)
     align_center_button.config(bg=second_color, fg=_text_color)
     align_right_button.config(bg=second_color, fg=_text_color)
+    # not working
+    font_box.config(bg=second_color, fg=_text_color)
 
 
 def night_off():
@@ -292,25 +293,25 @@ def change_font_size(event=None):
 
 # align Left func
 def align_left():
-    text_content = text.get(1.0, "end")
+    text_content = text.get('sel.first', 'sel.last')
     text.tag_config("left", justify=LEFT)
-    text.delete(1.0, END)
+    text.delete('sel.first', 'sel.last')
     text.insert(INSERT, text_content, "left")
 
 
 # Align Center func
 def align_center():
-    text_content = text.get(1.0, "end")
+    text_content = text.get('sel.first', 'sel.last')
     text.tag_config("center", justify=CENTER)
-    text.delete(1.0, END)
+    text.delete('sel.first', 'sel.last')
     text.insert(INSERT, text_content, "center")
 
 
 # Align Right func
 def align_right():
-    text_content = text.get(1.0, "end")
+    text_content = text.get('sel.first', 'sel.last')
     text.tag_config("right", justify=RIGHT)
-    text.delete(1.0, END)
+    text.delete('sel.first', 'sel.last')
     text.insert(INSERT, text_content, "right")
 
 
