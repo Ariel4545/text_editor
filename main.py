@@ -200,7 +200,6 @@ def hl_color():
 # print file func
 def print_file():
     printer_name = win32print.GetDefaultPrinter()
-    # status_bar.config(text=printer_name)
     file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
                                         , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                      ('Python Files', '*.py')))
@@ -244,8 +243,6 @@ def night_on():
     align_left_button.config(bg=second_color, fg=_text_color)
     align_center_button.config(bg=second_color, fg=_text_color)
     align_right_button.config(bg=second_color, fg=_text_color)
-    # not working
-    font_box.config(bg=second_color, fg=_text_color)
 
 
 def night_off():
@@ -397,6 +394,7 @@ status_bar = Label(root, text='Ready    ', anchor='e')
 status_bar.pack(fill=X, side=BOTTOM, ipady=5)
 
 # edit keybindings
+root.bind("<Control-o>", open_file)
 root.bind('<Control-Key-x>', cut)
 root.bind('<Control-Key-v>', paste)
 root.bind('<Control-Key-c>', copy)
