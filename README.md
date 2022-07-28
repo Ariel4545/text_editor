@@ -1,2 +1,13 @@
-# text_editor
+# text_editor 📝
 rich text editor using tkinter
+## features 🔥
+1. save & open text files and more 💾.
+2. customize the color of your text 🌈.
+3. customize the tones of your text - bold , italics, underline 📋.
+4. edit your text with many operations - redo, undo, select all ,clear , copy, paste ect ⚙️.
+5. be able to print your files 🖨️.
+6. enjoy night mode ⭐.
+
+### W.I.P ⏳
+1. text size.
+2. text font.
