@@ -20,7 +20,7 @@ global selected
 selected = False
 
 chosen_font = 'arial'
-chosen_size = 14
+chosen_size = 16
 
 
 # create file func
@@ -273,6 +273,7 @@ def night_off():
 def change_font(event=None):
     global chosen_font
     chosen_font = font_family.get()
+    # wb font tuple
     text.configure(font=(chosen_font, chosen_size))
 
 
@@ -331,9 +332,10 @@ font_box.grid(row=0, column=4, padx=5)
 
 # Size Box
 size_var = IntVar()
+size_var.set(16)
 font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="readonly")
 font_size["values"] = tuple(range(8, 80, 2))
-font_size.current(3)  # 12 is at index 4
+font_size.current(4)  # 16 is at index 5
 font_size.grid(row=0, column=5, padx=5)
 # create scrollbar for the text box
 text_scroll = Scrollbar(frame)
@@ -342,6 +344,7 @@ text_scroll.pack(side=RIGHT, fill=Y)
 horizontal_scroll = Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
 # create text box
+# chosen font?
 text = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue', selectforeground='white',
             undo=True
             , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap='none',  relief=FLAT)
