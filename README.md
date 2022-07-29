@@ -16,5 +16,4 @@
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 
 ## build using
-<img src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue" />
-<img src="http://www.pythonics.org/" />
+<img src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue" /> <img src="[http://www.pythonics.org/](https://programacionfacil.org/cursos/tkinter/capitulo_1_tkinter_primera_ventana_grafica.html)" />
