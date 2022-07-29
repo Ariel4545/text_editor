@@ -8,7 +8,7 @@ import win32print
 import win32api
 
 root = Tk()
-root.geometry('1280x790')
+root.geometry('1280x800')
 root.title('Egon Text editor')
 root.resizable(False, False)
 # root.iconbitmap('txt.png')
@@ -21,6 +21,7 @@ selected = False
 
 chosen_font = 'arial'
 chosen_size = 16
+modern_font = 'young 10'
 
 
 # create file func
@@ -393,7 +394,7 @@ menu.add_cascade(label='options', menu=options_menu)
 options_menu.add_command(label='Night mode on', command=night_on)
 options_menu.add_command(label='Night mode off', command=night_off)
 # add status bar to bottom add
-status_bar = Label(root, text='Ready    ', anchor='e')
+status_bar = Label(root, text='Ready    ', anchor='e', font=modern_font)
 status_bar.pack(fill=X, side=BOTTOM, ipady=5)
 
 # edit keybindings
@@ -407,27 +408,27 @@ root.bind('<Control-Key-A>', select_all)
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
 # buttons creation and placement
-bold_button = Button(toolbar_frame, text='bold', command=bold)
+bold_button = Button(toolbar_frame, text='bold', command=bold, relief=FLAT)
 bold_button.grid(row=0, column=0, sticky=W, padx=2)
 
-italics_button = Button(toolbar_frame, text='italics', command=italics)
+italics_button = Button(toolbar_frame, text='italics', command=italics, relief=FLAT)
 italics_button.grid(row=0, column=1, sticky=W, padx=2)
 
-underline_button = Button(toolbar_frame, text='underline', command=underline)
+underline_button = Button(toolbar_frame, text='underline', command=underline, relief=FLAT)
 underline_button.grid(row=0, column=2, sticky=W, padx=2)
 
-color_button = Button(toolbar_frame, text='Text color', command=text_color)
+color_button = Button(toolbar_frame, text='Text color', command=text_color, relief=FLAT)
 color_button.grid(row=0, column=3, padx=5)
 
-align_left_button = Button(toolbar_frame, text='align left')
+align_left_button = Button(toolbar_frame, text='align left', relief=FLAT)
 align_left_button.grid(row=0, column=6, padx=5)
 
 # align center button
-align_center_button = Button(toolbar_frame, text='align center')
+align_center_button = Button(toolbar_frame, text='align center', relief=FLAT)
 align_center_button.grid(row=0, column=7, padx=5)
 
 # align right button
-align_right_button = Button(toolbar_frame, text='align right')
+align_right_button = Button(toolbar_frame, text='align right', relief=FLAT)
 align_right_button.grid(row=0, column=8, padx=5)
 
 # buttons config
