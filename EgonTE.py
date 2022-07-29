@@ -7,14 +7,14 @@ from tkinter import ttk
 import win32print
 import win32api
 
+
 root = Tk()
-root.geometry('1280x800')
+root.geometry('1280x825')
 root.title('Egon Text editor')
 root.resizable(False, False)
 
 logo = PhotoImage(file='ETE_icon.png')
 root.iconphoto(False, logo)
-
 
 global open_status_name
 open_status_name = False
@@ -24,7 +24,15 @@ selected = False
 
 chosen_font = 'arial'
 chosen_size = 16
-modern_font = 'young 10'
+
+# icons - size=32x32
+bold_img = PhotoImage(file='assets/bold.png')
+underline_img = PhotoImage(file='assets/underlined-text.png')
+italics_img = PhotoImage(file='assets/italics.png')
+colors_img = PhotoImage(file='assets/edition.png')
+align_left_img = PhotoImage(file='assets/left-align.png')
+align_center_img = PhotoImage(file=f'assets/center-align.png')
+align_right_img = PhotoImage(file='assets/right-align.png')
 
 
 # create file func
@@ -351,7 +359,7 @@ horizontal_scroll.pack(side=BOTTOM, fill=X)
 # chosen font?
 text = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue', selectforeground='white',
             undo=True
-            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap='none',  relief=FLAT)
+            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap='none', relief=FLAT)
 text.focus_set()
 text.pack(fill=BOTH, expand=True)
 # config scrollbar
@@ -364,7 +372,7 @@ root.config(menu=menu)
 file_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='File', menu=file_menu)
 file_menu.add_command(label='New', command=new_file)
-file_menu.add_command(label='Open',accelerator='ctrl+o', command=open_file)
+file_menu.add_command(label='Open', accelerator='ctrl+o', command=open_file)
 file_menu.add_command(label='Save', command=save, accelerator='ctrl+s')
 file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
@@ -398,7 +406,7 @@ menu.add_cascade(label='options', menu=options_menu)
 options_menu.add_command(label='Night mode on', command=night_on)
 options_menu.add_command(label='Night mode off', command=night_off)
 # add status bar to bottom add
-status_bar = Label(root, text='Ready    ', anchor='e', font=modern_font)
+status_bar = Label(root, text='Ready    ', anchor='e')
 status_bar.pack(fill=X, side=BOTTOM, ipady=5)
 
 # edit keybindings
@@ -412,28 +420,27 @@ root.bind('<Control-Key-A>', select_all)
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
 # buttons creation and placement
-bold_button = Button(toolbar_frame, text='bold', command=bold, relief=FLAT)
+bold_button = Button(toolbar_frame, image=bold_img, command=bold, relief=FLAT)
 bold_button.grid(row=0, column=0, sticky=W, padx=2)
 
-
-italics_button = Button(toolbar_frame, text='italics', command=italics, relief=FLAT)
+italics_button = Button(toolbar_frame, image=italics_img, command=italics, relief=FLAT)
 italics_button.grid(row=0, column=1, sticky=W, padx=2)
 
-underline_button = Button(toolbar_frame, text='underline', command=underline, relief=FLAT)
+underline_button = Button(toolbar_frame,image=underline_img, command=underline, relief=FLAT)
 underline_button.grid(row=0, column=2, sticky=W, padx=2)
 
-color_button = Button(toolbar_frame, text='Text color', command=text_color, relief=FLAT)
+color_button = Button(toolbar_frame, image=colors_img, command=text_color, relief=FLAT)
 color_button.grid(row=0, column=3, padx=5)
 
-align_left_button = Button(toolbar_frame, text='align left', relief=FLAT)
+align_left_button = Button(toolbar_frame, image=align_left_img, relief=FLAT)
 align_left_button.grid(row=0, column=6, padx=5)
 
 # align center button
-align_center_button = Button(toolbar_frame, text='align center', relief=FLAT)
+align_center_button = Button(toolbar_frame, image=align_center_img, relief=FLAT)
 align_center_button.grid(row=0, column=7, padx=5)
 
 # align right button
-align_right_button = Button(toolbar_frame, text='align right', relief=FLAT)
+align_right_button = Button(toolbar_frame, image=align_right_img, relief=FLAT)
 align_right_button.grid(row=0, column=8, padx=5)
 
 # buttons config
