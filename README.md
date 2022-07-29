@@ -1,7 +1,5 @@
-# text_editor 📝
-![plot](C:\Users\אריאל ונועם\Downloads\ETE_logo.png)
+![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
 
-rich text editor using tkinter
 ## features 🔥
 1. save & open text files and more 💾.
 2. customize the color of your text 🌈.
