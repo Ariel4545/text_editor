@@ -1,12 +1,8 @@
 import tkinter.messagebox
 from tkinter import *
-from tkinter import filedialog
-from tkinter import font
-from tkinter import colorchooser
-from tkinter import ttk
+from tkinter import filedialog, colorchooser, font, ttk
 import win32print
 import win32api
-
 
 root = Tk()
 root.geometry('1280x825')
@@ -21,6 +17,8 @@ open_status_name = False
 
 global selected
 selected = False
+
+text_changed = False
 
 chosen_font = 'arial'
 chosen_size = 16
@@ -327,9 +325,14 @@ def align_right():
     text.insert(INSERT, text_content, "right")
 
 
-def status_bar():
-    pass
-# coming soon!
+def status(event=None):
+    global text_changed
+    if text.edit_modified():
+        text_changed = True
+        words = len(text.get(1.0, "end-1c").split())
+        characters = len(text.get(1.0, "end-1c"))
+        status_bar.config(text=f'Characters:{characters} Words: {words}')
+    text.edit_modified(False)
 
 
 # create toolbar frame
@@ -361,9 +364,10 @@ horizontal_scroll = Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
 # create text box
 # chosen font?
-text = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue', selectforeground='white',
+text = Text(frame, width=100, height=30, font=(chosen_font, chosen_size), selectbackground='blue',
+            selectforeground='white',
             undo=True
-            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap='none', relief=FLAT)
+            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT)
 text.focus_set()
 text.pack(fill=BOTH, expand=True)
 # config scrollbar
@@ -410,7 +414,7 @@ menu.add_cascade(label='options', menu=options_menu)
 options_menu.add_command(label='Night mode on', command=night_on)
 options_menu.add_command(label='Night mode off', command=night_off)
 # add status bar to bottom add
-status_bar = Label(root, text='Ready    ', anchor='e')
+status_bar = Label(root, text='Ready    ', anchor='w')
 status_bar.pack(fill=X, side=BOTTOM, ipady=5)
 
 # edit keybindings
@@ -423,6 +427,7 @@ root.bind('<Control-Key-a>', select_all)
 root.bind('<Control-Key-A>', select_all)
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
+root.bind("<<Modified>>", status)
 # buttons creation and placement
 bold_button = Button(toolbar_frame, image=bold_img, command=bold, relief=FLAT)
 bold_button.grid(row=0, column=0, sticky=W, padx=2)
@@ -430,7 +435,7 @@ bold_button.grid(row=0, column=0, sticky=W, padx=2)
 italics_button = Button(toolbar_frame, image=italics_img, command=italics, relief=FLAT)
 italics_button.grid(row=0, column=1, sticky=W, padx=2)
 
-underline_button = Button(toolbar_frame,image=underline_img, command=underline, relief=FLAT)
+underline_button = Button(toolbar_frame, image=underline_img, command=underline, relief=FLAT)
 underline_button.grid(row=0, column=2, sticky=W, padx=2)
 
 color_button = Button(toolbar_frame, image=colors_img, command=text_color, relief=FLAT)
@@ -453,4 +458,5 @@ align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 root.mainloop()
+
 
