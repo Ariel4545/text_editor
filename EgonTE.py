@@ -222,7 +222,7 @@ def print_file():
 
 
 # select all func
-def select_all(x):
+def select_all(event=None):
     text.tag_add('sel', '1.0', 'end')
 
 
@@ -233,28 +233,29 @@ def clear():
 
 # night on func
 def night_on():
-    main_color = '#000000'
+    main_color = '#110022'
     second_color = '#373737'
+    third_color = '#280137'
     _text_color = 'green'
     root.config(bg=main_color)
     status_bar.config(bg=main_color, fg=_text_color)
     text.config(bg=second_color, fg=_text_color)
     toolbar_frame.config(bg=main_color)
     # toolbar buttons
-    bold_button.config(bg=second_color, fg=_text_color)
-    italics_button.config(bg=second_color, fg=_text_color)
-    color_button.config(bg=second_color, fg=_text_color)
+    bold_button.config(bg=third_color, fg=_text_color)
+    italics_button.config(bg=third_color, fg=_text_color)
+    color_button.config(bg=third_color, fg=_text_color)
+    underline_button.config(bg=third_color, fg=_text_color)
+    align_left_button.config(bg=third_color, fg=_text_color)
+    align_center_button.config(bg=third_color, fg=_text_color)
+    align_right_button.config(bg=third_color, fg=_text_color)
     # file menu colors
     file_menu.config(bg=second_color, fg=_text_color)
     edit_menu.config(bg=second_color, fg=_text_color)
     color_menu.config(bg=second_color, fg=_text_color)
     options_menu.config(bg=second_color, fg=_text_color)
 
-    # new additions
-    underline_button.config(bg=second_color, fg=_text_color)
-    align_left_button.config(bg=second_color, fg=_text_color)
-    align_center_button.config(bg=second_color, fg=_text_color)
-    align_right_button.config(bg=second_color, fg=_text_color)
+    # text_scroll.config(bg=third_color)
 
 
 def night_off():
@@ -269,17 +270,15 @@ def night_off():
     bold_button.config(bg=second_color, fg=_text_color)
     italics_button.config(bg=second_color, fg=_text_color)
     color_button.config(bg=second_color, fg=_text_color)
+    underline_button.config(bg=second_color, fg=_text_color)
+    align_left_button.config(bg=second_color, fg=_text_color)
+    align_center_button.config(bg=second_color, fg=_text_color)
+    align_right_button.config(bg=second_color, fg=_text_color)
     # file menu colors
     file_menu.config(bg=second_color, fg=_text_color)
     edit_menu.config(bg=second_color, fg=_text_color)
     color_menu.config(bg=second_color, fg=_text_color)
     options_menu.config(bg=second_color, fg=_text_color)
-
-    # new additions
-    underline_button.config(bg=second_color, fg=_text_color)
-    align_left_button.config(bg=second_color, fg=_text_color)
-    align_center_button.config(bg=second_color, fg=_text_color)
-    align_right_button.config(bg=second_color, fg=_text_color)
 
 
 def change_font(event=None):
@@ -326,6 +325,11 @@ def align_right():
     text.tag_config("right", justify=RIGHT)
     text.delete('sel.first', 'sel.last')
     text.insert(INSERT, text_content, "right")
+
+
+def status_bar():
+    pass
+# coming soon!
 
 
 # create toolbar frame
@@ -449,3 +453,4 @@ align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 root.mainloop()
+
