@@ -389,6 +389,7 @@ color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
 color_menu.add_command(label='change selected text', command=text_color)
 color_menu.add_command(label='change all text', command=all_txt_color)
+color_menu.add_separator()
 color_menu.add_command(label='background', command=bg_color)
 color_menu.add_command(label='highlight', command=hl_color)
 # options menu
