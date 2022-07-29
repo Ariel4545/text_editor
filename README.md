@@ -1,4 +1,6 @@
 # text_editor 📝
+![EgonTE]("C:\Users\אריאל ונועם\Downloads\ETE_logo.png"?raw=true "Title")
+
 rich text editor using tkinter
 ## features 🔥
 1. save & open text files and more 💾.
