@@ -11,7 +11,10 @@ root = Tk()
 root.geometry('1280x800')
 root.title('Egon Text editor')
 root.resizable(False, False)
-# root.iconbitmap('txt.png')
+
+logo = PhotoImage(file='ETE_icon.png')
+root.iconphoto(False, logo)
+
 
 global open_status_name
 open_status_name = False
@@ -410,6 +413,7 @@ root.bind("<<ComboboxSelected>>", change_font_size)
 # buttons creation and placement
 bold_button = Button(toolbar_frame, text='bold', command=bold, relief=FLAT)
 bold_button.grid(row=0, column=0, sticky=W, padx=2)
+
 
 italics_button = Button(toolbar_frame, text='italics', command=italics, relief=FLAT)
 italics_button.grid(row=0, column=1, sticky=W, padx=2)
