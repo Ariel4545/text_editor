@@ -1,5 +1,6 @@
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
 
+( __Egon Text Editor is in a alpha state__ )
 ## features 🔥
 1. save & open text files and more 💾.
 2. customize the color of your text 🌈.
@@ -16,4 +17,4 @@
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 
 ## build using
-<img src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue" /> <img src="http://www.pythonics.org/](https://programacionfacil.org/cursos/tkinter/capitulo_1_tkinter_primera_ventana_grafica.html" />
+<img src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue" /> 
