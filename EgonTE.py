@@ -53,7 +53,7 @@ def new_file():
 
 
 # open file func
-def open_file():
+def open_file(event=None):
     text.delete("1.0", END)
     text_file = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
                                            , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
@@ -73,7 +73,7 @@ def open_file():
 
 
 # save as func
-def save_as():
+def save_as(event=None):
     text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
                                              filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                         ('Python Files', '*.py')))
@@ -89,7 +89,7 @@ def save_as():
 
 
 # save func
-def save():
+def save(event=None):
     global open_status_name
     if open_status_name:
         text_file = open(open_status_name, 'w')
@@ -139,7 +139,7 @@ def paste(x):
 
 
 # bold text func
-def bold():
+def bold(event=None):
     # create
     bold_font = font.Font(text, text.cget('font'))
     bold_font.configure(weight='bold')
@@ -153,7 +153,7 @@ def bold():
 
 
 # italics text func
-def italics():
+def italics(event=None):
     # create
     italics_font = font.Font(text, text.cget('font'))
     italics_font.configure(slant='italic')
@@ -166,7 +166,7 @@ def italics():
         text.tag_add('italics', 'sel.first', 'sel.last')
 
 
-def underline():
+def underline(event=None):
     # create
     underline_font = font.Font(text, text.cget('font'))
     underline_font.configure(underline=True)
@@ -312,7 +312,7 @@ def change_font_size(event=None):
 
 
 # align Left func
-def align_left():
+def align_left(event=None):
     text_content = text.get('sel.first', 'sel.last')
     text.tag_config("left", justify=LEFT)
     text.delete('sel.first', 'sel.last')
@@ -320,7 +320,7 @@ def align_left():
 
 
 # Align Center func
-def align_center():
+def align_center(event=None):
     text_content = text.get('sel.first', 'sel.last')
     text.tag_config("center", justify=CENTER)
     text.delete('sel.first', 'sel.last')
@@ -328,7 +328,7 @@ def align_center():
 
 
 # Align Right func
-def align_right():
+def align_right(event=None):
     text_content = text.get('sel.first', 'sel.last')
     text.tag_config("right", justify=RIGHT)
     text.delete('sel.first', 'sel.last')
@@ -442,7 +442,14 @@ root.bind('<Control-Key-v>', paste)
 root.bind('<Control-Key-c>', copy)
 root.bind('<Control-Key-s>', save)
 root.bind('<Control-Key-a>', select_all)
-root.bind('<Control-Key-A>', select_all)
+root.bind('<Control-Key-b>', bold)
+root.bind('<Control-Key-i>', italics)
+root.bind('<Control-Key-u>', underline)
+root.bind('<Control-Key-l>', align_left)
+root.bind('<Control-Key-A>', align_center)
+root.bind('<Control-Key-A>', align_right)
+
+
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
 root.bind("<<Modified>>", status)
@@ -482,4 +489,5 @@ align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 root.mainloop()
+
 
