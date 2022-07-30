@@ -7,7 +7,13 @@ import pyttsx3
 import threading
 
 root = Tk()
-root.geometry('1280x825')
+width = 1250
+height = 830
+screen_width = root.winfo_width()
+screen_height = root.winfo_height()
+placement_x = abs((screen_width // 2) - (width // 2))
+placement_y = abs((screen_height // 2) - (height // 2))
+root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
 root.title('Egon Text editor')
 root.resizable(False, False)
 
@@ -25,7 +31,6 @@ text_changed = False
 chosen_font = 'arial'
 chosen_size = 16
 
-
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
 underline_img = PhotoImage(file='assets/underlined-text.png')
@@ -35,6 +40,7 @@ align_left_img = PhotoImage(file='assets/left-align.png')
 align_center_img = PhotoImage(file=f'assets/center-align.png')
 align_right_img = PhotoImage(file='assets/right-align.png')
 tts_image = PhotoImage(file='assets/text-to-speech(1).png')
+
 
 # create file func
 def new_file():
@@ -465,9 +471,10 @@ align_right_button = Button(toolbar_frame, image=align_right_img, relief=FLAT)
 align_right_button.grid(row=0, column=8, padx=5)
 
 # tts button
-tts_button = Button(toolbar_frame, image=tts_image, relief=FLAT,command=lambda: threading.Thread(target=speech).start(),
+tts_button = Button(toolbar_frame, image=tts_image, relief=FLAT,
+                    command=lambda: threading.Thread(target=speech).start(),
                     justify=RIGHT)
-tts_button.grid(row=0,column=9, padx=5)
+tts_button.grid(row=0, column=9, padx=5)
 
 # buttons config
 align_left_button.configure(command=align_left)
@@ -475,3 +482,4 @@ align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 root.mainloop()
+
