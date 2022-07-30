@@ -182,6 +182,7 @@ def text_color():
         current_tags = text.tag_names('sel.first')
         if 'colored_txt' in current_tags:
             text.tag_remove('colored_txt', 'sel.first', 'sel.last')
+
         else:
             text.tag_add('colored_txt', 'sel.first', 'sel.last')
 
@@ -367,7 +368,8 @@ horizontal_scroll.pack(side=BOTTOM, fill=X)
 text = Text(frame, width=100, height=30, font=(chosen_font, chosen_size), selectbackground='blue',
             selectforeground='white',
             undo=True
-            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT)
+            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT, cursor=
+            'tcross')
 text.focus_set()
 text.pack(fill=BOTH, expand=True)
 # config scrollbar
@@ -458,5 +460,4 @@ align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 root.mainloop()
-
 
