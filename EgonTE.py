@@ -1,6 +1,6 @@
 import tkinter.messagebox
-from tkinter import *
 from tkinter import filedialog, colorchooser, font, ttk
+from tkinter.tix import *
 import win32print
 import win32api
 import pyttsx3
@@ -21,10 +21,9 @@ logo = PhotoImage(file='ETE_icon.png')
 root.iconphoto(False, logo)
 
 global open_status_name
-open_status_name = False
 
 global selected
-selected = False
+
 
 text_changed = False
 
@@ -40,6 +39,9 @@ align_left_img = PhotoImage(file='assets/left-align.png')
 align_center_img = PhotoImage(file=f'assets/center-align.png')
 align_right_img = PhotoImage(file='assets/right-align.png')
 tts_image = PhotoImage(file='assets/text-to-speech(1).png')
+
+# create toll tip
+tip = Balloon(root)
 
 
 # create file func
@@ -299,16 +301,20 @@ def change_font(event=None):
 def change_font_size(event=None):
     global chosen_size
     chosen_size = size_var.get()
-    text.configure(font=(chosen_font, chosen_size))
-    # italics_font = font.Font(text, text.cget('font'))
-    # italics_font.configure(slant='italic')
-    # # config
-    # text.tag_configure('size', font=italics_font)
-    # current_tags = text.tag_names('sel.first')
-    # if 'size' in current_tags:
-    #     text.tag_remove('size', 'sel.first', 'sel.last')
-    # else:
-    #     text.tag_add('size', 'sel.first', 'sel.last')
+    # text.configure(font=(chosen_font, chosen_size))
+
+    size = font.Font(text, text.cget('font'))
+    size.configure(size=chosen_size)
+    # config
+    text.tag_configure('size', font=size)
+    current_tags = text.tag_names('sel.first')
+
+    if 'size' in current_tags:
+        text.tag_remove('size', 'sel.first', 'sel.last')
+
+    else:
+        text.tag_add('size', 'sel.first', 'sel.last')
+    # text.tag_delete('size')
 
 
 # align Left func
@@ -446,9 +452,8 @@ root.bind('<Control-Key-b>', bold)
 root.bind('<Control-Key-i>', italics)
 root.bind('<Control-Key-u>', underline)
 root.bind('<Control-Key-l>', align_left)
-root.bind('<Control-Key-A>', align_center)
-root.bind('<Control-Key-A>', align_right)
-
+root.bind('<Control-Key-e>', align_center)
+root.bind('<Control-Key-r>', align_right)
 
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
@@ -488,6 +493,14 @@ align_left_button.configure(command=align_left)
 align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
+# bind and make tooltips
+tip.bind_widget(bold_button, balloonmsg='Bold (ctrl+u)')
+tip.bind_widget(italics_button, balloonmsg='italics (ctrl+i)')
+tip.bind_widget(underline_button, balloonmsg='underline (ctrl+u)')
+tip.bind_widget(align_left_button, balloonmsg='align left (ctrl+l)')
+tip.bind_widget(align_center_button, balloonmsg='align center (ctrl+e)')
+tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
+
 root.mainloop()
 
-
+# contact - reedit= arielo_o
