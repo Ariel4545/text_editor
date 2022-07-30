@@ -3,6 +3,8 @@ from tkinter import *
 from tkinter import filedialog, colorchooser, font, ttk
 import win32print
 import win32api
+import pyttsx3
+import threading
 
 root = Tk()
 root.geometry('1280x825')
@@ -23,6 +25,7 @@ text_changed = False
 chosen_font = 'arial'
 chosen_size = 16
 
+
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
 underline_img = PhotoImage(file='assets/underlined-text.png')
@@ -31,7 +34,7 @@ colors_img = PhotoImage(file='assets/edition.png')
 align_left_img = PhotoImage(file='assets/left-align.png')
 align_center_img = PhotoImage(file=f'assets/center-align.png')
 align_right_img = PhotoImage(file='assets/right-align.png')
-
+tts_image = PhotoImage(file='assets/text-to-speech(1).png')
 
 # create file func
 def new_file():
@@ -336,6 +339,13 @@ def status(event=None):
     text.edit_modified(False)
 
 
+def speech():
+    tts = pyttsx3.init()
+    content = text.get('sel.first', 'sel.last')
+    tts.say(content)
+    tts.runAndWait()
+
+
 # create toolbar frame
 toolbar_frame = Frame(root)
 toolbar_frame.pack(fill=X)
@@ -454,10 +464,14 @@ align_center_button.grid(row=0, column=7, padx=5)
 align_right_button = Button(toolbar_frame, image=align_right_img, relief=FLAT)
 align_right_button.grid(row=0, column=8, padx=5)
 
+# tts button
+tts_button = Button(toolbar_frame, image=tts_image, relief=FLAT,command=lambda: threading.Thread(target=speech).start(),
+                    justify=RIGHT)
+tts_button.grid(row=0,column=9, padx=5)
+
 # buttons config
 align_left_button.configure(command=align_left)
 align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 root.mainloop()
-
