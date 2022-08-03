@@ -14,6 +14,12 @@
 1. text size.
 2. text font.
 
+## personal goal 🌟
+my personal goal with this project is to learn Tkinter and while  
+In doing so try to implement everything related that is related enough  
+to the project, so in short when learning Tkinter also attempt to push it  
+to its limits (as far as I can)
+
 ## tested on
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
 
