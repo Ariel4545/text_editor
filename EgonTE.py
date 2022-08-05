@@ -227,8 +227,7 @@ def print_file():
                                         , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                      ('Python Files', '*.py')))
     if file2p:
-        tkinter.messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?')
-        if YES:
+        if tkinter.messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
             win32api.ShellExecute(0, 'print', file2p, None, '.', 0)
 
 
@@ -296,7 +295,7 @@ def change_font(event=None):
     global chosen_font
     chosen_font = font_family.get()
     # wb font tuple
-    text.configure(font=(chosen_font, chosen_size))
+    text.config(font=chosen_font)
 
 
 def change_font_size(event=None):
@@ -359,6 +358,10 @@ def speech():
     tts.runAndWait()
 
 
+def exit_app():
+    if tkinter.messagebox.askyesno('Quit', 'Are you wish to exit?'):
+        root.quit()
+
 # create toolbar frame
 toolbar_frame = Frame(root)
 toolbar_frame.pack(fill=X)
@@ -411,7 +414,7 @@ file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
 file_menu.add_command(label='Print file', command=print_file)
 file_menu.add_separator()
-file_menu.add_command(label='Exit', command=root.quit)
+file_menu.add_command(label='Exit', command=exit_app)
 # edit menu
 edit_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Edit', menu=edit_menu)
@@ -505,4 +508,3 @@ tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
 root.mainloop()
 
 # contact - reedit = arielo_o
-
