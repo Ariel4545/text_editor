@@ -1,5 +1,6 @@
 import tkinter.messagebox
-from tkinter import filedialog, colorchooser, font, ttk
+from tkinter import filedialog, colorchooser, font, ttk, PhotoImage
+from tkinter import *
 from tkinter.tix import *
 import win32print
 import win32api
@@ -38,7 +39,7 @@ colors_img = PhotoImage(file='assets/edition.png')
 align_left_img = PhotoImage(file='assets/left-align.png')
 align_center_img = PhotoImage(file=f'assets/center-align.png')
 align_right_img = PhotoImage(file='assets/right-align.png')
-tts_image = PhotoImage(file='assets/text-to-speech(1).png')
+tts_image = PhotoImage(file='assets/tts(1).png')
 
 # create toll tip
 tip = Balloon(root)
@@ -503,4 +504,5 @@ tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
 
 root.mainloop()
 
-# contact - reedit= arielo_o
+# contact - reedit = arielo_o
+
