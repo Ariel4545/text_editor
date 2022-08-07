@@ -6,6 +6,9 @@ import win32print
 import win32api
 import pyttsx3
 import threading
+import pyaudio
+import random
+import speech_recognition
 
 root = Tk()
 width = 1250
@@ -22,9 +25,8 @@ logo = PhotoImage(file='ETE_icon.png')
 root.iconphoto(False, logo)
 
 global open_status_name
-
+global chosen_font
 global selected
-
 
 text_changed = False
 
@@ -39,7 +41,8 @@ colors_img = PhotoImage(file='assets/edition.png')
 align_left_img = PhotoImage(file='assets/left-align.png')
 align_center_img = PhotoImage(file=f'assets/center-align.png')
 align_right_img = PhotoImage(file='assets/right-align.png')
-tts_image = PhotoImage(file='assets/tts(1).png')
+tts_img = PhotoImage(file='assets/tts(1).png')
+talk_img = PhotoImage(file="assets/speech-icon-19(1).png")
 
 # create toll tip
 tip = Balloon(root)
@@ -47,7 +50,7 @@ tip = Balloon(root)
 
 # create file func
 def new_file():
-    text.delete("1.0", END)
+    EgonTE.delete("1.0", END)
     root.title('New file - Egon Text editor')
     status_bar.config(text='New file')
 
@@ -57,7 +60,7 @@ def new_file():
 
 # open file func
 def open_file(event=None):
-    text.delete("1.0", END)
+    EgonTE.delete("1.0", END)
     text_file = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
                                            , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                         ('Python Files', '*.py')))
@@ -71,7 +74,7 @@ def open_file(event=None):
     root.title(f'{name} - Egon Text editor')
     text_file = open(text_file, 'r')
     stuff = text_file.read()
-    text.insert(END, stuff)
+    EgonTE.insert(END, stuff)
     text_file.close()
 
 
@@ -87,7 +90,7 @@ def save_as(event=None):
         status_bar.config(text=f'Saved: {name}        ')
 
         text_file = open(text_file, 'w')
-        text_file.write(text.get(1.0, END))
+        text_file.write(EgonTE.get(1.0, END))
         text_file.close()
 
 
@@ -96,7 +99,7 @@ def save(event=None):
     global open_status_name
     if open_status_name:
         text_file = open(open_status_name, 'w')
-        text_file.write(text.get(1.0, END))
+        text_file.write(EgonTE.get(1.0, END))
         text_file.close()
         status_bar.config(text=f'Saved: {open_status_name}        ')
     else:
@@ -109,11 +112,11 @@ def cut(x):
     if x:
         selected = root.clipboard_get()
     else:
-        if text.selection_get():
+        if EgonTE.selection_get():
             # grab
-            selected = text.selection_get()
+            selected = EgonTE.selection_get()
             # del
-            text.delete('sel.first', 'sel.last')
+            EgonTE.delete('sel.first', 'sel.last')
             root.clipboard_clear()
             root.clipboard_append(selected)
 
@@ -123,9 +126,9 @@ def copy(x):
     global selected
     if x:
         selected = root.clipboard_get()
-    if text.selection_get():
+    if EgonTE.selection_get():
         # grab
-        selected = text.selection_get()
+        selected = EgonTE.selection_get()
         root.clipboard_clear()
         root.clipboard_append(selected)
 
@@ -137,49 +140,49 @@ def paste(x):
         selected = root.clipboard_get()
     else:
         if selected:
-            position = text.index(INSERT)
-            text.insert(position, selected)
+            position = EgonTE.index(INSERT)
+            EgonTE.insert(position, selected)
 
 
 # bold text func
 def bold(event=None):
     # create
-    bold_font = font.Font(text, text.cget('font'))
+    bold_font = font.Font(EgonTE, EgonTE.cget('font'))
     bold_font.configure(weight='bold')
     # config
-    text.tag_configure('bold', font=bold_font)
-    current_tags = text.tag_names('sel.first')
+    EgonTE.tag_configure('bold', font=bold_font)
+    current_tags = EgonTE.tag_names('sel.first')
     if 'bold' in current_tags:
-        text.tag_remove('bold', 'sel.first', 'sel.last')
+        EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
     else:
-        text.tag_add('bold', 'sel.first', 'sel.last')
+        EgonTE.tag_add('bold', 'sel.first', 'sel.last')
 
 
 # italics text func
 def italics(event=None):
     # create
-    italics_font = font.Font(text, text.cget('font'))
+    italics_font = font.Font(EgonTE, EgonTE.cget('font'))
     italics_font.configure(slant='italic')
     # config
-    text.tag_configure('italics', font=italics_font)
-    current_tags = text.tag_names('sel.first')
+    EgonTE.tag_configure('italics', font=italics_font)
+    current_tags = EgonTE.tag_names('sel.first')
     if 'italics' in current_tags:
-        text.tag_remove('italics', 'sel.first', 'sel.last')
+        EgonTE.tag_remove('italics', 'sel.first', 'sel.last')
     else:
-        text.tag_add('italics', 'sel.first', 'sel.last')
+        EgonTE.tag_add('italics', 'sel.first', 'sel.last')
 
 
 def underline(event=None):
     # create
-    underline_font = font.Font(text, text.cget('font'))
+    underline_font = font.Font(EgonTE, EgonTE.cget('font'))
     underline_font.configure(underline=True)
-    # config
-    text.tag_configure('underline', font=underline_font)
-    current_tags = text.tag_names('sel.first')
+    # config+
+    EgonTE.tag_configure('underline', font=underline_font)
+    current_tags = EgonTE.tag_names('sel.first')
     if 'underline' in current_tags:
-        text.tag_remove('underline', 'sel.first', 'sel.last')
+        EgonTE.tag_remove('underline', 'sel.first', 'sel.last')
     else:
-        text.tag_add('underline', 'sel.first', 'sel.last')
+        EgonTE.tag_add('underline', 'sel.first', 'sel.last')
 
 
 # text color func
@@ -188,36 +191,36 @@ def text_color():
     selected_color = colorchooser.askcolor()[1]
     if selected_color:
         # create
-        color_font = font.Font(text, text.cget('font'))
+        color_font = font.Font(EgonTE, EgonTE.cget('font'))
         # config
-        text.tag_configure('colored_txt', font=color_font, foreground=selected_color)
-        current_tags = text.tag_names('sel.first')
+        EgonTE.tag_configure('colored_txt', font=color_font, foreground=selected_color)
+        current_tags = EgonTE.tag_names('sel.first')
         if 'colored_txt' in current_tags:
-            text.tag_remove('colored_txt', 'sel.first', 'sel.last')
+            EgonTE.tag_remove('colored_txt', 'sel.first', 'sel.last')
 
         else:
-            text.tag_add('colored_txt', 'sel.first', 'sel.last')
+            EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
 
 
 # background color func
 def bg_color():
     selected_color = colorchooser.askcolor()[1]
     if selected_color:
-        text.config(bg=selected_color)
+        EgonTE.config(bg=selected_color)
 
 
 # all color txt func
 def all_txt_color():
     color = colorchooser.askcolor()[1]
     if color:
-        text.config(fg=color)
+        EgonTE.config(fg=color)
 
 
 # highlight color func
 def hl_color():
     color = colorchooser.askcolor()[1]
     if color:
-        text.config(selectbackground=color)
+        EgonTE.config(selectbackground=color)
 
 
 # print file func
@@ -233,134 +236,209 @@ def print_file():
 
 # select all func
 def select_all(event=None):
-    text.tag_add('sel', '1.0', 'end')
+    EgonTE.tag_add('sel', '1.0', 'end')
 
 
 # clear func
 def clear():
-    text.delete('1.0', END)
+    EgonTE.delete('1.0', END)
+
+
+def hide_statusbar():
+    global show_statusbar
+    if show_statusbar:
+        status_bar.pack_forget()
+        show_statusbar = False
+    else:
+        status_bar.pack(side=BOTTOM)
+        show_statusbar = True
+
+
+def hide_toolbar():
+    global show_toolbar
+    if show_toolbar:
+        toolbar_frame.pack_forget()
+        show_toolbar = False
+    else:
+        EgonTE.pack_forget()
+        status_bar.pack_forget()
+        toolbar_frame.pack(fill=X)
+        EgonTE.pack(fill=BOTH, expand=True)
+        status_bar.pack(side=BOTTOM)
+        show_toolbar = True
 
 
 # night on func
-def night_on():
-    main_color = '#110022'
-    second_color = '#373737'
-    third_color = '#280137'
-    _text_color = 'green'
-    root.config(bg=main_color)
-    status_bar.config(bg=main_color, fg=_text_color)
-    text.config(bg=second_color, fg=_text_color)
-    toolbar_frame.config(bg=main_color)
-    # toolbar buttons
-    bold_button.config(bg=third_color, fg=_text_color)
-    italics_button.config(bg=third_color, fg=_text_color)
-    color_button.config(bg=third_color, fg=_text_color)
-    underline_button.config(bg=third_color, fg=_text_color)
-    align_left_button.config(bg=third_color, fg=_text_color)
-    align_center_button.config(bg=third_color, fg=_text_color)
-    align_right_button.config(bg=third_color, fg=_text_color)
-    # file menu colors
-    file_menu.config(bg=second_color, fg=_text_color)
-    edit_menu.config(bg=second_color, fg=_text_color)
-    color_menu.config(bg=second_color, fg=_text_color)
-    options_menu.config(bg=second_color, fg=_text_color)
-
+def night():
+    global night_mode
+    if night_mode:
+        main_color = '#110022'
+        second_color = '#373737'
+        third_color = '#280137'
+        _text_color = 'green'
+        root.config(bg=main_color)
+        status_bar.config(bg=main_color, fg=_text_color)
+        EgonTE.config(bg=second_color, fg=_text_color)
+        toolbar_frame.config(bg=main_color)
+        # toolbar buttons
+        bold_button.config(bg=third_color, fg=_text_color)
+        italics_button.config(bg=third_color, fg=_text_color)
+        color_button.config(bg=third_color, fg=_text_color)
+        underline_button.config(bg=third_color, fg=_text_color)
+        align_left_button.config(bg=third_color, fg=_text_color)
+        align_center_button.config(bg=third_color, fg=_text_color)
+        align_right_button.config(bg=third_color, fg=_text_color)
+        tts_button.config(bg=third_color, fg=_text_color)
+        talk_button.config(bg=third_color, fg=_text_color)
+        # file menu colors
+        file_menu.config(bg=second_color, fg=_text_color)
+        edit_menu.config(bg=second_color, fg=_text_color)
+        color_menu.config(bg=second_color, fg=_text_color)
+        options_menu.config(bg=second_color, fg=_text_color)
+        night_mode = False
+    else:
+        main_color = 'SystemButtonFace'
+        second_color = 'SystemButtonFace'
+        _text_color = 'black'
+        root.config(bg=main_color)
+        status_bar.config(bg=main_color, fg=_text_color)
+        EgonTE.config(bg='white', fg=_text_color)
+        toolbar_frame.config(bg=main_color)
+        # toolbar buttons
+        bold_button.config(bg=second_color, fg=_text_color)
+        italics_button.config(bg=second_color, fg=_text_color)
+        color_button.config(bg=second_color, fg=_text_color)
+        underline_button.config(bg=second_color, fg=_text_color)
+        align_left_button.config(bg=second_color, fg=_text_color)
+        align_center_button.config(bg=second_color, fg=_text_color)
+        align_right_button.config(bg=second_color, fg=_text_color)
+        tts_button.config(bg=second_color, fg=_text_color)
+        talk_button.config(bg=second_color, fg=_text_color)
+        # file menu colors
+        file_menu.config(bg=second_color, fg=_text_color)
+        edit_menu.config(bg=second_color, fg=_text_color)
+        color_menu.config(bg=second_color, fg=_text_color)
+        options_menu.config(bg=second_color, fg=_text_color)
+        night_mode = True
     # text_scroll.config(bg=third_color)
-
-
-def night_off():
-    main_color = 'SystemButtonFace'
-    second_color = 'SystemButtonFace'
-    _text_color = 'black'
-    root.config(bg=main_color)
-    status_bar.config(bg=main_color, fg=_text_color)
-    text.config(bg='white', fg=_text_color)
-    toolbar_frame.config(bg=main_color)
-    # toolbar buttons
-    bold_button.config(bg=second_color, fg=_text_color)
-    italics_button.config(bg=second_color, fg=_text_color)
-    color_button.config(bg=second_color, fg=_text_color)
-    underline_button.config(bg=second_color, fg=_text_color)
-    align_left_button.config(bg=second_color, fg=_text_color)
-    align_center_button.config(bg=second_color, fg=_text_color)
-    align_right_button.config(bg=second_color, fg=_text_color)
-    # file menu colors
-    file_menu.config(bg=second_color, fg=_text_color)
-    edit_menu.config(bg=second_color, fg=_text_color)
-    color_menu.config(bg=second_color, fg=_text_color)
-    options_menu.config(bg=second_color, fg=_text_color)
 
 
 def change_font(event=None):
     global chosen_font
     chosen_font = font_family.get()
     # wb font tuple
-    text.config(font=chosen_font)
+    sfont = font.Font(EgonTE, EgonTE.cget('font'))
+    # config
+    EgonTE.config(font=sfont)
+    EgonTE.tag_configure('font', font=chosen_font)
 
 
 def change_font_size(event=None):
     global chosen_size
     chosen_size = size_var.get()
-    # text.configure(font=(chosen_font, chosen_size))
+    # EgonTE.configure(font=(chosen_font, chosen_size))
 
-    size = font.Font(text, text.cget('font'))
+    size = font.Font(EgonTE, EgonTE.cget('font'))
     size.configure(size=chosen_size)
     # config
-    text.tag_configure('size', font=size)
-    current_tags = text.tag_names('sel.first')
+    EgonTE.tag_configure('size', font=size)
+    current_tags = EgonTE.tag_names('sel.first')
+    EgonTE.tag_add('size', 'sel.first', 'sel.last')
 
-    if 'size' in current_tags:
-        text.tag_remove('size', 'sel.first', 'sel.last')
-
-    else:
-        text.tag_add('size', 'sel.first', 'sel.last')
-    # text.tag_delete('size')
+    # EgonTE.tag_delete('size')
 
 
 # align Left func
 def align_left(event=None):
-    text_content = text.get('sel.first', 'sel.last')
-    text.tag_config("left", justify=LEFT)
-    text.delete('sel.first', 'sel.last')
-    text.insert(INSERT, text_content, "left")
+    text_content = EgonTE.get('sel.first', 'sel.last')
+    EgonTE.tag_config("left", justify=LEFT)
+    EgonTE.delete('sel.first', 'sel.last')
+    EgonTE.insert(INSERT, text_content, "left")
 
 
 # Align Center func
 def align_center(event=None):
-    text_content = text.get('sel.first', 'sel.last')
-    text.tag_config("center", justify=CENTER)
-    text.delete('sel.first', 'sel.last')
-    text.insert(INSERT, text_content, "center")
+    text_content = EgonTE.get('sel.first', 'sel.last')
+    EgonTE.tag_config("center", justify=CENTER)
+    EgonTE.delete('sel.first', 'sel.last')
+    EgonTE.insert(INSERT, text_content, "center")
 
 
 # Align Right func
 def align_right(event=None):
-    text_content = text.get('sel.first', 'sel.last')
-    text.tag_config("right", justify=RIGHT)
-    text.delete('sel.first', 'sel.last')
-    text.insert(INSERT, text_content, "right")
+    text_content = EgonTE.get('sel.first', 'sel.last')
+    EgonTE.tag_config("right", justify=RIGHT)
+    EgonTE.delete('sel.first', 'sel.last')
+    EgonTE.insert(INSERT, text_content, "right")
 
 
 def status(event=None):
     global text_changed
-    if text.edit_modified():
+    if EgonTE.edit_modified():
         text_changed = True
-        words = len(text.get(1.0, "end-1c").split())
-        characters = len(text.get(1.0, "end-1c"))
+        words = len(EgonTE.get(1.0, "end-1c").split())
+        characters = len(EgonTE.get(1.0, "end-1c"))
         status_bar.config(text=f'Characters:{characters} Words: {words}')
-    text.edit_modified(False)
+    EgonTE.edit_modified(False)
 
 
-def speech():
+def text_to_speech():
+    global tts
     tts = pyttsx3.init()
-    content = text.get('sel.first', 'sel.last')
+    content = EgonTE.get('sel.first', 'sel.last')
     tts.say(content)
     tts.runAndWait()
+
+
+def read_text(**kwargs):
+    global engine
+    if 'EgonTE' in kwargs:
+        ttr = kwargs['EgonTE']
+    else:
+        ttr = EgonTE.get(1.0, 'end')  # get EgonTE content
+    engine = pyttsx3.init()
+    engine.say(ttr)
+    engine.runAndWait()
+    engine.stop()
+
+
+def text_formatter(phrase):
+    interrogatives = ('how', 'why', 'what', 'when', 'who', 'where', 'is', 'do you', "whom", "whose")
+    capitalized = phrase.capitalize()
+    if phrase.startswith(interrogatives):
+        return f'{capitalized}?'
+    else:
+        return f'{capitalized}.'
+
+
+def speech_to_text():
+    error_msg = "Excuse me, I don't know what you mean!"
+    recolonize = speech_recognition.Recognizer()  # initialize the listener
+    mic = speech_recognition.Microphone()
+    with mic as source:  # set listening device to microphone
+        read_text(text='Please say the message you would like to the EgonTE editor!')
+        recolonize.pause_threshold = 1
+        audio = recolonize.listen(source)
+    try:
+        query = recolonize.recognize_google(audio, language='en-UK')  # listen to audio
+        query = text_formatter(query)
+    except Exception:
+        read_text(text=error_msg)
+        if tkinter.messagebox.askyesno('EgonTE', 'are you want to try again?'):
+            query = speech_to_text()
+        else:
+            read_text(text='ok, I will try to do my best next time!')
+    EgonTE.insert(INSERT, query, END)
+    return query
 
 
 def exit_app():
     if tkinter.messagebox.askyesno('Quit', 'Are you wish to exit?'):
         root.quit()
+        engine.stop()
+        tts.stop()
+        exit()
+
 
 # create toolbar frame
 toolbar_frame = Frame(root)
@@ -383,24 +461,24 @@ font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="r
 font_size["values"] = tuple(range(8, 80, 2))
 font_size.current(4)  # 16 is at index 5
 font_size.grid(row=0, column=5, padx=5)
-# create scrollbar for the text box
+# create scrollbar for the EgonTE box
 text_scroll = Scrollbar(frame)
 text_scroll.pack(side=RIGHT, fill=Y)
 # horizontal scrollbar
 horizontal_scroll = Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
-# create text box
+# create EgonTE box
 # chosen font?
-text = Text(frame, width=100, height=30, font=(chosen_font, chosen_size), selectbackground='blue',
-            selectforeground='white',
-            undo=True
-            , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT, cursor=
-            'tcross')
-text.focus_set()
-text.pack(fill=BOTH, expand=True)
+EgonTE = Text(frame, width=100, height=30, font=(chosen_font, chosen_size), selectbackground='blue',
+              selectforeground='white',
+              undo=True
+              , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT, cursor=
+              'tcross')
+EgonTE.focus_set()
+EgonTE.pack(fill=BOTH, expand=True)
 # config scrollbar
-text_scroll.config(command=text.yview)
-horizontal_scroll.config(command=text.xview)
+text_scroll.config(command=EgonTE.yview)
+horizontal_scroll.config(command=EgonTE.xview)
 # create menu
 menu = Menu(frame)
 root.config(menu=menu)
@@ -422,8 +500,8 @@ edit_menu.add_command(label='Cut', accelerator='ctrl+x', command=lambda: cut('no
 edit_menu.add_command(label='Copy', accelerator='ctrl+c', command=lambda: copy('nothing'))
 edit_menu.add_command(label='Paste', accelerator='ctrl+v', command=lambda: paste('nothing'))
 edit_menu.add_separator()
-edit_menu.add_command(label='Undo', accelerator='ctrl+z', command=text.edit_undo)
-edit_menu.add_command(label='Redo', accelerator='ctrl+y', command=text.edit_redo)
+edit_menu.add_command(label='Undo', accelerator='ctrl+z', command=EgonTE.edit_undo)
+edit_menu.add_command(label='Redo', accelerator='ctrl+y', command=EgonTE.edit_redo)
 edit_menu.add_separator()
 edit_menu.add_command(label='Select All', accelerator='ctrl+a', command=lambda: select_all('nothing'))
 edit_menu.add_command(label='Clear', accelerator='', command=clear)
@@ -439,10 +517,9 @@ color_menu.add_command(label='highlight', command=hl_color)
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='options', menu=options_menu)
-options_menu.add_command(label='Night mode on', command=night_on)
-options_menu.add_command(label='Night mode off', command=night_off)
+
 # add status bar to bottom add
-status_bar = Label(root, text='Ready    ', anchor='w')
+status_bar = Label(root, text='Ready')
 status_bar.pack(fill=X, side=BOTTOM, ipady=5)
 
 # edit keybindings
@@ -487,15 +564,43 @@ align_right_button = Button(toolbar_frame, image=align_right_img, relief=FLAT)
 align_right_button.grid(row=0, column=8, padx=5)
 
 # tts button
-tts_button = Button(toolbar_frame, image=tts_image, relief=FLAT,
-                    command=lambda: threading.Thread(target=speech).start(),
-                    justify=RIGHT)
+tts_button = Button(toolbar_frame, image=tts_img, relief=FLAT,
+                    command=lambda: threading.Thread(target=text_to_speech).start(),
+                    )
 tts_button.grid(row=0, column=9, padx=5)
+
+# boolean tk vars
+show_statusbar = BooleanVar()
+show_statusbar.set(True)
+
+show_toolbar = BooleanVar()
+show_toolbar.set(True)
+
+night_mode = BooleanVar()
+
+# check marks
+options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
+                             variable=night_mode, compound=LEFT, command=night)
+options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
+                             variable=show_statusbar, compound=LEFT, command=hide_statusbar)
+options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
+                             variable=show_toolbar, compound=LEFT, command=hide_toolbar)
+
+# talk button
+talk_button = Button(toolbar_frame, image=talk_img, relief=FLAT,
+                     command=lambda: threading.Thread(target=speech_to_text).start())
+talk_button.grid(row=0, column=10, padx=5)
 
 # buttons config
 align_left_button.configure(command=align_left)
 align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
+
+# opening sentence
+op_msgs = ['hello world!', '^-^', 'what a beautiful day!', 'welcome!', '', 'believe in yourself!',
+           'if I did it you can do way more than that', 'don\'t give up!']
+op_msg = random.choice(op_msgs)
+EgonTE.insert(END, op_msg)
 
 # bind and make tooltips
 tip.bind_widget(bold_button, balloonmsg='Bold (ctrl+u)')
