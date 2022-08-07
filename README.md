@@ -8,7 +8,8 @@
 4. edit your text with many operations - redo, undo, select all ,clear , copy, paste ect ⚙️.
 5. be able to print your files 🖨️.
 6. be able to listen to your writings 📣.
-7. enjoy night mode 🌙.
+7. be able to convert speak to text 🎤. 
+8. enjoy night mode 🌙.
 
 ## W.I.P ⏳
 1. text size.
