@@ -439,6 +439,14 @@ def exit_app():
         tts.stop()
         exit()
 
+def find_text():
+    search_text = tkinter.simpledialog.askstring("Find","Enter Text")
+    text_data = EgonTE.get('1.0',END+'-1c')
+    occurs = text_data.lower().count(search_text.lower())
+    if text_data.lower().count(search_text.lower()):
+        search_label = tkinter.messagebox.showinfo("Result:", f"{search_text} has {str(occurs)} occurrences")
+    else:
+        search_label = tkinter.messagebox.showinfo("Result:", "No match found")
 
 # create toolbar frame
 toolbar_frame = Frame(root)
@@ -505,6 +513,8 @@ edit_menu.add_command(label='Redo', accelerator='ctrl+y', command=EgonTE.edit_re
 edit_menu.add_separator()
 edit_menu.add_command(label='Select All', accelerator='ctrl+a', command=lambda: select_all('nothing'))
 edit_menu.add_command(label='Clear', accelerator='', command=clear)
+edit_menu.add_separator()
+edit_menu.add_command(label="Find Text", command=find_text)
 
 # color menu
 color_menu = Menu(menu, tearoff=False)
