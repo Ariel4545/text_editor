@@ -9,7 +9,8 @@
 5. be able to print your files 🖨️.
 6. be able to listen to your writings 📣.
 7. be able to convert speak to text 🎤. 
-8. enjoy night mode 🌙.
+8. be able to search text in your document 🔎
+9. enjoy night mode 🌙.
 
 ## W.I.P ⏳
 1. text size.
