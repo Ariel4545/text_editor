@@ -1,14 +1,15 @@
-import tkinter.messagebox
-from tkinter import filedialog, colorchooser, font, ttk, PhotoImage
+from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialog
 from tkinter import *
 from tkinter.tix import *
-import win32print
-import win32api
+from win32print import GetDefaultPrinter
+from win32api import ShellExecute
 import pyttsx3
-import threading
+from threading import Thread
 import pyaudio
-import random
-import speech_recognition
+from random import choice
+from speech_recognition import Recognizer, Microphone
+from sys import exit as exit_
+
 
 root = Tk()
 width = 1250
@@ -29,9 +30,9 @@ global chosen_font
 global selected
 
 text_changed = False
-
-chosen_font = 'arial'
-chosen_size = 16
+global engine
+chosen_font = ('arial', 16)
+night_mode = BooleanVar()
 
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
@@ -101,7 +102,7 @@ def save(event=None):
         text_file = open(open_status_name, 'w')
         text_file.write(EgonTE.get(1.0, END))
         text_file.close()
-        status_bar.config(text=f'Saved: {open_status_name}        ')
+        status_bar.config(text=f'Saved: {open_status_name}')
     else:
         save_as()
 
@@ -109,7 +110,7 @@ def save(event=None):
 # cut func
 def cut(x):
     global selected
-    if x:
+    if not x:
         selected = root.clipboard_get()
     else:
         if EgonTE.selection_get():
@@ -124,7 +125,7 @@ def cut(x):
 # copy func
 def copy(x):
     global selected
-    if x:
+    if not x:
         selected = root.clipboard_get()
     if EgonTE.selection_get():
         # grab
@@ -136,7 +137,7 @@ def copy(x):
 # paste func
 def paste(x):
     global selected
-    if x:
+    if not x:
         selected = root.clipboard_get()
     else:
         if selected:
@@ -225,13 +226,13 @@ def hl_color():
 
 # print file func
 def print_file():
-    printer_name = win32print.GetDefaultPrinter()
+    printer_name = GetDefaultPrinter()
     file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
                                         , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                      ('Python Files', '*.py')))
     if file2p:
-        if tkinter.messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
-            win32api.ShellExecute(0, 'print', file2p, None, '.', 0)
+        if messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
+            ShellExecute(0, 'print', file2p, None, '.', 0)
 
 
 # select all func
@@ -261,8 +262,12 @@ def hide_toolbar():
         show_toolbar = False
     else:
         EgonTE.pack_forget()
+        horizontal_scroll.pack_forget()
+        text_scroll.pack_forget()
         status_bar.pack_forget()
         toolbar_frame.pack(fill=X)
+        text_scroll.pack(side=RIGHT, fill=Y)
+        horizontal_scroll.pack(side=BOTTOM, fill=X)
         EgonTE.pack(fill=BOTH, expand=True)
         status_bar.pack(side=BOTTOM)
         show_toolbar = True
@@ -295,6 +300,8 @@ def night():
         edit_menu.config(bg=second_color, fg=_text_color)
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
+        text_scroll.config(bg=second_color)
+        horizontal_scroll.config(bg=second_color)
         night_mode = False
     else:
         main_color = 'SystemButtonFace'
@@ -319,8 +326,8 @@ def night():
         edit_menu.config(bg=second_color, fg=_text_color)
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
+
         night_mode = True
-    # text_scroll.config(bg=third_color)
 
 
 def change_font(event=None):
@@ -343,9 +350,10 @@ def change_font_size(event=None):
     # config
     EgonTE.tag_configure('size', font=size)
     current_tags = EgonTE.tag_names('sel.first')
-    EgonTE.tag_add('size', 'sel.first', 'sel.last')
-
-    # EgonTE.tag_delete('size')
+    if 'size' in current_tags:
+        EgonTE.tag_delete('size')
+    else:
+        EgonTE.tag_add('size', 'sel.first', 'sel.last')
 
 
 # align Left func
@@ -392,11 +400,11 @@ def text_to_speech():
 
 def read_text(**kwargs):
     global engine
+    engine = pyttsx3.init()
     if 'EgonTE' in kwargs:
         ttr = kwargs['EgonTE']
     else:
         ttr = EgonTE.get(1.0, 'end')  # get EgonTE content
-    engine = pyttsx3.init()
     engine.say(ttr)
     engine.runAndWait()
     engine.stop()
@@ -413,8 +421,8 @@ def text_formatter(phrase):
 
 def speech_to_text():
     error_msg = "Excuse me, I don't know what you mean!"
-    recolonize = speech_recognition.Recognizer()  # initialize the listener
-    mic = speech_recognition.Microphone()
+    recolonize = Recognizer()  # initialize the listener
+    mic = Microphone()
     with mic as source:  # set listening device to microphone
         read_text(text='Please say the message you would like to the EgonTE editor!')
         recolonize.pause_threshold = 1
@@ -424,7 +432,7 @@ def speech_to_text():
         query = text_formatter(query)
     except Exception:
         read_text(text=error_msg)
-        if tkinter.messagebox.askyesno('EgonTE', 'are you want to try again?'):
+        if messagebox.askyesno('EgonTE', 'are you want to try again?'):
             query = speech_to_text()
         else:
             read_text(text='ok, I will try to do my best next time!')
@@ -433,20 +441,23 @@ def speech_to_text():
 
 
 def exit_app():
-    if tkinter.messagebox.askyesno('Quit', 'Are you wish to exit?'):
+    if messagebox.askyesno('Quit', 'Are you wish to exit?'):
         root.quit()
-        engine.stop()
         tts.stop()
-        exit()
+        exit_()
+        quit(1)
+        pyttsx3.Engine.stop(engine)
+
 
 def find_text():
-    search_text = tkinter.simpledialog.askstring("Find","Enter Text")
-    text_data = EgonTE.get('1.0',END+'-1c')
+    search_text = simpledialog.askstring("Find", "Enter Text")
+    text_data = EgonTE.get('1.0', END + '-1c')
     occurs = text_data.lower().count(search_text.lower())
     if text_data.lower().count(search_text.lower()):
-        search_label = tkinter.messagebox.showinfo("Result:", f"{search_text} has {str(occurs)} occurrences")
+        search_label = messagebox.showinfo("Result:", f"{search_text} has {str(occurs)} occurrences")
     else:
-        search_label = tkinter.messagebox.showinfo("Result:", "No match found")
+        search_label = messagebox.showinfo("Result:", "No match found")
+
 
 # create toolbar frame
 toolbar_frame = Frame(root)
@@ -477,12 +488,12 @@ horizontal_scroll = Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
 # create EgonTE box
 # chosen font?
-EgonTE = Text(frame, width=100, height=30, font=(chosen_font, chosen_size), selectbackground='blue',
+EgonTE = Text(frame, width=100, height=30, font=chosen_font, selectbackground='blue',
               selectforeground='white',
               undo=True
               , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT, cursor=
               'tcross')
-EgonTE.focus_set()
+EgonTE.focus_set()  # possible problem for the toolbar
 EgonTE.pack(fill=BOTH, expand=True)
 # config scrollbar
 text_scroll.config(command=EgonTE.yview)
@@ -504,9 +515,9 @@ file_menu.add_command(label='Exit', command=exit_app)
 # edit menu
 edit_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Edit', menu=edit_menu)
-edit_menu.add_command(label='Cut', accelerator='ctrl+x', command=lambda: cut('nothing'))
-edit_menu.add_command(label='Copy', accelerator='ctrl+c', command=lambda: copy('nothing'))
-edit_menu.add_command(label='Paste', accelerator='ctrl+v', command=lambda: paste('nothing'))
+edit_menu.add_command(label='Cut', accelerator='ctrl+x', command=lambda: cut(True))
+edit_menu.add_command(label='Copy', accelerator='ctrl+c', command=lambda: copy(True))
+edit_menu.add_command(label='Paste', accelerator='ctrl+v', command=lambda: paste(True))
 edit_menu.add_separator()
 edit_menu.add_command(label='Undo', accelerator='ctrl+z', command=EgonTE.edit_undo)
 edit_menu.add_command(label='Redo', accelerator='ctrl+y', command=EgonTE.edit_redo)
@@ -534,17 +545,29 @@ status_bar.pack(fill=X, side=BOTTOM, ipady=5)
 
 # edit keybindings
 root.bind("<Control-o>", open_file)
+root.bind("<Control-O>", open_file)
 root.bind('<Control-Key-x>', cut)
+root.bind('<Control-Key-X>', cut)
 root.bind('<Control-Key-v>', paste)
+root.bind('<Control-Key-V>', paste)
 root.bind('<Control-Key-c>', copy)
+root.bind('<Control-Key-C>', copy)
 root.bind('<Control-Key-s>', save)
+root.bind('<Control-Key-S>', save)
 root.bind('<Control-Key-a>', select_all)
+root.bind('<Control-Key-A>', select_all)
 root.bind('<Control-Key-b>', bold)
+root.bind('<Control-Key-B>', bold)
 root.bind('<Control-Key-i>', italics)
+root.bind('<Control-Key-I>', italics)
 root.bind('<Control-Key-u>', underline)
+root.bind('<Control-Key-U>', underline)
 root.bind('<Control-Key-l>', align_left)
+root.bind('<Control-Key-L>', align_left)
 root.bind('<Control-Key-e>', align_center)
+root.bind('<Control-Key-E>', align_center)
 root.bind('<Control-Key-r>', align_right)
+root.bind('<Control-Key-R>', align_right)
 
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
@@ -575,7 +598,7 @@ align_right_button.grid(row=0, column=8, padx=5)
 
 # tts button
 tts_button = Button(toolbar_frame, image=tts_img, relief=FLAT,
-                    command=lambda: threading.Thread(target=text_to_speech).start(),
+                    command=lambda: Thread(target=text_to_speech).start(),
                     )
 tts_button.grid(row=0, column=9, padx=5)
 
@@ -586,11 +609,9 @@ show_statusbar.set(True)
 show_toolbar = BooleanVar()
 show_toolbar.set(True)
 
-night_mode = BooleanVar()
-
 # check marks
 options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
-                             variable=night_mode, compound=LEFT, command=night)
+                             compound=LEFT, command=night)
 options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
                              variable=show_statusbar, compound=LEFT, command=hide_statusbar)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
@@ -598,7 +619,7 @@ options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
 
 # talk button
 talk_button = Button(toolbar_frame, image=talk_img, relief=FLAT,
-                     command=lambda: threading.Thread(target=speech_to_text).start())
+                     command=lambda: Thread(target=speech_to_text).start())
 talk_button.grid(row=0, column=10, padx=5)
 
 # buttons config
@@ -609,11 +630,11 @@ align_right_button.configure(command=align_right)
 # opening sentence
 op_msgs = ['hello world!', '^-^', 'what a beautiful day!', 'welcome!', '', 'believe in yourself!',
            'if I did it you can do way more than that', 'don\'t give up!']
-op_msg = random.choice(op_msgs)
-EgonTE.insert(END, op_msg)
+op_msg = choice(op_msgs)
+EgonTE.insert('1.0', op_msg)
 
 # bind and make tooltips
-tip.bind_widget(bold_button, balloonmsg='Bold (ctrl+u)')
+tip.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
 tip.bind_widget(italics_button, balloonmsg='italics (ctrl+i)')
 tip.bind_widget(underline_button, balloonmsg='underline (ctrl+u)')
 tip.bind_widget(align_left_button, balloonmsg='align left (ctrl+l)')
@@ -622,4 +643,4 @@ tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
 
 root.mainloop()
 
-# contact - reedit = arielo_o
+# contact - reedit = arielo_o, discord - Arielp2#4011
