@@ -2,14 +2,14 @@ from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialo
 from tkinter import *
 from tkinter.tix import *
 from win32print import GetDefaultPrinter
-from win32api import ShellExecute
+from win32api import ShellExecute, GetShortPathName
 import pyttsx3
 from threading import Thread
 import pyaudio
 from random import choice
 from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
-
+from datetime import datetime
 
 root = Tk()
 width = 1250
@@ -45,15 +45,19 @@ align_right_img = PhotoImage(file='assets/right-align.png')
 tts_img = PhotoImage(file='assets/tts(1).png')
 talk_img = PhotoImage(file="assets/speech-icon-19(1).png")
 
-# create toll tip
+# create toll tip, for the toolbar buttons (with shortcuts)
 tip = Balloon(root)
+
+
+# current time for the file bar
+def get_time():
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 # create file func
 def new_file():
     EgonTE.delete("1.0", END)
-    root.title('New file - Egon Text editor')
-    status_bar.config(text='New file')
+    file_bar.config(text='New file')
 
     global open_status_name
     open_status_name = False
@@ -61,6 +65,7 @@ def new_file():
 
 # open file func
 def open_file(event=None):
+    global name
     EgonTE.delete("1.0", END)
     text_file = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
                                            , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
@@ -69,10 +74,9 @@ def open_file(event=None):
         global open_status_name
         open_status_name = text_file
     name = text_file
-    status_bar.config(text=f'{name}        ')
+    file_bar.config(text=f'Opened file: {GetShortPathName(name)}')
     name.replace('C:/EgonTE/', '')
     name.replace('C:/users', '')
-    root.title(f'{name} - Egon Text editor')
     text_file = open(text_file, 'r')
     stuff = text_file.read()
     EgonTE.insert(END, stuff)
@@ -81,14 +85,14 @@ def open_file(event=None):
 
 # save as func
 def save_as(event=None):
+    global name
     text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
                                              filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                         ('Python Files', '*.py')))
     if text_file:
         name = text_file
         name = name.replace('C:/EgonTE', '')
-        root.title(f'{name} - Egon Text editor')
-        status_bar.config(text=f'Saved: {name}        ')
+        file_bar.config(text=f'Saved: {(name)} - {get_time()}')
 
         text_file = open(text_file, 'w')
         text_file.write(EgonTE.get(1.0, END))
@@ -97,12 +101,12 @@ def save_as(event=None):
 
 # save func
 def save(event=None):
-    global open_status_name
+    global open_status_name, name
     if open_status_name:
         text_file = open(open_status_name, 'w')
         text_file.write(EgonTE.get(1.0, END))
         text_file.close()
-        status_bar.config(text=f'Saved: {open_status_name}')
+        file_bar.config(text=f'Saved: {(name)} - {get_time()}')
     else:
         save_as()
 
@@ -172,7 +176,7 @@ def italics(event=None):
     else:
         EgonTE.tag_add('italics', 'sel.first', 'sel.last')
 
-
+# make the text underline func
 def underline(event=None):
     # create
     underline_font = font.Font(EgonTE, EgonTE.cget('font'))
@@ -244,15 +248,18 @@ def select_all(event=None):
 def clear():
     EgonTE.delete('1.0', END)
 
-
-def hide_statusbar():
+# hide file bar & status bar func
+def hide_statusbars():
     global show_statusbar
     if show_statusbar:
         status_bar.pack_forget()
+        file_bar.pack_forget()
         show_statusbar = False
     else:
-        status_bar.pack(side=BOTTOM)
+        status_bar.pack(side=LEFT)
+        file_bar.pack(side=RIGHT)
         show_statusbar = True
+
 
 
 def hide_toolbar():
@@ -261,6 +268,7 @@ def hide_toolbar():
         toolbar_frame.pack_forget()
         show_toolbar = False
     else:
+        EgonTE.focus_displayof()
         EgonTE.pack_forget()
         horizontal_scroll.pack_forget()
         text_scroll.pack_forget()
@@ -269,6 +277,7 @@ def hide_toolbar():
         text_scroll.pack(side=RIGHT, fill=Y)
         horizontal_scroll.pack(side=BOTTOM, fill=X)
         EgonTE.pack(fill=BOTH, expand=True)
+        EgonTE.focus_set()
         status_bar.pack(side=BOTTOM)
         show_toolbar = True
 
@@ -283,6 +292,7 @@ def night():
         _text_color = 'green'
         root.config(bg=main_color)
         status_bar.config(bg=main_color, fg=_text_color)
+        file_bar.config(bg=main_color, fg=_text_color)
         EgonTE.config(bg=second_color, fg=_text_color)
         toolbar_frame.config(bg=main_color)
         # toolbar buttons
@@ -309,6 +319,7 @@ def night():
         _text_color = 'black'
         root.config(bg=main_color)
         status_bar.config(bg=main_color, fg=_text_color)
+        file_bar.config(bg=main_color, fg=_text_color)
         EgonTE.config(bg='white', fg=_text_color)
         toolbar_frame.config(bg=main_color)
         # toolbar buttons
@@ -330,6 +341,7 @@ def night():
         night_mode = True
 
 
+# WIP
 def change_font(event=None):
     global chosen_font
     chosen_font = font_family.get()
@@ -340,6 +352,7 @@ def change_font(event=None):
     EgonTE.tag_configure('font', font=chosen_font)
 
 
+# WIP
 def change_font_size(event=None):
     global chosen_size
     chosen_size = size_var.get()
@@ -379,7 +392,7 @@ def align_right(event=None):
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "right")
 
-
+# get & display character and word count with status bar
 def status(event=None):
     global text_changed
     if EgonTE.edit_modified():
@@ -440,6 +453,7 @@ def speech_to_text():
     return query
 
 
+ # force the app to quit
 def exit_app():
     if messagebox.askyesno('Quit', 'Are you wish to exit?'):
         root.quit()
@@ -449,6 +463,7 @@ def exit_app():
         pyttsx3.Engine.stop(engine)
 
 
+# find if text exists in the specific file
 def find_text():
     search_text = simpledialog.askstring("Find", "Enter Text")
     text_data = EgonTE.get('1.0', END + '-1c')
@@ -540,9 +555,11 @@ options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='options', menu=options_menu)
 
 # add status bar to bottom add
-status_bar = Label(root, text='Ready')
-status_bar.pack(fill=X, side=BOTTOM, ipady=5)
-
+status_bar = Label(root, text='Characters:0 Words:0')
+status_bar.pack(fill=X, side=LEFT, ipady=5)
+# add file bar
+file_bar = Label(root, text='')
+file_bar.pack(fill=X, side=RIGHT, ipady=5)
 # edit keybindings
 root.bind("<Control-o>", open_file)
 root.bind("<Control-O>", open_file)
@@ -613,7 +630,7 @@ show_toolbar.set(True)
 options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
 options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
-                             variable=show_statusbar, compound=LEFT, command=hide_statusbar)
+                             variable=show_statusbar, compound=LEFT, command=hide_statusbars)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
 
