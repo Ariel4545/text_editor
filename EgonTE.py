@@ -10,6 +10,7 @@ from random import choice
 from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
 from datetime import datetime
+from webbrowser import open as open_
 
 root = Tk()
 width = 1250
@@ -52,6 +53,15 @@ tip = Balloon(root)
 # current time for the file bar
 def get_time():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
+# open the github page
+def github():
+    open_('https://github.com/Ariel4545/text_editor')
+
+
+def undo():
+    return EgonTE.edit_undo()
 
 
 # create file func
@@ -176,6 +186,7 @@ def italics(event=None):
     else:
         EgonTE.tag_add('italics', 'sel.first', 'sel.last')
 
+
 # make the text underline func
 def underline(event=None):
     # create
@@ -248,6 +259,7 @@ def select_all(event=None):
 def clear():
     EgonTE.delete('1.0', END)
 
+
 # hide file bar & status bar func
 def hide_statusbars():
     global show_statusbar
@@ -259,7 +271,6 @@ def hide_statusbars():
         status_bar.pack(side=LEFT)
         file_bar.pack(side=RIGHT)
         show_statusbar = True
-
 
 
 def hide_toolbar():
@@ -392,6 +403,7 @@ def align_right(event=None):
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "right")
 
+
 # get & display character and word count with status bar
 def status(event=None):
     global text_changed
@@ -453,7 +465,7 @@ def speech_to_text():
     return query
 
 
- # force the app to quit
+# force the app to quit
 def exit_app():
     if messagebox.askyesno('Quit', 'Are you wish to exit?'):
         root.quit()
@@ -502,7 +514,7 @@ text_scroll.pack(side=RIGHT, fill=Y)
 horizontal_scroll = Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
 # create EgonTE box
-# chosen font?
+# ( chosen font - testing W.I.P )
 EgonTE = Text(frame, width=100, height=30, font=chosen_font, selectbackground='blue',
               selectforeground='white',
               undo=True
@@ -528,7 +540,7 @@ file_menu.add_command(label='Print file', command=print_file)
 file_menu.add_separator()
 file_menu.add_command(label='Exit', command=exit_app)
 # edit menu
-edit_menu = Menu(menu, tearoff=False)
+edit_menu = Menu(menu, tearoff=True)
 menu.add_cascade(label='Edit', menu=edit_menu)
 edit_menu.add_command(label='Cut', accelerator='ctrl+x', command=lambda: cut(True))
 edit_menu.add_command(label='Copy', accelerator='ctrl+c', command=lambda: copy(True))
@@ -553,7 +565,9 @@ color_menu.add_command(label='highlight', command=hl_color)
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='options', menu=options_menu)
-
+# github page
+github_menu = Menu(menu, tearoff=False)
+menu.add_cascade(label='github', menu=github, command=github)
 # add status bar to bottom add
 status_bar = Label(root, text='Characters:0 Words:0')
 status_bar.pack(fill=X, side=LEFT, ipady=5)
@@ -657,7 +671,6 @@ tip.bind_widget(underline_button, balloonmsg='underline (ctrl+u)')
 tip.bind_widget(align_left_button, balloonmsg='align left (ctrl+l)')
 tip.bind_widget(align_center_button, balloonmsg='align center (ctrl+e)')
 tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
-
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
