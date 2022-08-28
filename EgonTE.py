@@ -1,3 +1,4 @@
+import random
 from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialog
 from tkinter import *
 from tkinter.tix import *
@@ -31,7 +32,6 @@ global chosen_font
 global selected
 
 text_changed = False
-global engine
 chosen_font = ('arial', 16)
 night_mode = BooleanVar()
 
@@ -424,10 +424,9 @@ def text_to_speech():
 
 
 def read_text(**kwargs):
-    global engine
     engine = pyttsx3.init()
-    if 'EgonTE' in kwargs:
-        ttr = kwargs['EgonTE']
+    if 'text' in kwargs:
+        ttr = kwargs['text']
     else:
         ttr = EgonTE.get(1.0, 'end')  # get EgonTE content
     engine.say(ttr)
@@ -445,11 +444,13 @@ def text_formatter(phrase):
 
 
 def speech_to_text():
-    error_msg = "Excuse me, I don't know what you mean!"
+    error_sentences = ['I don\'t know what you mean!', 'can you say that again?', 'please speak more clear']
+    error_sentence = random.choice(error_sentences)
+    error_msg = f'Excuse me, {error_sentence}'
     recolonize = Recognizer()  # initialize the listener
     mic = Microphone()
     with mic as source:  # set listening device to microphone
-        read_text(text='Please say the message you would like to the EgonTE editor!')
+        read_text(text='Please say the message you would like to the text editor!')
         recolonize.pause_threshold = 1
         audio = recolonize.listen(source)
     try:
@@ -460,7 +461,9 @@ def speech_to_text():
         if messagebox.askyesno('EgonTE', 'are you want to try again?'):
             query = speech_to_text()
         else:
-            read_text(text='ok, I will try to do my best next time!')
+            gb_sentences = ['ok', 'goodbye', 'sorry']
+            gb_sentence = random.choice(gb_sentences)
+            read_text(text=f'{gb_sentence}, I will try to do my best next time!')
     EgonTE.insert(INSERT, query, END)
     return query
 
@@ -472,7 +475,6 @@ def exit_app():
         tts.stop()
         exit_()
         quit(1)
-        pyttsx3.Engine.stop(engine)
 
 
 # find if text exists in the specific file
