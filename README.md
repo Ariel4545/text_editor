@@ -10,7 +10,8 @@
 6. be able to listen to your writings 📣.
 7. be able to convert speak to text 🎤. 
 8. be able to search text in your document 🔎
-9. enjoy night mode 🌙.
+9. enjoy night mode 🌙.  
+10. be able to insert - datetime & math solutions 📩.
 
 ## W.I.P ⏳
 1. text size.
