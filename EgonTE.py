@@ -1,4 +1,3 @@
-import random
 from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialog
 from tkinter import *
 from tkinter.tix import *
@@ -445,7 +444,7 @@ def text_formatter(phrase):
 
 def speech_to_text():
     error_sentences = ['I don\'t know what you mean!', 'can you say that again?', 'please speak more clear']
-    error_sentence = random.choice(error_sentences)
+    error_sentence = choice(error_sentences)
     error_msg = f'Excuse me, {error_sentence}'
     recolonize = Recognizer()  # initialize the listener
     mic = Microphone()
@@ -462,7 +461,7 @@ def speech_to_text():
             query = speech_to_text()
         else:
             gb_sentences = ['ok', 'goodbye', 'sorry']
-            gb_sentence = random.choice(gb_sentences)
+            gb_sentence = choice(gb_sentences)
             read_text(text=f'{gb_sentence}, I will try to do my best next time!')
     EgonTE.insert(INSERT, query, END)
     return query
