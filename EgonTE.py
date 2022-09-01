@@ -504,6 +504,9 @@ def calc():
     Ce.grid(row=1)
     enter.grid(row=2)
 
+def dt():
+    pos = EgonTE.index(INSERT)
+    EgonTE.insert(pos, get_time())
 
 # create toolbar frame
 toolbar_frame = Frame(root)
@@ -577,6 +580,7 @@ edit_menu.add_separator()
 ins_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='insert', menu=ins_menu)
 ins_menu.add_command(label='Calculation',command=calc)
+ins_menu.add_command(label='current datetime', command=dt)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
