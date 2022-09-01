@@ -488,6 +488,24 @@ def find_text():
         search_label = messagebox.showinfo("Result:", "No match found")
 
 
+def calc():
+    def enter_button():
+        pos = EgonTE.index(INSERT)
+        equation = Ce.get()
+        equation = eval(equation)
+        EgonTE.insert(pos,equation)
+        Croot.destroy()
+    Croot = Toplevel(relief=FLAT)
+    Croot.resizable(False, False)
+    Croot.geometry('150x75')
+    introduction_text = Label(Croot, text='Enter equation below:')
+    enter = Button(Croot, text='Enter', command=enter_button)
+    Ce = Entry(Croot)
+    introduction_text.grid(row=0)
+    Ce.grid(row=1)
+    enter.grid(row=2)
+
+
 # create toolbar frame
 toolbar_frame = Frame(root)
 toolbar_frame.pack(fill=X)
@@ -555,7 +573,11 @@ edit_menu.add_command(label='Select All', accelerator='ctrl+a', command=lambda: 
 edit_menu.add_command(label='Clear', accelerator='', command=clear)
 edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", command=find_text)
-
+edit_menu.add_separator()
+# insert menu
+ins_menu = Menu(menu, tearoff=False)
+menu.add_cascade(label='insert', menu=ins_menu)
+ins_menu.add_command(label='Calculation',command=calc)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
