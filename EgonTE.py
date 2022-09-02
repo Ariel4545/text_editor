@@ -6,7 +6,7 @@ from win32api import ShellExecute, GetShortPathName
 import pyttsx3
 from threading import Thread
 import pyaudio
-from random import choice
+from random import choice, randint
 from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
 from datetime import datetime
@@ -53,6 +53,9 @@ tip = Balloon(root)
 def get_time():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+
+def get_pos():
+    return EgonTE.index(INSERT)
 
 # open the github page
 def github():
@@ -487,26 +490,48 @@ def find_text():
         search_label = messagebox.showinfo("Result:", "No match found")
 
 
-def calc():
+def ins_calc():
     def enter_button():
-        pos = EgonTE.index(INSERT)
         equation = Ce.get()
         equation = eval(equation)
-        EgonTE.insert(pos,equation)
+        EgonTE.insert(get_pos(),equation)
         Croot.destroy()
     Croot = Toplevel(relief=FLAT)
     Croot.resizable(False, False)
     Croot.geometry('150x75')
     introduction_text = Label(Croot, text='Enter equation below:')
-    enter = Button(Croot, text='Enter', command=enter_button)
-    Ce = Entry(Croot)
+    enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
+    Ce = Entry(Croot, relief=FLAT)
     introduction_text.grid(row=0)
     Ce.grid(row=1)
     enter.grid(row=2)
 
+
 def dt():
-    pos = EgonTE.index(INSERT)
-    EgonTE.insert(pos, get_time())
+    EgonTE.insert(get_pos(), get_time())
+
+
+def ins_random():
+    def enter_button():
+        num_1 = int(Ce1.get())
+        num_2 = int(Ce2.get())
+        rand = randint(num_1, num_2)
+        EgonTE.insert(get_pos(),rand)
+        Croot.destroy()
+    Croot = Toplevel()
+    Croot.resizable(False, False)
+    Croot.geometry('300x100')
+    introduction_text = Label(Croot, text='Enter numbers below:', justify='center')
+    enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
+    Ce1 = Entry(Croot, relief=FLAT)
+    Ce2 = Entry(Croot, relief=FLAT)
+    bt_text = Label(Croot, text='<->')
+    introduction_text.grid(row=0, columnspan=1)
+    Ce1.grid(row=1, column=0, columnspan=2)
+    bt_text.grid(row=1, column=1, )
+    Ce2.grid(row=1, column=2)
+    enter.grid(row=2, column=0, columnspan=1)
+
 
 # create toolbar frame
 toolbar_frame = Frame(root)
@@ -579,8 +604,9 @@ edit_menu.add_separator()
 # insert menu
 ins_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='insert', menu=ins_menu)
-ins_menu.add_command(label='Calculation',command=calc)
+ins_menu.add_command(label='Calculation', command=ins_calc)
 ins_menu.add_command(label='current datetime', command=dt)
+ins_menu.add_command(label='random number', command=ins_random)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
@@ -701,3 +727,4 @@ tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
+
