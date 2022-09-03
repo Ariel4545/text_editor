@@ -495,15 +495,36 @@ def ins_calc():
         equation = eval(equation)
         EgonTE.insert(get_pos(),equation)
         Croot.destroy()
+
+    def show_oper():
+        global add_sub, mul_div, pow_
+        Croot.geometry('150x155')
+        show_op.config(text='hide operations', command=hide_oper)
+        add_sub = Label(Croot, text='+ addition, - subtraction')
+        mul_div = Label(Croot, text='* multiply, / deviation')
+        pow_ = Label(Croot, text='** power')
+        add_sub.grid(row=4)
+        mul_div.grid(row=5)
+        pow_.grid(row=6)
+
+    def hide_oper():
+        Croot.geometry('150x90')
+        add_sub.grid_forget()
+        mul_div.grid_forget()
+        pow_.grid_forget()
+        show_op.config(text='show operations', command=show_oper)
+
     Croot = Toplevel(relief=FLAT)
     Croot.resizable(False, False)
-    Croot.geometry('150x75')
+    Croot.geometry('150x90')
     introduction_text = Label(Croot, text='Enter equation below:')
     enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
     Ce = Entry(Croot, relief=FLAT, justify='center')
+    show_op = Button(Croot, text='Show operators', relief=FLAT, command=show_oper)
     introduction_text.grid(row=0)
     Ce.grid(row=1)
     enter.grid(row=2)
+    show_op.grid(row=3)
 
 
 def dt():
