@@ -194,7 +194,7 @@ def underline(event=None):
     # create
     underline_font = font.Font(EgonTE, EgonTE.cget('font'))
     underline_font.configure(underline=True)
-    # config+
+    # config
     EgonTE.tag_configure('underline', font=underline_font)
     current_tags = EgonTE.tag_names('sel.first')
     if 'underline' in current_tags:
@@ -358,11 +358,12 @@ def night():
 def change_font(event=None):
     global chosen_font
     chosen_font = font_family.get()
-    # wb font tuple
-    sfont = font.Font(EgonTE, EgonTE.cget('font'))
-    # config
-    EgonTE.config(font=sfont)
-    EgonTE.tag_configure('font', font=chosen_font)
+    # # wb font tuple
+    # # config
+    EgonTE.configure(font=chosen_font)
+    # EgonTE.config(font=sfont)
+    # EgonTE.tag_configure('font', font=chosen_font)
+    # EgonTE.tag_config(font=(chosen_font, font_size))
 
 
 # WIP
@@ -375,11 +376,9 @@ def change_font_size(event=None):
     size.configure(size=chosen_size)
     # config
     EgonTE.tag_configure('size', font=size)
-    current_tags = EgonTE.tag_names('sel.first')
-    if 'size' in current_tags:
-        EgonTE.tag_delete('size')
-    else:
-        EgonTE.tag_add('size', 'sel.first', 'sel.last')
+    current_tags = EgonTE.tag_names('1.0')
+    if not 'size' in current_tags:
+        EgonTE.tag_add('size', '1.0', END)
 
 
 # align Left func
@@ -501,7 +500,7 @@ def ins_calc():
     Croot.geometry('150x75')
     introduction_text = Label(Croot, text='Enter equation below:')
     enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
-    Ce = Entry(Croot, relief=FLAT)
+    Ce = Entry(Croot, relief=FLAT, justify='center')
     introduction_text.grid(row=0)
     Ce.grid(row=1)
     enter.grid(row=2)
@@ -523,8 +522,8 @@ def ins_random():
     Croot.geometry('300x100')
     introduction_text = Label(Croot, text='Enter numbers below:', justify='center')
     enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
-    Ce1 = Entry(Croot, relief=FLAT)
-    Ce2 = Entry(Croot, relief=FLAT)
+    Ce1 = Entry(Croot, relief=FLAT, justify='center')
+    Ce2 = Entry(Croot, relief=FLAT, justify='center')
     bt_text = Label(Croot, text='<->')
     introduction_text.grid(row=0, columnspan=1)
     Ce1.grid(row=1, column=0, columnspan=2)
@@ -600,7 +599,6 @@ edit_menu.add_command(label='Select All', accelerator='ctrl+a', command=lambda: 
 edit_menu.add_command(label='Clear', accelerator='', command=clear)
 edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", command=find_text)
-edit_menu.add_separator()
 # insert menu
 ins_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='insert', menu=ins_menu)
