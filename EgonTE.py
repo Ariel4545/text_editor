@@ -27,6 +27,7 @@ logo = PhotoImage(file='ETE_icon.png')
 root.iconphoto(False, logo)
 
 global open_status_name
+open_status_name = False
 global chosen_font
 global selected
 
@@ -56,6 +57,7 @@ def get_time():
 
 def get_pos():
     return EgonTE.index(INSERT)
+
 
 # open the github page
 def github():
@@ -96,19 +98,25 @@ def open_file(event=None):
 
 
 # save as func
-def save_as(event=None):
+def save_as(event):
     global name
-    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
-                                             filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-                                                        ('Python Files', '*.py')))
-    if text_file:
-        name = text_file
-        name = name.replace('C:/EgonTE', '')
-        file_bar.config(text=f'Saved: {(name)} - {get_time()}')
+    if event == None:
+        text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
+                                                 filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
+                                                            ('Python Files', '*.py')))
+        if text_file:
+            name = text_file
+            name = name.replace('C:/EgonTE', '')
+            file_bar.config(text=f'Saved: {(name)} - {get_time()}')
 
-        text_file = open(text_file, 'w')
-        text_file.write(EgonTE.get(1.0, END))
-        text_file.close()
+            text_file = open(text_file, 'w')
+            text_file.write(EgonTE.get(1.0, END))
+            text_file.close()
+    if event == 'get name':
+        try:
+            return name
+        except NameError:
+            messagebox.showerror('error', 'You cant copy a file name if you doesn\'t use a file ')
 
 
 # save func
@@ -120,7 +128,7 @@ def save(event=None):
         text_file.close()
         file_bar.config(text=f'Saved: {(name)} - {get_time()}')
     else:
-        save_as()
+        save_as(None)
 
 
 # cut func
@@ -139,15 +147,18 @@ def cut(x):
 
 
 # copy func
-def copy(x):
+def copy(x, special_case=(False, None)):
     global selected
     if not x:
         selected = root.clipboard_get()
-    if EgonTE.selection_get():
-        # grab
-        selected = EgonTE.selection_get()
-        root.clipboard_clear()
-        root.clipboard_append(selected)
+        if EgonTE.selection_get():
+            # grab
+            selected = EgonTE.selection_get()
+            root.clipboard_clear()
+            root.clipboard_append(selected)
+    # elif special_case == 'file':
+    #     root.clipboard_clear()
+    #     root.clipboard_append(special_case())
 
 
 # paste func
@@ -157,22 +168,23 @@ def paste(x):
         selected = root.clipboard_get()
     else:
         if selected:
-            position = EgonTE.index(INSERT)
-            EgonTE.insert(position, selected)
+            EgonTE.insert(get_pos(), selected)
 
 
 # bold text func
 def bold(event=None):
     # create
+
     bold_font = font.Font(EgonTE, EgonTE.cget('font'))
     bold_font.configure(weight='bold')
     # config
     EgonTE.tag_configure('bold', font=bold_font)
     current_tags = EgonTE.tag_names('sel.first')
     if 'bold' in current_tags:
-        EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
-    else:
-        EgonTE.tag_add('bold', 'sel.first', 'sel.last')
+        if selected:
+            EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_add('bold', 'sel.first', 'sel.last')
 
 
 # italics text func
@@ -212,12 +224,15 @@ def text_color():
         color_font = font.Font(EgonTE, EgonTE.cget('font'))
         # config
         EgonTE.tag_configure('colored_txt', font=color_font, foreground=selected_color)
-        current_tags = EgonTE.tag_names('sel.first')
-        if 'colored_txt' in current_tags:
-            EgonTE.tag_remove('colored_txt', 'sel.first', 'sel.last')
+        try:
+            current_tags = EgonTE.tag_names('sel.first')
+            if 'colored_txt' in current_tags:
+                EgonTE.tag_remove('colored_txt', 'sel.first', 'sel.last')
 
-        else:
-            EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
+            else:
+                EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
+        except:
+            messagebox.showerror('error','didn\'t selected text')
 
 
 # background color func
@@ -492,7 +507,10 @@ def find_text():
 def ins_calc():
     def enter_button():
         equation = Ce.get()
-        equation = eval(equation)
+        try:
+            equation = eval(equation)
+        except:
+            messagebox.showerror('error', 'didn\'t type valid characters')
         EgonTE.insert(get_pos(),equation)
         Croot.destroy()
 
@@ -533,11 +551,18 @@ def dt():
 
 def ins_random():
     def enter_button():
-        num_1 = int(Ce1.get())
-        num_2 = int(Ce2.get())
-        rand = randint(num_1, num_2)
-        EgonTE.insert(get_pos(),rand)
-        Croot.destroy()
+        global num_1, num_2
+        try:
+            try:
+                num_1 = int(Ce1.get())
+                num_2 = int(Ce2.get())
+            except ValueError:
+                messagebox.showerror('error', 'didn\'t type valid characters')
+            rand = randint(num_1, num_2)
+            EgonTE.insert(get_pos(),rand)
+            Croot.destroy()
+        except NameError:
+            pass
     Croot = Toplevel()
     Croot.resizable(False, False)
     Croot.geometry('300x100')
@@ -551,6 +576,13 @@ def ins_random():
     bt_text.grid(row=1, column=1, )
     Ce2.grid(row=1, column=2)
     enter.grid(row=2, column=0, columnspan=1)
+
+
+def copy_file_path():
+    # global selected
+    file_name = save_as(event='get name')
+    root.clipboard_clear()
+    root.clipboard_append(file_name)
 
 
 # create toolbar frame
@@ -574,7 +606,7 @@ font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="r
 font_size["values"] = tuple(range(8, 80, 2))
 font_size.current(4)  # 16 is at index 5
 font_size.grid(row=0, column=5, padx=5)
-# create scrollbar for the EgonTE box
+# create scrollbar for the EgonTE box+
 text_scroll = Scrollbar(frame)
 text_scroll.pack(side=RIGHT, fill=Y)
 # horizontal scrollbar
@@ -604,6 +636,8 @@ file_menu.add_command(label='Save', command=save, accelerator='ctrl+s')
 file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
 file_menu.add_command(label='Print file', command=print_file)
+file_menu.add_separator()
+file_menu.add_command(label='copy path', command=copy_file_path)
 file_menu.add_separator()
 file_menu.add_command(label='Exit', command=exit_app)
 # edit menu
@@ -746,4 +780,3 @@ tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
-
