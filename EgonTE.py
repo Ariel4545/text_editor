@@ -69,7 +69,7 @@ def undo():
 
 
 # create file func
-def new_file():
+def new_file(event=None):
     EgonTE.delete("1.0", END)
     file_bar.config(text='New file')
 
@@ -243,7 +243,7 @@ def bg_color():
 
 
 # all color txt func
-def all_txt_color():
+def all_txt_color(event=None):
     color = colorchooser.askcolor()[1]
     if color:
         EgonTE.config(fg=color)
@@ -257,7 +257,7 @@ def hl_color():
 
 
 # print file func
-def print_file():
+def print_file(event=None):
     printer_name = GetDefaultPrinter()
     file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
                                         , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
@@ -273,7 +273,7 @@ def select_all(event=None):
 
 
 # clear func
-def clear():
+def clear(event=None):
     EgonTE.delete('1.0', END)
 
 
@@ -477,7 +477,7 @@ def speech_to_text():
         if messagebox.askyesno('EgonTE', 'are you want to try again?'):
             query = speech_to_text()
         else:
-            gb_sentences = ['ok', 'goodbye', 'sorry']
+            gb_sentences = ['ok', 'goodbye', 'sorry', 'my bad']
             gb_sentence = choice(gb_sentences)
             read_text(text=f'{gb_sentence}, I will try to do my best next time!')
     EgonTE.insert(INSERT, query, END)
@@ -488,13 +488,12 @@ def speech_to_text():
 def exit_app():
     if messagebox.askyesno('Quit', 'Are you wish to exit?'):
         root.quit()
-        tts.stop()
         exit_()
         quit(1)
 
 
 # find if text exists in the specific file
-def find_text():
+def find_text(event=None):
     search_text = simpledialog.askstring("Find", "Enter Text")
     text_data = EgonTE.get('1.0', END + '-1c')
     occurs = text_data.lower().count(search_text.lower())
@@ -630,12 +629,12 @@ root.config(menu=menu)
 # file menu
 file_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='File', menu=file_menu)
-file_menu.add_command(label='New', command=new_file)
-file_menu.add_command(label='Open', accelerator='ctrl+o', command=open_file)
-file_menu.add_command(label='Save', command=save, accelerator='ctrl+s')
+file_menu.add_command(label='New', accelerator='(ctrl+n)',command=new_file)
+file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=open_file)
+file_menu.add_command(label='Save', command=save, accelerator='(ctrl+s)')
 file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
-file_menu.add_command(label='Print file', command=print_file)
+file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
 file_menu.add_separator()
 file_menu.add_command(label='copy path', command=copy_file_path)
 file_menu.add_separator()
@@ -643,17 +642,17 @@ file_menu.add_command(label='Exit', command=exit_app)
 # edit menu
 edit_menu = Menu(menu, tearoff=True)
 menu.add_cascade(label='Edit', menu=edit_menu)
-edit_menu.add_command(label='Cut', accelerator='ctrl+x', command=lambda: cut(True))
-edit_menu.add_command(label='Copy', accelerator='ctrl+c', command=lambda: copy(True))
-edit_menu.add_command(label='Paste', accelerator='ctrl+v', command=lambda: paste(True))
+edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: cut(True))
+edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: copy(True))
+edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: paste(True))
 edit_menu.add_separator()
-edit_menu.add_command(label='Undo', accelerator='ctrl+z', command=EgonTE.edit_undo)
-edit_menu.add_command(label='Redo', accelerator='ctrl+y', command=EgonTE.edit_redo)
+edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=EgonTE.edit_undo)
+edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=EgonTE.edit_redo)
 edit_menu.add_separator()
-edit_menu.add_command(label='Select All', accelerator='ctrl+a', command=lambda: select_all('nothing'))
-edit_menu.add_command(label='Clear', accelerator='', command=clear)
+edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda: select_all('nothing'))
+edit_menu.add_command(label='Clear', accelerator='(ctrl+del)', command=clear)
 edit_menu.add_separator()
-edit_menu.add_command(label="Find Text", command=find_text)
+edit_menu.add_command(label="Find Text",accelerator='(ctrl+f)', command=find_text)
 # insert menu
 ins_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='insert', menu=ins_menu)
@@ -705,7 +704,13 @@ root.bind('<Control-Key-e>', align_center)
 root.bind('<Control-Key-E>', align_center)
 root.bind('<Control-Key-r>', align_right)
 root.bind('<Control-Key-R>', align_right)
-
+root.bind('<Control-Key-p>', print_file)
+root.bind('<Control-Key-P>', print_file)
+root.bind('<Control-Key-n>', new_file)
+root.bind('<Control-Key-N>', new_file)
+root.bind('<Control-Key-Delete>', clear)
+root.bind('<Control-Key-f>', find_text)
+root.bind('<Control-Key-F>', find_text)
 root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
 root.bind("<<Modified>>", status)
@@ -773,10 +778,13 @@ EgonTE.insert('1.0', op_msg)
 # bind and make tooltips
 tip.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
 tip.bind_widget(italics_button, balloonmsg='italics (ctrl+i)')
+tip.bind_widget(color_button, balloonmsg='change colors')
 tip.bind_widget(underline_button, balloonmsg='underline (ctrl+u)')
 tip.bind_widget(align_left_button, balloonmsg='align left (ctrl+l)')
 tip.bind_widget(align_center_button, balloonmsg='align center (ctrl+e)')
 tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
+tip.bind_widget(tts_button, balloonmsg='text to speach')
+tip.bind_widget(talk_button, balloonmsg='speach to talk')
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
