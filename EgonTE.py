@@ -33,7 +33,7 @@ global selected
 
 text_changed = False
 chosen_font = ('arial', 16)
-night_mode = BooleanVar()
+
 
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
@@ -584,6 +584,16 @@ def copy_file_path():
     root.clipboard_append(file_name)
 
 
+def custom_cursor():
+    global cc
+    if cc:
+        EgonTE.config(cursor='tcross')
+        cc = False
+    else:
+        EgonTE.config(cursor='arrow')
+        cc = True
+
+
 # create toolbar frame
 toolbar_frame = Frame(root)
 toolbar_frame.pack(fill=X)
@@ -751,6 +761,10 @@ show_statusbar.set(True)
 show_toolbar = BooleanVar()
 show_toolbar.set(True)
 
+night_mode = BooleanVar()
+
+cc = BooleanVar()
+
 # check marks
 options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
@@ -758,6 +772,8 @@ options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
                              variable=show_statusbar, compound=LEFT, command=hide_statusbars)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
+options_menu.add_checkbutton(label="original cursor", onvalue=True, offvalue=False
+                             , compound=LEFT, command=custom_cursor)
 
 # talk button
 talk_button = Button(toolbar_frame, image=talk_img, relief=FLAT,
