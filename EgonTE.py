@@ -11,6 +11,7 @@ from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
 from datetime import datetime
 from webbrowser import open as open_
+import names
 
 root = Tk()
 width = 1250
@@ -594,6 +595,10 @@ def custom_cursor():
         cc = True
 
 
+def ins_random_name():
+    EgonTE.insert(get_pos(), names.get_full_name())
+
+
 # create toolbar frame
 toolbar_frame = Frame(root)
 toolbar_frame.pack(fill=X)
@@ -669,6 +674,7 @@ menu.add_cascade(label='insert', menu=ins_menu)
 ins_menu.add_command(label='Calculation', command=ins_calc)
 ins_menu.add_command(label='current datetime', command=dt)
 ins_menu.add_command(label='random number', command=ins_random)
+ins_menu.add_command(label='random name', command=ins_random_name)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
