@@ -30,4 +30,4 @@ to its limits (as far as I can)
 <img src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue" /> , 🪶Tkinter
 
 ## links
-[prototpe versions](https://drive.google.com/drive/folders/198UXDgf7o3Juqkd-CtJOGqjPYZ_Q4mAq?usp=sharing)
+[prototype versions](https://drive.google.com/drive/folders/198UXDgf7o3Juqkd-CtJOGqjPYZ_Q4mAq?usp=sharing)
