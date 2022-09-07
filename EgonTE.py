@@ -12,6 +12,7 @@ from sys import exit as exit_
 from datetime import datetime
 from webbrowser import open as open_
 import names
+from googletrans import Translator  # req version 3.1.0a0
 
 root = Tk()
 width = 1250
@@ -34,7 +35,6 @@ global selected
 
 text_changed = False
 chosen_font = ('arial', 16)
-
 
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
@@ -99,7 +99,7 @@ def open_file(event=None):
 
 
 # save as func
-def save_as(event):
+def save_as(event=None):
     global name
     if event == None:
         text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
@@ -182,10 +182,9 @@ def bold(event=None):
     EgonTE.tag_configure('bold', font=bold_font)
     current_tags = EgonTE.tag_names('sel.first')
     if 'bold' in current_tags:
-        if selected:
-            EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
-        else:
-            EgonTE.tag_add('bold', 'sel.first', 'sel.last')
+        EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
+    else:
+        EgonTE.tag_add('bold', 'sel.first', 'sel.last')
 
 
 # italics text func
@@ -233,7 +232,7 @@ def text_color():
             else:
                 EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
         except:
-            messagebox.showerror('error','didn\'t selected text')
+            messagebox.showerror('error', 'didn\'t selected text')
 
 
 # background color func
@@ -511,7 +510,7 @@ def ins_calc():
             equation = eval(equation)
         except:
             messagebox.showerror('error', 'didn\'t type valid characters')
-        EgonTE.insert(get_pos(),equation)
+        EgonTE.insert(get_pos(), equation)
         Croot.destroy()
 
     def show_oper():
@@ -559,10 +558,11 @@ def ins_random():
             except ValueError:
                 messagebox.showerror('error', 'didn\'t type valid characters')
             rand = randint(num_1, num_2)
-            EgonTE.insert(get_pos(),rand)
+            EgonTE.insert(get_pos(), rand)
             Croot.destroy()
         except NameError:
             pass
+
     Croot = Toplevel()
     Croot.resizable(False, False)
     Croot.geometry('300x100')
@@ -597,6 +597,52 @@ def custom_cursor():
 
 def ins_random_name():
     EgonTE.insert(get_pos(), names.get_full_name())
+
+
+def translate():
+    def button():
+        to_translate = t1.get("1.0", "end-1c")
+        cl = choose_langauge.get()
+
+        if to_translate == '':
+            messagebox.showerror('error', 'please fill the box')
+        else:
+            translator = Translator()
+            output = translator.translate(to_translate, dest=cl)
+            EgonTE.insert(get_pos(), output.text)
+
+    Lroot = Toplevel()
+    Lroot.geometry('252x246')
+    Lroot.resizable(False, False)
+    a = StringVar()
+    auto_detect = ttk.Combobox(Lroot, width=20, textvariable=a, state='readonly', font=('arial', 10, 'bold'), )
+
+    auto_detect['values'] = (
+        'Auto Detect',
+    )
+    l = StringVar()
+    choose_langauge = ttk.Combobox(Lroot, width=20, textvariable=l, state='readonly', font=('arial', 10, 'bold'))
+    choose_langauge['values'] = (
+        'Afrikaans', 'Albanian', 'Arabic', 'Armenian', ' Azerbaijani', 'Basque', 'Belarusian', 'Bengali', 'Bosnian',
+        'Bulgarian', ' Catalan', 'Cebuano', 'Chichewa', 'Chinese', 'Corsican', 'Croatian', ' Czech', 'Danish', 'Dutch',
+        'English', 'Esperanto', 'Estonian', 'Filipino', 'Finnish', 'French', 'Frisian', 'Galician', 'Georgian',
+        'German', 'Greek', 'Gujarati', 'Haitian Creole', 'Hausa', 'Hawaiian', 'Hebrew', 'Hindi', 'Hmong', 'Hungarian',
+        'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian', 'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer',
+        'Kinyarwanda', 'Korean', 'Kurdish', 'Kyrgyz', 'Lao', 'Latin', 'Latvian', 'Lithuanian', 'Luxembourgish',
+        'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Maori', 'Marathi', 'Mongolian', 'Myanmar', 'Nepali',
+        'Norwegian''Odia', 'Pashto', 'Persian', 'Polish', 'Portuguese', 'Punjabi', 'Romanian', 'Russian', 'Samoan',
+        'Scots Gaelic', 'Serbian', 'Sesotho', 'Shona', 'Sindhi', 'Sinhala', 'Slovak', 'Slovenian', 'Somali', 'Spanish',
+        'Sundanese', 'Swahili', 'Swedish', 'Tajik', 'Tamil', 'Tatar', 'Telugu', 'Thai', 'Turkish', 'Turkmen',
+        'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa''Yiddish', 'Yoruba', 'Zulu',
+    )
+
+    t1 = Text(Lroot, width=30, height=10, borderwidth=5, relief=RIDGE)
+    button_ = Button(Lroot, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'), cursor="hand2",
+                     command=button)
+    auto_detect.grid(row=0)
+    choose_langauge.grid(row=1)
+    t1.grid(row=2)
+    button_.grid(row=3)
 
 
 # create toolbar frame
@@ -644,7 +690,7 @@ root.config(menu=menu)
 # file menu
 file_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='File', menu=file_menu)
-file_menu.add_command(label='New', accelerator='(ctrl+n)',command=new_file)
+file_menu.add_command(label='New', accelerator='(ctrl+n)', command=new_file)
 file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=open_file)
 file_menu.add_command(label='Save', command=save, accelerator='(ctrl+s)')
 file_menu.add_command(label='Save As', command=save_as)
@@ -667,14 +713,15 @@ edit_menu.add_separator()
 edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda: select_all('nothing'))
 edit_menu.add_command(label='Clear', accelerator='(ctrl+del)', command=clear)
 edit_menu.add_separator()
-edit_menu.add_command(label="Find Text",accelerator='(ctrl+f)', command=find_text)
+edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
 # insert menu
-ins_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='insert', menu=ins_menu)
-ins_menu.add_command(label='Calculation', command=ins_calc)
-ins_menu.add_command(label='current datetime', command=dt)
-ins_menu.add_command(label='random number', command=ins_random)
-ins_menu.add_command(label='random name', command=ins_random_name)
+tool_menu = Menu(menu, tearoff=False)
+menu.add_cascade(label='tools', menu=tool_menu)
+tool_menu.add_command(label='Calculation', command=ins_calc)
+tool_menu.add_command(label='current datetime', command=dt)
+tool_menu.add_command(label='random number', command=ins_random)
+tool_menu.add_command(label='random name', command=ins_random_name)
+tool_menu.add_command(label='translate', command=translate)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
