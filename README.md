@@ -11,7 +11,7 @@
 7. be able to convert speak to text 🎤. 
 8. be able to search text in your document 🔎
 9. enjoy night mode 🌙.  
-10. be able to insert - datetime & math solutions 📩.
+10. amaizing tools - translate, calculate & many more 📩.
 
 ## W.I.P ⏳
 1. text size.
