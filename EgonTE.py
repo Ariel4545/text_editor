@@ -595,8 +595,41 @@ def custom_cursor():
         cc = True
 
 
+# still W.I.P
 def ins_random_name():
-    EgonTE.insert(get_pos(), names.get_full_name())
+    def button():
+        global random_name
+        EgonTE.insert(get_pos(), random_name)
+
+    def roll():
+        global random_name
+        random_name = names.get_full_name()
+        name.config(text=random_name)
+
+    def adv_option():
+        adv_frame = Frame(Nroot)
+        v = StringVar(adv_frame, '1')
+        gen_val = {'man': '1', 'woman': '2'}
+        for (text, value) in gen_val.items():
+            row_num = 6
+            Radiobutton(adv_frame, text=text, variable=v,
+                        value=value).grid()
+            row_num += 1
+        # gender = Radiobutton()
+
+    Nroot = Toplevel()
+    bs_frame = Frame(Nroot)
+    random_name = names.get_full_name()
+    text = Label(Nroot, text='random name that generated:')
+    name = Label(Nroot, text=random_name)
+    enter = Button(Nroot, text='submit', command=button)
+    reroll = Button(Nroot, text='re-roll', command=roll)
+    adv_options = Button(Nroot, text='advance options', command=adv_option, state=DISABLED)
+    text.grid(row=1)
+    name.grid(row=2)
+    enter.grid(row=3)
+    reroll.grid(row=4)
+    adv_options.grid(row=5)
 
 
 def translate():
