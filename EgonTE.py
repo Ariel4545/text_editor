@@ -1,3 +1,4 @@
+import random
 from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialog
 from tkinter import *
 from tkinter.tix import *
@@ -13,6 +14,7 @@ from datetime import datetime
 from webbrowser import open as open_
 import names
 from googletrans import Translator  # req version 3.1.0a0
+from math import ceil
 
 root = Tk()
 width = 1250
@@ -510,6 +512,7 @@ def ins_calc():
             equation = eval(equation)
         except:
             messagebox.showerror('error', 'didn\'t type valid characters')
+        equation = str(equation) + ' '
         EgonTE.insert(get_pos(), equation)
         Croot.destroy()
 
@@ -519,7 +522,7 @@ def ins_calc():
         show_op.config(text='hide operations', command=hide_oper)
         add_sub = Label(Croot, text='+ addition, - subtraction')
         mul_div = Label(Croot, text='* multiply, / deviation')
-        pow_ = Label(Croot, text='** power')
+        pow_ = Label(Croot, text='** power, % modulus')
         add_sub.grid(row=4)
         mul_div.grid(row=5)
         pow_.grid(row=6)
@@ -536,7 +539,7 @@ def ins_calc():
     Croot.geometry('150x90')
     introduction_text = Label(Croot, text='Enter equation below:')
     enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
-    Ce = Entry(Croot, relief=FLAT, justify='center')
+    Ce = Entry(Croot, relief=RIDGE, justify='center')
     show_op = Button(Croot, text='Show operators', relief=FLAT, command=show_oper)
     introduction_text.grid(row=0)
     Ce.grid(row=1)
@@ -545,11 +548,11 @@ def ins_calc():
 
 
 def dt():
-    EgonTE.insert(get_pos(), get_time())
+    EgonTE.insert(get_pos(), get_time() + ' ')
 
 
 def ins_random():
-    def enter_button():
+    def enter_button_custom():
         global num_1, num_2
         try:
             try:
@@ -558,24 +561,41 @@ def ins_random():
             except ValueError:
                 messagebox.showerror('error', 'didn\'t type valid characters')
             rand = randint(num_1, num_2)
+            rand = str(rand) + ' '
             EgonTE.insert(get_pos(), rand)
-            Croot.destroy()
         except NameError:
             pass
+
+    def enter_button_quick_float():
+        random_float = str(random.random()) + ' '
+        EgonTE.insert(get_pos(), random_float)
+
+    def enter_button_quick_int():
+        random_float = random.random()
+        random_exp = len(str(random_float))
+        random_round = random.randint(50, 1000)
+        random_int = int(random_float * 10 ** random_exp)
+        random_int //= random_round
+        random_int = str(random_int) + ' '
+        EgonTE.insert(get_pos(), random_int)
 
     Croot = Toplevel()
     Croot.resizable(False, False)
     Croot.geometry('300x100')
     introduction_text = Label(Croot, text='Enter numbers below:', justify='center')
-    enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
-    Ce1 = Entry(Croot, relief=FLAT, justify='center')
-    Ce2 = Entry(Croot, relief=FLAT, justify='center')
+    sub_c = Button(Croot, text='submit custom', command=enter_button_custom, relief=FLAT)
+    sub_qf = Button(Croot, text='submit quick float', command=enter_button_quick_float, relief=FLAT)
+    sub_qi = Button(Croot, text='submit quick int', command=enter_button_quick_int, relief=FLAT)
+    Ce1 = Entry(Croot, relief=RIDGE, justify='center')
+    Ce2 = Entry(Croot, relief=RIDGE, justify='center')
     bt_text = Label(Croot, text='<->')
     introduction_text.grid(row=0, columnspan=1)
     Ce1.grid(row=1, column=0, columnspan=2)
-    bt_text.grid(row=1, column=1, )
+    bt_text.grid(row=1, column=1)
     Ce2.grid(row=1, column=2)
-    enter.grid(row=2, column=0, columnspan=1)
+    sub_c.grid(row=2, column=0, columnspan=1)
+    sub_qf.grid(row=3, column=0, columnspan=2)
+    sub_qi.grid(row=3, column=1, columnspan=2)
 
 
 def copy_file_path():
@@ -597,34 +617,70 @@ def custom_cursor():
 
 # still W.I.P
 def ins_random_name():
+    global random_name
+
     def button():
         global random_name
         EgonTE.insert(get_pos(), random_name)
 
-    def roll():
+    def roll(event):
         global random_name
-        random_name = names.get_full_name()
+        if event == 'simple':
+            random_name = names.get_full_name()
+        elif event == 'advance':
+            random_name = adv_random_name()
         name.config(text=random_name)
+        return random_name
 
+    # UI
     def adv_option():
+        global gender, types
         adv_frame = Frame(Nroot)
-        v = StringVar(adv_frame, '1')
-        gen_val = {'man': '1', 'woman': '2'}
-        for (text, value) in gen_val.items():
-            row_num = 6
-            Radiobutton(adv_frame, text=text, variable=v,
-                        value=value).grid()
-            row_num += 1
-        # gender = Radiobutton()
+        t = StringVar()
+        g = StringVar()
+        gender = ttk.Combobox(Nroot, width=13, textvariable=g, state='readonly', font=('arial', 10, 'bold'), )
+        gender['values'] = ('Male', 'Female')
+        types = ttk.Combobox(Nroot, width=13, textvariable=t, state='readonly', font=('arial', 10, 'bold'), )
+        types['values'] = ('Full Name', 'First Name', 'Last Name')
+        gender.grid(row=6, column=0)
+        types.grid(row=7, column=0)
+        adv_options.grid_forget()
+
+    # mechanical function
+    def adv_random_name():
+        global gender, types
+        reroll.config(command=lambda: roll('advance'))
+        Gender = gender.get()
+        Type = types.get()
+        if Gender == 'Male' and Type == "Full Name":
+            random_name = names.get_full_name(gender="male")
+            return random_name
+        elif Gender == 'Male' and Type == "First Name":
+            random_name = names.get_first_name()
+            return random_name
+        elif Gender == 'Male' and Type == "Last Name":
+            random_name = names.get_last_name()
+            return random_name
+
+        elif Gender == 'Female' and Type == "Full Name":
+            random_name = names.get_full_name(gender="female")
+            return random_name
+        elif Gender == 'Female' and Type == "First Name":
+            random_name = names.get_first_name()
+            return random_name
+        elif Gender == 'Female' and Type == "Last Name":
+            random_name = names.get_last_name()
+            return random_name
 
     Nroot = Toplevel()
+    Nroot.resizable(False, False)
     bs_frame = Frame(Nroot)
     random_name = names.get_full_name()
-    text = Label(Nroot, text='random name that generated:')
+    text = Label(Nroot, text='random random_name that generated:')
     name = Label(Nroot, text=random_name)
     enter = Button(Nroot, text='submit', command=button)
-    reroll = Button(Nroot, text='re-roll', command=roll)
-    adv_options = Button(Nroot, text='advance options', command=adv_option, state=DISABLED)
+    reroll = Button(Nroot, text='re-roll', command=lambda: roll('simple'))
+    adv_options = Button(Nroot, text='advance options', command=adv_option)
     text.grid(row=1)
     name.grid(row=2)
     enter.grid(row=3)
