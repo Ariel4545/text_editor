@@ -14,7 +14,6 @@ from datetime import datetime
 from webbrowser import open as open_
 import names
 from googletrans import Translator  # req version 3.1.0a0
-from math import ceil
 
 root = Tk()
 width = 1250
@@ -34,9 +33,10 @@ global open_status_name
 open_status_name = False
 global chosen_font
 global selected
-
+global cc
 text_changed = False
 chosen_font = ('arial', 16)
+
 
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
@@ -298,17 +298,20 @@ def hide_toolbar():
         toolbar_frame.pack_forget()
         show_toolbar = False
     else:
+        # test bout the y/x scroll command
         EgonTE.focus_displayof()
         EgonTE.pack_forget()
         horizontal_scroll.pack_forget()
         text_scroll.pack_forget()
         status_bar.pack_forget()
-        toolbar_frame.pack(fill=X)
+        file_bar.pack_forget()
+        toolbar_frame.pack(fill=X, anchor=W)
         text_scroll.pack(side=RIGHT, fill=Y)
         horizontal_scroll.pack(side=BOTTOM, fill=X)
-        EgonTE.pack(fill=BOTH, expand=True)
+        EgonTE.pack(fill=BOTH, expand=True, side=BOTTOM)
         EgonTE.focus_set()
-        status_bar.pack(side=BOTTOM)
+        status_bar.pack(side=LEFT)
+        file_bar.pack(side=RIGHT)
         show_toolbar = True
 
 
@@ -452,6 +455,7 @@ def read_text(**kwargs):
     engine.stop()
 
 
+# to make the narrator voice more convincing
 def text_formatter(phrase):
     interrogatives = ('how', 'why', 'what', 'when', 'who', 'where', 'is', 'do you', "whom", "whose")
     capitalized = phrase.capitalize()
@@ -607,12 +611,12 @@ def copy_file_path():
 
 def custom_cursor():
     global cc
-    if cc:
+    if not cc:
         EgonTE.config(cursor='tcross')
-        cc = False
+        cc = True
     else:
         EgonTE.config(cursor='arrow')
-        cc = True
+        cc = False
 
 
 # still W.I.P
@@ -621,20 +625,19 @@ def ins_random_name():
 
     def button():
         global random_name
-        EgonTE.insert(get_pos(), random_name)
+        EgonTE.insert(get_pos(), random_name + ' ')
 
     def roll(event):
         global random_name
         if event == 'simple':
             random_name = names.get_full_name()
         elif event == 'advance':
-            random_name = adv_random_name()
+            pass
         name.config(text=random_name)
-        return random_name
 
     # UI
     def adv_option():
-        global gender, types
+        global gender, types, random_name
         adv_frame = Frame(Nroot)
         t = StringVar()
         g = StringVar()
@@ -642,36 +645,43 @@ def ins_random_name():
         gender['values'] = ('Male', 'Female')
         types = ttk.Combobox(Nroot, width=13, textvariable=t, state='readonly', font=('arial', 10, 'bold'), )
         types['values'] = ('Full Name', 'First Name', 'Last Name')
+        # does get to the types
+        print(types['values'], gender['values'])
         gender.grid(row=6, column=0)
         types.grid(row=7, column=0)
         adv_options.grid_forget()
 
-    # mechanical function
-    def adv_random_name():
-        global gender, types
-        reroll.config(command=lambda: roll('advance'))
-        Gender = gender.get()
-        Type = types.get()
-        if Gender == 'Male' and Type == "Full Name":
-            random_name = names.get_full_name(gender="male")
-            return random_name
-        elif Gender == 'Male' and Type == "First Name":
-            random_name = names.get_first_name()
-            return random_name
-        elif Gender == 'Male' and Type == "Last Name":
-            random_name = names.get_last_name()
-            return random_name
+        # mechanical function
+        def adv_random_name():
+            reroll.config(command=lambda: roll('advance'))
+            # not getting into the func! / check more about ['values']
+            Gender = gender.get()
+            Type = types.get()
+            print(Type, Gender)
+            # not getting into the conditions
+            if Gender == 'Male' and Type == "Full Name":
+                random_name = names.get_full_name(gender="male")
+                print(random_name)
+                return random_name
+            elif Gender == 'Male' and Type == "First Name":
+                random_name = names.get_first_name()
+                return random_name
+            elif Gender == 'Male' and Type == "Last Name":
+                random_name = names.get_last_name()
+                return random_name
 
-        elif Gender == 'Female' and Type == "Full Name":
-            random_name = names.get_full_name(gender="female")
-            return random_name
-        elif Gender == 'Female' and Type == "First Name":
-            random_name = names.get_first_name()
-            return random_name
-        elif Gender == 'Female' and Type == "Last Name":
-            random_name = names.get_last_name()
-            return random_name
+            elif Gender == 'Female' and Type == "Full Name":
+                random_name = names.get_full_name(gender="female")
+                return random_name
+            elif Gender == 'Female' and Type == "First Name":
+                random_name = names.get_first_name()
+                return random_name
+            elif Gender == 'Female' and Type == "Last Name":
+                random_name = names.get_last_name()
+                return random_name
 
+        random_name = adv_random_name()
+        print(random_name)
     Nroot = Toplevel()
     Nroot.resizable(False, False)
     bs_frame = Frame(Nroot)
@@ -680,7 +690,7 @@ def ins_random_name():
     name = Label(Nroot, text=random_name)
     enter = Button(Nroot, text='submit', command=button)
     reroll = Button(Nroot, text='re-roll', command=lambda: roll('simple'))
-    adv_options = Button(Nroot, text='advance options', command=adv_option)
+    adv_options = Button(Nroot, text='advance options', command=adv_option, state=DISABLED)
     text.grid(row=1)
     name.grid(row=2)
     enter.grid(row=3)
@@ -734,12 +744,12 @@ def translate():
     button_.grid(row=3)
 
 
-# create toolbar frame
-toolbar_frame = Frame(root)
-toolbar_frame.pack(fill=X)
-# create main frame
 frame = Frame(root)
 frame.pack(pady=5)
+# create toolbar frame
+toolbar_frame = Frame(frame)
+toolbar_frame.pack(fill=X, anchor=W)
+# create main frame
 # Font Box
 font_tuple = font.families()
 font_family = StringVar()
@@ -906,6 +916,7 @@ show_toolbar.set(True)
 night_mode = BooleanVar()
 
 cc = BooleanVar()
+cc.set(True)
 
 # check marks
 options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
@@ -914,8 +925,8 @@ options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
                              variable=show_statusbar, compound=LEFT, command=hide_statusbars)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
-options_menu.add_checkbutton(label="original cursor", onvalue=True, offvalue=False
-                             , compound=LEFT, command=custom_cursor)
+options_menu.add_checkbutton(label="custom cursor", onvalue=True, offvalue=False
+                             , compound=LEFT, command=custom_cursor, variable=cc)
 
 # talk button
 talk_button = Button(toolbar_frame, image=talk_img, relief=FLAT,
