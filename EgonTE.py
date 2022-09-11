@@ -18,13 +18,14 @@ from googletrans import Translator  # req version 3.1.0a0
 root = Tk()
 width = 1250
 height = 830
-screen_width = root.winfo_width()
-screen_height = root.winfo_height()
-placement_x = abs((screen_width // 2) - (width // 2))
-placement_y = abs((screen_height // 2) - (height // 2))
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+placement_x = ((screen_width // 2) - (width // 2))
+placement_y = ((screen_height // 2) - (height // 2))
 root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
 root.title('Egon Text editor')
 root.resizable(False, False)
+
 
 logo = PhotoImage(file='ETE_icon.png')
 root.iconphoto(False, logo)
@@ -36,7 +37,6 @@ global selected
 global cc
 text_changed = False
 chosen_font = ('arial', 16)
-
 
 # icons - size=32x32
 bold_img = PhotoImage(file='assets/bold.png')
@@ -285,33 +285,34 @@ def hide_statusbars():
     if show_statusbar:
         status_bar.pack_forget()
         file_bar.pack_forget()
+        root.geometry(f'{width}x{height - 10}')
         show_statusbar = False
     else:
         status_bar.pack(side=LEFT)
         file_bar.pack(side=RIGHT)
+        root.geometry(f'{width}x{height}')
         show_statusbar = True
 
 
 def hide_toolbar():
-    global show_toolbar
+    global show_toolbar, height, width
     if show_toolbar:
         toolbar_frame.pack_forget()
+        height = 770
+        root.geometry(f'{width}x{height}')
         show_toolbar = False
     else:
-        # test bout the y/x scroll command
         EgonTE.focus_displayof()
         EgonTE.pack_forget()
         horizontal_scroll.pack_forget()
         text_scroll.pack_forget()
-        status_bar.pack_forget()
-        file_bar.pack_forget()
         toolbar_frame.pack(fill=X, anchor=W)
         text_scroll.pack(side=RIGHT, fill=Y)
         horizontal_scroll.pack(side=BOTTOM, fill=X)
         EgonTE.pack(fill=BOTH, expand=True, side=BOTTOM)
         EgonTE.focus_set()
-        status_bar.pack(side=LEFT)
-        file_bar.pack(side=RIGHT)
+        height = 805
+        root.geometry(f'{width}x{height}')
         show_toolbar = True
 
 
@@ -343,8 +344,8 @@ def night():
         edit_menu.config(bg=second_color, fg=_text_color)
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
-        text_scroll.config(bg=second_color)
-        horizontal_scroll.config(bg=second_color)
+        font_box.config(foreground=_text_color)
+        font_size.config(foreground=_text_color)
         night_mode = False
     else:
         main_color = 'SystemButtonFace'
@@ -370,7 +371,8 @@ def night():
         edit_menu.config(bg=second_color, fg=_text_color)
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
-
+        font_box.config(foreground=_text_color)
+        font_size.config(foreground=_text_color)
         night_mode = True
 
 
@@ -619,6 +621,18 @@ def custom_cursor():
         cc = False
 
 
+def custom_style():
+    global cs
+    if not cs:
+        style.theme_use('clam')
+        EgonTE.config(relief=RIDGE)
+        cs = True
+    else:
+        style.theme_use('vista')
+        EgonTE.config(relief=FLAT)
+        cs = False
+
+
 # still W.I.P
 def ins_random_name():
     global random_name
@@ -682,6 +696,7 @@ def ins_random_name():
 
         random_name = adv_random_name()
         print(random_name)
+
     Nroot = Toplevel()
     Nroot.resizable(False, False)
     bs_frame = Frame(Nroot)
@@ -744,6 +759,9 @@ def translate():
     button_.grid(row=3)
 
 
+# classic styled
+style = ttk.Style()
+style.theme_use('clam')
 frame = Frame(root)
 frame.pack(pady=5)
 # create toolbar frame
@@ -765,18 +783,18 @@ font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="r
 font_size["values"] = tuple(range(8, 80, 2))
 font_size.current(4)  # 16 is at index 5
 font_size.grid(row=0, column=5, padx=5)
-# create scrollbar for the EgonTE box+
-text_scroll = Scrollbar(frame)
+# create scrollbar for the EgonTE box
+text_scroll = ttk.Scrollbar(frame)
 text_scroll.pack(side=RIGHT, fill=Y)
 # horizontal scrollbar
-horizontal_scroll = Scrollbar(frame, orient='horizontal')
+horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
 # create EgonTE box
 # ( chosen font - testing W.I.P )
 EgonTE = Text(frame, width=100, height=30, font=chosen_font, selectbackground='blue',
               selectforeground='white',
               undo=True
-              , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=FLAT, cursor=
+              , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=RIDGE, cursor=
               'tcross')
 EgonTE.focus_set()  # possible problem for the toolbar
 EgonTE.pack(fill=BOTH, expand=True)
@@ -918,6 +936,9 @@ night_mode = BooleanVar()
 cc = BooleanVar()
 cc.set(True)
 
+cs = BooleanVar()
+cs.set(True)
+
 # check marks
 options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
@@ -927,6 +948,9 @@ options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
 options_menu.add_checkbutton(label="custom cursor", onvalue=True, offvalue=False
                              , compound=LEFT, command=custom_cursor, variable=cc)
+
+options_menu.add_checkbutton(label="custom style", onvalue=True, offvalue=False
+                             , compound=LEFT, command=custom_style, variable=cs)
 
 # talk button
 talk_button = Button(toolbar_frame, image=talk_img, relief=FLAT,
