@@ -1,4 +1,3 @@
-import random
 from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialog
 from tkinter import *
 from tkinter.tix import *
@@ -6,8 +5,8 @@ from win32print import GetDefaultPrinter
 from win32api import ShellExecute, GetShortPathName
 import pyttsx3
 from threading import Thread
-import pyaudio
-from random import choice, randint
+import pyaudio  # imported to make speech_recognition work
+from random import choice, randint, random
 from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
 from datetime import datetime
@@ -20,15 +19,14 @@ width = 1250
 height = 830
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
-placement_x = ((screen_width // 2) - (width // 2))
-placement_y = ((screen_height // 2) - (height // 2))
+placement_x = round((screen_width / 2) - (width / 2))
+placement_y = round((screen_height / 2) - (height / 2))
 root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
 root.title('Egon Text editor')
 root.resizable(False, False)
 
-
-logo = PhotoImage(file='ETE_icon.png')
-root.iconphoto(False, logo)
+LOGO = PhotoImage(file='ETE_icon.png')
+root.iconphoto(False, LOGO)
 
 global open_status_name
 open_status_name = False
@@ -39,18 +37,18 @@ text_changed = False
 chosen_font = ('arial', 16)
 
 # icons - size=32x32
-bold_img = PhotoImage(file='assets/bold.png')
-underline_img = PhotoImage(file='assets/underlined-text.png')
-italics_img = PhotoImage(file='assets/italics.png')
-colors_img = PhotoImage(file='assets/edition.png')
-align_left_img = PhotoImage(file='assets/left-align.png')
-align_center_img = PhotoImage(file=f'assets/center-align.png')
-align_right_img = PhotoImage(file='assets/right-align.png')
-tts_img = PhotoImage(file='assets/tts(1).png')
-talk_img = PhotoImage(file="assets/speech-icon-19(1).png")
+BOLD_IMAGE = PhotoImage(file='assets/bold.png')
+UNDERLINE_IMAGE = PhotoImage(file='assets/underlined-text.png')
+ITALICS_IMAGE = PhotoImage(file='assets/italics.png')
+COLORS_IMAGE = PhotoImage(file='assets/edition.png')
+ALIGN_LEFT_IMAGE = PhotoImage(file='assets/left-align.png')
+ALIGN_CENTER_IMAGE = PhotoImage(file=f'assets/center-align.png')
+ALIGN_RIGHT_IMAGE = PhotoImage(file='assets/right-align.png')
+TTS_IMAGE = PhotoImage(file='assets/tts(1).png')
+STT_IMAGE = PhotoImage(file="assets/speech-icon-19(1).png")
 
 # create toll tip, for the toolbar buttons (with shortcuts)
-tip = Balloon(root)
+TOOL_TIP = Balloon(root)
 
 
 # current time for the file bar
@@ -62,7 +60,7 @@ def get_pos():
     return EgonTE.index(INSERT)
 
 
-# open the github page
+# open the GitHub page
 def github():
     open_('https://github.com/Ariel4545/text_editor')
 
@@ -110,7 +108,7 @@ def save_as(event=None):
         if text_file:
             name = text_file
             name = name.replace('C:/EgonTE', '')
-            file_bar.config(text=f'Saved: {(name)} - {get_time()}')
+            file_bar.config(text=f'Saved: {name} - {get_time()}')
 
             text_file = open(text_file, 'w')
             text_file.write(EgonTE.get(1.0, END))
@@ -150,7 +148,7 @@ def cut(x):
 
 
 # copy func
-def copy(x, special_case=(False, None)):
+def copy(x):
     global selected
     if not x:
         selected = root.clipboard_get()
@@ -159,9 +157,6 @@ def copy(x, special_case=(False, None)):
             selected = EgonTE.selection_get()
             root.clipboard_clear()
             root.clipboard_append(selected)
-    # elif special_case == 'file':
-    #     root.clipboard_clear()
-    #     root.clipboard_append(special_case())
 
 
 # paste func
@@ -497,7 +492,8 @@ def exit_app():
     if messagebox.askyesno('Quit', 'Are you wish to exit?'):
         root.quit()
         exit_()
-        quit(1)
+        quit()
+        exit()
 
 
 # find if text exists in the specific file
@@ -506,9 +502,9 @@ def find_text(event=None):
     text_data = EgonTE.get('1.0', END + '-1c')
     occurs = text_data.lower().count(search_text.lower())
     if text_data.lower().count(search_text.lower()):
-        search_label = messagebox.showinfo("Result:", f"{search_text} has {str(occurs)} occurrences")
+        search_label = messagebox.showinfo("EgonTE:", f"{search_text} has {str(occurs)} occurrences")
     else:
-        search_label = messagebox.showinfo("Result:", "No match found")
+        search_label = messagebox.showinfo("EgonTE:", "No match found")
 
 
 def ins_calc():
@@ -573,13 +569,13 @@ def ins_random():
             pass
 
     def enter_button_quick_float():
-        random_float = str(random.random()) + ' '
+        random_float = str(random()) + ' '
         EgonTE.insert(get_pos(), random_float)
 
     def enter_button_quick_int():
-        random_float = random.random()
+        random_float = random()
         random_exp = len(str(random_float))
-        random_round = random.randint(50, 1000)
+        random_round = randint(50, 1000)
         random_int = int(random_float * 10 ** random_exp)
         random_int //= random_round
         random_int = str(random_int) + ' '
@@ -667,7 +663,7 @@ def ins_random_name():
 
         # mechanical function
         def adv_random_name():
-            reroll.config(command=lambda: roll('advance'))
+            re_roll.config(command=lambda: roll('advance'))
             # not getting into the func! / check more about ['values']
             Gender = gender.get()
             Type = types.get()
@@ -701,15 +697,15 @@ def ins_random_name():
     Nroot.resizable(False, False)
     bs_frame = Frame(Nroot)
     random_name = names.get_full_name()
-    text = Label(Nroot, text='random random_name that generated:')
+    text = Label(Nroot, text='Random name that generated:')
     name = Label(Nroot, text=random_name)
-    enter = Button(Nroot, text='submit', command=button)
-    reroll = Button(Nroot, text='re-roll', command=lambda: roll('simple'))
-    adv_options = Button(Nroot, text='advance options', command=adv_option, state=DISABLED)
+    enter = Button(Nroot, text='Submit', command=button)
+    re_roll = Button(Nroot, text='Re-roll', command=lambda: roll('simple'))
+    adv_options = Button(Nroot, text='Advance options', command=adv_option, state=DISABLED)
     text.grid(row=1)
     name.grid(row=2)
     enter.grid(row=3)
-    reroll.grid(row=4)
+    re_roll.grid(row=4)
     adv_options.grid(row=5)
 
 
@@ -719,7 +715,7 @@ def translate():
         cl = choose_langauge.get()
 
         if to_translate == '':
-            messagebox.showerror('error', 'please fill the box')
+            messagebox.showerror('Error', 'Please fill the box')
         else:
             translator = Translator()
             output = translator.translate(to_translate, dest=cl)
@@ -751,7 +747,7 @@ def translate():
     )
 
     t1 = Text(Lroot, width=30, height=10, borderwidth=5, relief=RIDGE)
-    button_ = Button(Lroot, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'), cursor="hand2",
+    button_ = Button(Lroot, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'), cursor='tcross',
                      command=button)
     auto_detect.grid(row=0)
     choose_langauge.grid(row=1)
@@ -767,11 +763,10 @@ frame.pack(pady=5)
 # create toolbar frame
 toolbar_frame = Frame(frame)
 toolbar_frame.pack(fill=X, anchor=W)
-# create main frame
 # Font Box
 font_tuple = font.families()
 font_family = StringVar()
-font_box = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family, state="readonly")
+font_box = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family, state=DISABLED)
 font_box["values"] = font_tuple
 font_box.current(font_tuple.index("Arial"))
 font_box.grid(row=0, column=4, padx=5)
@@ -783,10 +778,10 @@ font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="r
 font_size["values"] = tuple(range(8, 80, 2))
 font_size.current(4)  # 16 is at index 5
 font_size.grid(row=0, column=5, padx=5)
-# create scrollbar for the EgonTE box
+# create vertical scrollbar
 text_scroll = ttk.Scrollbar(frame)
 text_scroll.pack(side=RIGHT, fill=Y)
-# horizontal scrollbar
+# create horizontal scrollbar
 horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
 # create EgonTE box
@@ -796,7 +791,7 @@ EgonTE = Text(frame, width=100, height=30, font=chosen_font, selectbackground='b
               undo=True
               , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=RIDGE, cursor=
               'tcross')
-EgonTE.focus_set()  # possible problem for the toolbar
+EgonTE.focus_set()
 EgonTE.pack(fill=BOTH, expand=True)
 # config scrollbar
 text_scroll.config(command=EgonTE.yview)
@@ -814,7 +809,7 @@ file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
 file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
 file_menu.add_separator()
-file_menu.add_command(label='copy path', command=copy_file_path)
+file_menu.add_command(label='Copy path', command=copy_file_path)
 file_menu.add_separator()
 file_menu.add_command(label='Exit', command=exit_app)
 # edit menu
@@ -831,28 +826,28 @@ edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda
 edit_menu.add_command(label='Clear', accelerator='(ctrl+del)', command=clear)
 edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
-# insert menu
+# tools menu
 tool_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='tools', menu=tool_menu)
 tool_menu.add_command(label='Calculation', command=ins_calc)
-tool_menu.add_command(label='current datetime', command=dt)
-tool_menu.add_command(label='random number', command=ins_random)
-tool_menu.add_command(label='random name', command=ins_random_name)
-tool_menu.add_command(label='translate', command=translate)
+tool_menu.add_command(label='Current datetime', command=dt)
+tool_menu.add_command(label='Random number', command=ins_random)
+tool_menu.add_command(label='Random name', command=ins_random_name)
+tool_menu.add_command(label='Translate', command=translate)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='colors', menu=color_menu)
-color_menu.add_command(label='change selected text', command=text_color)
-color_menu.add_command(label='change all text', command=all_txt_color)
+color_menu.add_command(label='Change selected text', command=text_color)
+color_menu.add_command(label='Change all text', command=all_txt_color)
 color_menu.add_separator()
-color_menu.add_command(label='background', command=bg_color)
-color_menu.add_command(label='highlight', command=hl_color)
+color_menu.add_command(label='Background', command=bg_color)
+color_menu.add_command(label='Highlight', command=hl_color)
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='options', menu=options_menu)
 # github page
 github_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='github', menu=github, command=github)
+menu.add_cascade(label='GitHub', command=github)
 # add status bar to bottom add
 status_bar = Label(root, text='Characters:0 Words:0')
 status_bar.pack(fill=X, side=LEFT, ipady=5)
@@ -895,31 +890,31 @@ root.bind("<<ComboboxSelected>>", change_font)
 root.bind("<<ComboboxSelected>>", change_font_size)
 root.bind("<<Modified>>", status)
 # buttons creation and placement
-bold_button = Button(toolbar_frame, image=bold_img, command=bold, relief=FLAT)
+bold_button = Button(toolbar_frame, image=BOLD_IMAGE, command=bold, relief=FLAT)
 bold_button.grid(row=0, column=0, sticky=W, padx=2)
 
-italics_button = Button(toolbar_frame, image=italics_img, command=italics, relief=FLAT)
+italics_button = Button(toolbar_frame, image=ITALICS_IMAGE, command=italics, relief=FLAT)
 italics_button.grid(row=0, column=1, sticky=W, padx=2)
 
-underline_button = Button(toolbar_frame, image=underline_img, command=underline, relief=FLAT)
+underline_button = Button(toolbar_frame, image=UNDERLINE_IMAGE, command=underline, relief=FLAT)
 underline_button.grid(row=0, column=2, sticky=W, padx=2)
 
-color_button = Button(toolbar_frame, image=colors_img, command=text_color, relief=FLAT)
+color_button = Button(toolbar_frame, image=COLORS_IMAGE, command=text_color, relief=FLAT)
 color_button.grid(row=0, column=3, padx=5)
 
-align_left_button = Button(toolbar_frame, image=align_left_img, relief=FLAT)
+align_left_button = Button(toolbar_frame, image=ALIGN_LEFT_IMAGE, relief=FLAT)
 align_left_button.grid(row=0, column=6, padx=5)
 
 # align center button
-align_center_button = Button(toolbar_frame, image=align_center_img, relief=FLAT)
+align_center_button = Button(toolbar_frame, image=ALIGN_CENTER_IMAGE, relief=FLAT)
 align_center_button.grid(row=0, column=7, padx=5)
 
 # align right button
-align_right_button = Button(toolbar_frame, image=align_right_img, relief=FLAT)
+align_right_button = Button(toolbar_frame, image=ALIGN_RIGHT_IMAGE, relief=FLAT)
 align_right_button.grid(row=0, column=8, padx=5)
 
 # tts button
-tts_button = Button(toolbar_frame, image=tts_img, relief=FLAT,
+tts_button = Button(toolbar_frame, image=TTS_IMAGE, relief=FLAT,
                     command=lambda: Thread(target=text_to_speech).start(),
                     )
 tts_button.grid(row=0, column=9, padx=5)
@@ -940,20 +935,20 @@ cs = BooleanVar()
 cs.set(True)
 
 # check marks
-options_menu.add_checkbutton(label="night mode", onvalue=True, offvalue=False,
+options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
 options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
                              variable=show_statusbar, compound=LEFT, command=hide_statusbars)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
-options_menu.add_checkbutton(label="custom cursor", onvalue=True, offvalue=False
+options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False
                              , compound=LEFT, command=custom_cursor, variable=cc)
 
-options_menu.add_checkbutton(label="custom style", onvalue=True, offvalue=False
+options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False
                              , compound=LEFT, command=custom_style, variable=cs)
 
 # talk button
-talk_button = Button(toolbar_frame, image=talk_img, relief=FLAT,
+talk_button = Button(toolbar_frame, image=STT_IMAGE, relief=FLAT,
                      command=lambda: Thread(target=speech_to_text).start())
 talk_button.grid(row=0, column=10, padx=5)
 
@@ -963,21 +958,22 @@ align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
 
 # opening sentence
-op_msgs = ['hello world!', '^-^', 'what a beautiful day!', 'welcome!', '', 'believe in yourself!',
-           'if I did it you can do way more than that', 'don\'t give up!']
+op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
+           'If I did it you can do way more than that', 'Don\'t give up!',
+           'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback']
 op_msg = choice(op_msgs)
 EgonTE.insert('1.0', op_msg)
 
 # bind and make tooltips
-tip.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
-tip.bind_widget(italics_button, balloonmsg='italics (ctrl+i)')
-tip.bind_widget(color_button, balloonmsg='change colors')
-tip.bind_widget(underline_button, balloonmsg='underline (ctrl+u)')
-tip.bind_widget(align_left_button, balloonmsg='align left (ctrl+l)')
-tip.bind_widget(align_center_button, balloonmsg='align center (ctrl+e)')
-tip.bind_widget(align_right_button, balloonmsg='align right (ctrl+r)')
-tip.bind_widget(tts_button, balloonmsg='text to speach')
-tip.bind_widget(talk_button, balloonmsg='speach to talk')
+TOOL_TIP.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
+TOOL_TIP.bind_widget(italics_button, balloonmsg='Italics (ctrl+i)')
+TOOL_TIP.bind_widget(color_button, balloonmsg='Change colors')
+TOOL_TIP.bind_widget(underline_button, balloonmsg='Underline (ctrl+u)')
+TOOL_TIP.bind_widget(align_left_button, balloonmsg='Align left (ctrl+l)')
+TOOL_TIP.bind_widget(align_center_button, balloonmsg='Align center (ctrl+e)')
+TOOL_TIP.bind_widget(align_right_button, balloonmsg='Align right (ctrl+r)')
+TOOL_TIP.bind_widget(tts_button, balloonmsg='Text to speach')
+TOOL_TIP.bind_widget(talk_button, balloonmsg='Speach to talk')
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
