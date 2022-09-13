@@ -14,6 +14,7 @@ from webbrowser import open as open_
 import names
 from googletrans import Translator  # req version 3.1.0a0
 
+# window creation
 root = Tk()
 width = 1250
 height = 830
@@ -25,15 +26,20 @@ root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
 root.title('Egon Text editor')
 root.resizable(False, False)
 
+# add and use logo
 LOGO = PhotoImage(file='ETE_icon.png')
 root.iconphoto(False, LOGO)
 
+# basic settings for the code
 global open_status_name
 open_status_name = False
 global chosen_font
 global selected
 global cc
 text_changed = False
+global random_name, types, gender
+global file_name
+global engine, tts
 chosen_font = ('arial', 16)
 
 # icons - size=32x32
@@ -80,18 +86,18 @@ def new_file(event=None):
 
 # open file func
 def open_file(event=None):
-    global name
+    global file_name
     EgonTE.delete("1.0", END)
-    text_file = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
-                                           , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-                                                        ('Python Files', '*.py')))
+    text_file = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file',
+                                           filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
+                                                      ('Python Files', '*.py')))
     if text_file:
         global open_status_name
         open_status_name = text_file
-    name = text_file
-    file_bar.config(text=f'Opened file: {GetShortPathName(name)}')
-    name.replace('C:/EgonTE/', '')
-    name.replace('C:/users', '')
+    file_name = text_file
+    file_bar.config(text=f'Opened file: {GetShortPathName(file_name)}')
+    file_name.replace('C:/EgonTE/', '')
+    file_name.replace('C:/users', '')
     text_file = open(text_file, 'r')
     stuff = text_file.read()
     EgonTE.insert(END, stuff)
@@ -100,34 +106,34 @@ def open_file(event=None):
 
 # save as func
 def save_as(event=None):
-    global name
+    global file_name
     if event == None:
         text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
                                                  filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                             ('Python Files', '*.py')))
         if text_file:
-            name = text_file
-            name = name.replace('C:/EgonTE', '')
-            file_bar.config(text=f'Saved: {name} - {get_time()}')
+            file_name = text_file
+            file_name = file_name.replace('C:/EgonTE', '')
+            file_bar.config(text=f'Saved: {file_name} - {get_time()}')
 
             text_file = open(text_file, 'w')
             text_file.write(EgonTE.get(1.0, END))
             text_file.close()
     if event == 'get name':
         try:
-            return name
+            return file_name
         except NameError:
             messagebox.showerror('error', 'You cant copy a file name if you doesn\'t use a file ')
 
 
 # save func
 def save(event=None):
-    global open_status_name, name
+    global open_status_name, file_name
     if open_status_name:
         text_file = open(open_status_name, 'w')
         text_file.write(EgonTE.get(1.0, END))
         text_file.close()
-        file_bar.config(text=f'Saved: {(name)} - {get_time()}')
+        file_bar.config(text=f'Saved: {file_name} - {get_time()}')
     else:
         save_as(None)
 
@@ -228,7 +234,7 @@ def text_color():
 
             else:
                 EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
-        except:
+        except EXCEPTION:
             messagebox.showerror('error', 'didn\'t selected text')
 
 
@@ -256,9 +262,9 @@ def hl_color():
 # print file func
 def print_file(event=None):
     printer_name = GetDefaultPrinter()
-    file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file'
-                                        , filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-                                                     ('Python Files', '*.py')))
+    file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file',
+                                        filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
+                                        ('Python Files', '*.py')))
     if file2p:
         if messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
             ShellExecute(0, 'print', file2p, None, '.', 0)
@@ -289,6 +295,7 @@ def hide_statusbars():
         show_statusbar = True
 
 
+#  hide tool bar func
 def hide_toolbar():
     global show_toolbar, height, width
     if show_toolbar:
@@ -433,6 +440,7 @@ def status(event=None):
     EgonTE.edit_modified(False)
 
 
+# AI narrator will read the selected text from the text box
 def text_to_speech():
     global tts
     tts = pyttsx3.init()
@@ -441,7 +449,9 @@ def text_to_speech():
     tts.runAndWait()
 
 
+# AI narrator will read the given text for other functions
 def read_text(**kwargs):
+    global engine
     engine = pyttsx3.init()
     if 'text' in kwargs:
         ttr = kwargs['text']
@@ -462,6 +472,7 @@ def text_formatter(phrase):
         return f'{capitalized}.'
 
 
+# advanced speech to text function
 def speech_to_text():
     error_sentences = ['I don\'t know what you mean!', 'can you say that again?', 'please speak more clear']
     error_sentence = choice(error_sentences)
@@ -507,59 +518,62 @@ def find_text(event=None):
         search_label = messagebox.showinfo("EgonTE:", "No match found")
 
 
+# insert mathematics calculation to the text box
 def ins_calc():
     def enter_button():
-        equation = Ce.get()
+        equation = clac_entry.get()
         try:
             equation = eval(equation)
-        except:
+        except EXCEPTION:
             messagebox.showerror('error', 'didn\'t type valid characters')
         equation = str(equation) + ' '
         EgonTE.insert(get_pos(), equation)
-        Croot.destroy()
+        clac_root.destroy()
 
     def show_oper():
         global add_sub, mul_div, pow_
-        Croot.geometry('150x155')
+        clac_root.geometry('150x155')
         show_op.config(text='hide operations', command=hide_oper)
-        add_sub = Label(Croot, text='+ addition, - subtraction')
-        mul_div = Label(Croot, text='* multiply, / deviation')
-        pow_ = Label(Croot, text='** power, % modulus')
+        add_sub = Label(clac_root, text='+ addition, - subtraction')
+        mul_div = Label(clac_root, text='* multiply, / deviation')
+        pow_ = Label(clac_root, text='** power, % modulus')
         add_sub.grid(row=4)
         mul_div.grid(row=5)
         pow_.grid(row=6)
 
     def hide_oper():
-        Croot.geometry('150x90')
+        clac_root.geometry('150x90')
         add_sub.grid_forget()
         mul_div.grid_forget()
         pow_.grid_forget()
         show_op.config(text='show operations', command=show_oper)
 
-    Croot = Toplevel(relief=FLAT)
-    Croot.resizable(False, False)
-    Croot.geometry('150x90')
-    introduction_text = Label(Croot, text='Enter equation below:')
-    enter = Button(Croot, text='Enter', command=enter_button, relief=FLAT)
-    Ce = Entry(Croot, relief=RIDGE, justify='center')
-    show_op = Button(Croot, text='Show operators', relief=FLAT, command=show_oper)
+    clac_root = Toplevel(relief=FLAT)
+    clac_root.resizable(False, False)
+    clac_root.geometry('150x90')
+    introduction_text = Label(clac_root, text='Enter equation below:')
+    enter = Button(clac_root, text='Enter', command=enter_button, relief=FLAT)
+    clac_entry = Entry(clac_root, relief=RIDGE, justify='center')
+    show_op = Button(clac_root, text='Show operators', relief=FLAT, command=show_oper)
     introduction_text.grid(row=0)
-    Ce.grid(row=1)
+    clac_entry.grid(row=1)
     enter.grid(row=2)
     show_op.grid(row=3)
 
 
+# insert the current date & time to the text box
 def dt():
     EgonTE.insert(get_pos(), get_time() + ' ')
 
 
+# insert a randon number to the text box
 def ins_random():
     def enter_button_custom():
         global num_1, num_2
         try:
             try:
-                num_1 = int(Ce1.get())
-                num_2 = int(Ce2.get())
+                num_1 = int(number_entry1.get())
+                num_2 = int(number_entry2.get())
             except ValueError:
                 messagebox.showerror('error', 'didn\'t type valid characters')
             rand = randint(num_1, num_2)
@@ -581,20 +595,20 @@ def ins_random():
         random_int = str(random_int) + ' '
         EgonTE.insert(get_pos(), random_int)
 
-    Croot = Toplevel()
-    Croot.resizable(False, False)
-    Croot.geometry('300x100')
-    introduction_text = Label(Croot, text='Enter numbers below:', justify='center')
-    sub_c = Button(Croot, text='submit custom', command=enter_button_custom, relief=FLAT)
-    sub_qf = Button(Croot, text='submit quick float', command=enter_button_quick_float, relief=FLAT)
-    sub_qi = Button(Croot, text='submit quick int', command=enter_button_quick_int, relief=FLAT)
-    Ce1 = Entry(Croot, relief=RIDGE, justify='center')
-    Ce2 = Entry(Croot, relief=RIDGE, justify='center')
-    bt_text = Label(Croot, text='<->')
+    ran_num_root = Toplevel()
+    ran_num_root.resizable(False, False)
+    ran_num_root.geometry('300x100')
+    introduction_text = Label(ran_num_root, text='Enter numbers below:', justify='center')
+    sub_c = Button(ran_num_root, text='submit custom', command=enter_button_custom, relief=FLAT)
+    sub_qf = Button(ran_num_root, text='submit quick float', command=enter_button_quick_float, relief=FLAT)
+    sub_qi = Button(ran_num_root, text='submit quick int', command=enter_button_quick_int, relief=FLAT)
+    number_entry1 = Entry(ran_num_root, relief=RIDGE, justify='center')
+    number_entry2 = Entry(ran_num_root, relief=RIDGE, justify='center')
+    bt_text = Label(ran_num_root, text='<->')
     introduction_text.grid(row=0, columnspan=1)
-    Ce1.grid(row=1, column=0, columnspan=2)
+    number_entry1.grid(row=1, column=0, columnspan=2)
     bt_text.grid(row=1, column=1)
-    Ce2.grid(row=1, column=2)
+    number_entry2.grid(row=1, column=2)
     sub_c.grid(row=2, column=0, columnspan=1)
     sub_qf.grid(row=3, column=0, columnspan=2)
     sub_qi.grid(row=3, column=1, columnspan=2)
@@ -602,11 +616,12 @@ def ins_random():
 
 def copy_file_path():
     # global selected
-    file_name = save_as(event='get name')
+    file_name_ = save_as(event='get name')
     root.clipboard_clear()
-    root.clipboard_append(file_name)
+    root.clipboard_append(file_name_)
 
 
+# change between the default and custom cursor
 def custom_cursor():
     global cc
     if not cc:
@@ -617,6 +632,7 @@ def custom_cursor():
         cc = False
 
 
+# change between the default and custom style
 def custom_style():
     global cs
     if not cs:
@@ -633,77 +649,70 @@ def custom_style():
 def ins_random_name():
     global random_name
 
+    # insert the random name into the text box
     def button():
         global random_name
         EgonTE.insert(get_pos(), random_name + ' ')
 
-    def roll(event):
+    # basic name roll
+    def roll():
         global random_name
-        if event == 'simple':
-            random_name = names.get_full_name()
-        elif event == 'advance':
-            pass
-        name.config(text=random_name)
+        random_name = names.get_full_name()
+        rand_name.config(text=random_name)
 
-    # UI
+    # UI & values
     def adv_option():
-        global gender, types, random_name
-        adv_frame = Frame(Nroot)
-        t = StringVar()
-        g = StringVar()
-        gender = ttk.Combobox(Nroot, width=13, textvariable=g, state='readonly', font=('arial', 10, 'bold'), )
+        global gender, types
+        type_string = StringVar()
+        gender_string = StringVar()
+        gender = ttk.Combobox(name_root, width=13, textvariable=gender_string, state='readonly',
+                              font=('arial', 10, 'bold'), )
+        types = ttk.Combobox(name_root, width=13, textvariable=type_string, state='readonly',
+                             font=('arial', 10, 'bold'), )
         gender['values'] = ('Male', 'Female')
-        types = ttk.Combobox(Nroot, width=13, textvariable=t, state='readonly', font=('arial', 10, 'bold'), )
         types['values'] = ('Full Name', 'First Name', 'Last Name')
-        # does get to the types
         print(types['values'], gender['values'])
         gender.grid(row=6, column=0)
         types.grid(row=7, column=0)
         adv_options.grid_forget()
 
-        # mechanical function
+        # advance name roll
         def adv_random_name():
-            re_roll.config(command=lambda: roll('advance'))
-            # not getting into the func! / check more about ['values']
-            Gender = gender.get()
-            Type = types.get()
-            print(Type, Gender)
-            # not getting into the conditions
-            if Gender == 'Male' and Type == "Full Name":
+            global random_name
+            gender_value = gender.get()
+            type_value = types.get()
+            if gender_value == 'Male' and type_value == "Full Name":
                 random_name = names.get_full_name(gender="male")
-                print(random_name)
-                return random_name
-            elif Gender == 'Male' and Type == "First Name":
+                rand_name.config(text=random_name)
+            elif gender_value == 'Male' and type_value == "First Name":
                 random_name = names.get_first_name()
-                return random_name
-            elif Gender == 'Male' and Type == "Last Name":
+                rand_name.config(text=random_name)
+            elif gender_value == 'Male' and type_value == "Last Name":
                 random_name = names.get_last_name()
-                return random_name
+                rand_name.config(text=random_name)
 
-            elif Gender == 'Female' and Type == "Full Name":
+            elif gender_value == 'Female' and type_value == "Full Name":
                 random_name = names.get_full_name(gender="female")
-                return random_name
-            elif Gender == 'Female' and Type == "First Name":
+                rand_name.config(text=random_name)
+            elif gender_value == 'Female' and type_value == "First Name":
                 random_name = names.get_first_name()
-                return random_name
-            elif Gender == 'Female' and Type == "Last Name":
+                rand_name.config(text=random_name)
+            elif gender_value == 'Female' and type_value == "Last Name":
                 random_name = names.get_last_name()
-                return random_name
+                rand_name.config(text=random_name)
 
-        random_name = adv_random_name()
-        print(random_name)
+        re_roll.config(command=adv_random_name)
 
-    Nroot = Toplevel()
-    Nroot.resizable(False, False)
-    bs_frame = Frame(Nroot)
+    name_root = Toplevel()
+    name_root.resizable(False, False)
     random_name = names.get_full_name()
-    text = Label(Nroot, text='Random name that generated:')
-    name = Label(Nroot, text=random_name)
-    enter = Button(Nroot, text='Submit', command=button)
-    re_roll = Button(Nroot, text='Re-roll', command=lambda: roll('simple'))
-    adv_options = Button(Nroot, text='Advance options', command=adv_option, state=DISABLED)
+    text = Label(name_root, text='Random name that generated:')
+    rand_name = Label(name_root, text=random_name)
+    enter = Button(name_root, text='Submit', command=button)
+    re_roll = Button(name_root, text='Re-roll', command=roll)
+    adv_options = Button(name_root, text='Advance options', command=adv_option, state=ACTIVE)
     text.grid(row=1)
-    name.grid(row=2)
+    rand_name.grid(row=2)
     enter.grid(row=3)
     re_roll.grid(row=4)
     adv_options.grid(row=5)
@@ -711,7 +720,7 @@ def ins_random_name():
 
 def translate():
     def button():
-        to_translate = t1.get("1.0", "end-1c")
+        to_translate = translate_box.get("1.0", "end-1c")
         cl = choose_langauge.get()
 
         if to_translate == '':
@@ -721,17 +730,24 @@ def translate():
             output = translator.translate(to_translate, dest=cl)
             EgonTE.insert(get_pos(), output.text)
 
-    Lroot = Toplevel()
-    Lroot.geometry('252x246')
-    Lroot.resizable(False, False)
-    a = StringVar()
-    auto_detect = ttk.Combobox(Lroot, width=20, textvariable=a, state='readonly', font=('arial', 10, 'bold'), )
+    # window
+    translate_root = Toplevel()
+    translate_root.geometry('252x246')
+    translate_root.resizable(False, False)
+    # string variables
+    auto_detect_string = StringVar()
+    languages = StringVar()
+    # combo box
+    auto_detect = ttk.Combobox(translate_root, width=20, textvariable=auto_detect_string, state='readonly',
+                               font=('arial', 10, 'bold'), )
 
+    choose_langauge = ttk.Combobox(translate_root, width=20, textvariable=languages, state='readonly',
+                                   font=('arial', 10, 'bold'))
+    # combo box values
     auto_detect['values'] = (
         'Auto Detect',
     )
-    l = StringVar()
-    choose_langauge = ttk.Combobox(Lroot, width=20, textvariable=l, state='readonly', font=('arial', 10, 'bold'))
+
     choose_langauge['values'] = (
         'Afrikaans', 'Albanian', 'Arabic', 'Armenian', ' Azerbaijani', 'Basque', 'Belarusian', 'Bengali', 'Bosnian',
         'Bulgarian', ' Catalan', 'Cebuano', 'Chichewa', 'Chinese', 'Corsican', 'Croatian', ' Czech', 'Danish', 'Dutch',
@@ -745,17 +761,19 @@ def translate():
         'Sundanese', 'Swahili', 'Swedish', 'Tajik', 'Tamil', 'Tatar', 'Telugu', 'Thai', 'Turkish', 'Turkmen',
         'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa''Yiddish', 'Yoruba', 'Zulu',
     )
-
-    t1 = Text(Lroot, width=30, height=10, borderwidth=5, relief=RIDGE)
-    button_ = Button(Lroot, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'), cursor='tcross',
+    # translate box & button
+    translate_box = Text(translate_root, width=30, height=10, borderwidth=5, relief=RIDGE)
+    button_ = Button(translate_root, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'),
+                     cursor='tcross',
                      command=button)
+    # placing the objects in the window
     auto_detect.grid(row=0)
     choose_langauge.grid(row=1)
-    t1.grid(row=2)
+    translate_box.grid(row=2)
     button_.grid(row=3)
 
 
-# classic styled
+# add custom style
 style = ttk.Style()
 style.theme_use('clam')
 frame = Frame(root)
@@ -784,13 +802,13 @@ text_scroll.pack(side=RIGHT, fill=Y)
 # create horizontal scrollbar
 horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
 horizontal_scroll.pack(side=BOTTOM, fill=X)
-# create EgonTE box
-# ( chosen font - testing W.I.P )
+# create text box
+# ( chosen font -  W.I.P )
 EgonTE = Text(frame, width=100, height=30, font=chosen_font, selectbackground='blue',
               selectforeground='white',
-              undo=True
-              , yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=RIDGE, cursor=
-              'tcross')
+              undo=True,
+              yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=RIDGE,
+              cursor='tcross')
 EgonTE.focus_set()
 EgonTE.pack(fill=BOTH, expand=True)
 # config scrollbar
@@ -828,7 +846,7 @@ edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
 # tools menu
 tool_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='tools', menu=tool_menu)
+menu.add_cascade(label='Tools', menu=tool_menu)
 tool_menu.add_command(label='Calculation', command=ins_calc)
 tool_menu.add_command(label='Current datetime', command=dt)
 tool_menu.add_command(label='Random number', command=ins_random)
@@ -836,7 +854,7 @@ tool_menu.add_command(label='Random name', command=ins_random_name)
 tool_menu.add_command(label='Translate', command=translate)
 # color menu
 color_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='colors', menu=color_menu)
+menu.add_cascade(label='Colors', menu=color_menu)
 color_menu.add_command(label='Change selected text', command=text_color)
 color_menu.add_command(label='Change all text', command=all_txt_color)
 color_menu.add_separator()
@@ -844,17 +862,17 @@ color_menu.add_command(label='Background', command=bg_color)
 color_menu.add_command(label='Highlight', command=hl_color)
 # options menu
 options_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='options', menu=options_menu)
+menu.add_cascade(label='Options', menu=options_menu)
 # github page
 github_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='GitHub', command=github)
-# add status bar to bottom add
+# add status bar
 status_bar = Label(root, text='Characters:0 Words:0')
 status_bar.pack(fill=X, side=LEFT, ipady=5)
 # add file bar
 file_bar = Label(root, text='')
 file_bar.pack(fill=X, side=RIGHT, ipady=5)
-# edit keybindings
+# add shortcuts
 root.bind("<Control-o>", open_file)
 root.bind("<Control-O>", open_file)
 root.bind('<Control-Key-x>', cut)
@@ -886,9 +904,10 @@ root.bind('<Control-Key-N>', new_file)
 root.bind('<Control-Key-Delete>', clear)
 root.bind('<Control-Key-f>', find_text)
 root.bind('<Control-Key-F>', find_text)
-root.bind("<<ComboboxSelected>>", change_font)
-root.bind("<<ComboboxSelected>>", change_font_size)
-root.bind("<<Modified>>", status)
+# special events
+root.bind('<<ComboboxSelected>>', change_font)
+root.bind('<<ComboboxSelected>>', change_font_size)
+root.bind('<<Modified>>', status)
 # buttons creation and placement
 bold_button = Button(toolbar_frame, image=BOLD_IMAGE, command=bold, relief=FLAT)
 bold_button.grid(row=0, column=0, sticky=W, padx=2)
@@ -934,6 +953,7 @@ cc.set(True)
 cs = BooleanVar()
 cs.set(True)
 
+
 # check marks
 options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
@@ -941,11 +961,12 @@ options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
                              variable=show_statusbar, compound=LEFT, command=hide_statusbars)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
-options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False
-                             , compound=LEFT, command=custom_cursor, variable=cc)
+options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False,
+                             compound=LEFT, command=custom_cursor, variable=cc)
 
-options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False
-                             , compound=LEFT, command=custom_style, variable=cs)
+options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False,
+                             compound=LEFT, command=custom_style, variable=cs)
+
 
 # talk button
 talk_button = Button(toolbar_frame, image=STT_IMAGE, relief=FLAT,
@@ -964,7 +985,7 @@ op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Beli
 op_msg = choice(op_msgs)
 EgonTE.insert('1.0', op_msg)
 
-# bind and make tooltips
+# add tooltips to the buttons
 TOOL_TIP.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
 TOOL_TIP.bind_widget(italics_button, balloonmsg='Italics (ctrl+i)')
 TOOL_TIP.bind_widget(color_button, balloonmsg='Change colors')
