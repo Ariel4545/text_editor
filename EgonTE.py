@@ -13,6 +13,7 @@ from datetime import datetime
 from webbrowser import open as open_
 import names
 from googletrans import Translator  # req version 3.1.0a0
+from pyshorteners import Shortener
 
 # window creation
 root = Tk()
@@ -773,6 +774,29 @@ def translate():
     button_.grid(row=3)
 
 
+def url():
+    # window
+    url_root = Toplevel()
+    url_root.resizable(False, False)
+    # ui components creation & placement
+    url_text = Label(url_root, text='Enter url below:')
+    url_entry = Entry(url_root, relief=GROOVE, width=40)
+    enter = Button(url_root, relief=FLAT, text='Enter')
+    url_text.grid(row=0)
+    url_entry.grid(row=1)
+    enter.grid(row=2)
+
+    def shorter():
+        try:
+            urls = url_entry.get()
+            s = Shortener()
+            short_url = s.tinyurl.short(urls)
+            EgonTE.insert(get_pos(), short_url)
+        except:
+            messagebox.showerror('error', 'Please Paste an  invalid url')
+    enter.config(command=shorter)
+
+
 # add custom style
 style = ttk.Style()
 style.theme_use('clam')
@@ -852,6 +876,7 @@ tool_menu.add_command(label='Current datetime', command=dt)
 tool_menu.add_command(label='Random number', command=ins_random)
 tool_menu.add_command(label='Random name', command=ins_random_name)
 tool_menu.add_command(label='Translate', command=translate)
+tool_menu.add_command(label='Url shorter', command=url)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Colors', menu=color_menu)
