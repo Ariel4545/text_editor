@@ -385,7 +385,7 @@ def change_font(event=None):
     chosen_font = font_family.get()
     # # wb font tuple
     # # config
-    EgonTE.configure(font=chosen_font)
+    EgonTE.config(font=(chosen_font))
     # EgonTE.config(font=sfont)
     # EgonTE.tag_configure('font', font=chosen_font)
     # EgonTE.tag_config(font=(chosen_font, font_size))
@@ -404,6 +404,34 @@ def change_font_size(event=None):
     current_tags = EgonTE.tag_names('1.0')
     if not 'size' in current_tags:
         EgonTE.tag_add('size', '1.0', END)
+
+
+def replace(event=None):
+    # window
+    replace_root = Toplevel()
+    replace_root.resizable(False, False)
+    # ui components
+    replace_text = Label(replace_root, text='Enter the word that you wish to replace')
+    find_input = Entry(replace_root, width=20)
+    replace_input = Entry(replace_root, width=20)
+    by_text = Label(replace_root, text='by')
+    replace_button = Button(replace_root, text='Replace', pady=3)
+    replace_text.grid(row=0, sticky=NSEW, column=0 , columnspan=1)
+    find_input.grid(row=1, column=0)
+    by_text.grid(row=2)
+    replace_input.grid(row=3, column=0)
+    replace_button.grid(row=4, column=0, pady=5)
+
+    # replacing
+    def rep_button():
+        find_ = find_input.get()
+        replace_ = replace_input.get()
+        content = EgonTE.get(1.0, END)
+
+        new_content = content.replace(find_, replace_)
+        EgonTE.delete(1.0, END)
+        EgonTE.insert(1.0, new_content)
+    replace_button.config(command=rep_button)
 
 
 # align Left func
@@ -646,7 +674,6 @@ def custom_style():
         cs = False
 
 
-# still W.I.P
 def ins_random_name():
     global random_name
 
@@ -672,7 +699,6 @@ def ins_random_name():
                              font=('arial', 10, 'bold'), )
         gender['values'] = ('Male', 'Female')
         types['values'] = ('Full Name', 'First Name', 'Last Name')
-        print(types['values'], gender['values'])
         gender.grid(row=6, column=0)
         types.grid(row=7, column=0)
         adv_options.grid_forget()
@@ -808,7 +834,7 @@ toolbar_frame.pack(fill=X, anchor=W)
 # Font Box
 font_tuple = font.families()
 font_family = StringVar()
-font_box = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family, state=DISABLED)
+font_box = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family)
 font_box["values"] = font_tuple
 font_box.current(font_tuple.index("Arial"))
 font_box.grid(row=0, column=4, padx=5)
@@ -868,6 +894,8 @@ edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda
 edit_menu.add_command(label='Clear', accelerator='(ctrl+del)', command=clear)
 edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
+edit_menu.add_separator()
+edit_menu.add_command(label='Replace', command=replace)
 # tools menu
 tool_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Tools', menu=tool_menu)
@@ -929,6 +957,8 @@ root.bind('<Control-Key-N>', new_file)
 root.bind('<Control-Key-Delete>', clear)
 root.bind('<Control-Key-f>', find_text)
 root.bind('<Control-Key-F>', find_text)
+root.bind('<Control-Key-h>', replace)
+root.bind('<Control-Key-H>', replace)
 # special events
 root.bind('<<ComboboxSelected>>', change_font)
 root.bind('<<ComboboxSelected>>', change_font_size)
