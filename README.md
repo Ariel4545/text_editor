@@ -11,9 +11,9 @@
 7. be able to convert speak to text 🎤. 
 8. be able to search text in your document 🔎.
 9. enjoy night mode 🌙.  
-10. amaizing tools - translate, calculate & many more 📩.
-11. change text size 📊.
-12 replace one text by others with a great tool 🔧.
+10. amaizing tools - translate, calculate & many more 📩.  
+11. change text size 📊.  
+12 replace one text by others with a great tool 🔧.  
 
 ## W.I.P ⏳
 1. text font (canceled for the time being).
