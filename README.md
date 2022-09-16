@@ -13,7 +13,7 @@
 9. enjoy night mode 🌙.  
 10. amaizing tools - translate, calculate & many more 📩.  
 11. change text size 📊.  
-12 replace one text by others with a great tool 🔧.  
+12. 12. replace one text by others with a great tool 🔧.
 
 ## W.I.P ⏳
 1. text font (canceled for the time being).
