@@ -6,7 +6,7 @@ from win32api import ShellExecute, GetShortPathName
 import pyttsx3
 from threading import Thread
 import pyaudio  # imported to make speech_recognition work
-from random import choice, randint, random
+from random import choice, randint, random, shuffle
 from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
 from datetime import datetime
@@ -14,6 +14,8 @@ from webbrowser import open as open_
 import names
 from googletrans import Translator  # req version 3.1.0a0
 from pyshorteners import Shortener
+from os import getcwd
+import string
 
 # window creation
 root = Tk()
@@ -34,14 +36,13 @@ root.iconphoto(False, LOGO)
 # basic settings for the code
 global open_status_name
 open_status_name = False
-global chosen_font
 global selected
 global cc
 text_changed = False
 global random_name, types, gender
 global file_name
 global engine, tts
-chosen_font = ('arial', 16)
+text_changed = False
 
 # icons - size=32x32
 BOLD_IMAGE = PhotoImage(file='assets/bold.png')
@@ -78,6 +79,8 @@ def undo():
 
 # create file func
 def new_file(event=None):
+    global file_name
+    file_name = ''
     EgonTE.delete("1.0", END)
     file_bar.config(text='New file')
 
@@ -89,20 +92,22 @@ def new_file(event=None):
 def open_file(event=None):
     global file_name
     EgonTE.delete("1.0", END)
-    text_file = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file',
+    text_file = filedialog.askopenfilename(initialdir=getcwd(), title='Open file',
                                            filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                       ('Python Files', '*.py')))
     if text_file:
         global open_status_name
         open_status_name = text_file
-    file_name = text_file
-    file_bar.config(text=f'Opened file: {GetShortPathName(file_name)}')
-    file_name.replace('C:/EgonTE/', '')
-    file_name.replace('C:/users', '')
-    text_file = open(text_file, 'r')
-    stuff = text_file.read()
-    EgonTE.insert(END, stuff)
-    text_file.close()
+        file_name = text_file
+        file_bar.config(text=f'Opened file: {GetShortPathName(file_name)}')
+        file_name.replace('C:/EgonTE/', '')
+        file_name.replace('C:/users', '')
+        text_file = open(text_file, 'r')
+        stuff = text_file.read()
+        EgonTE.insert(END, stuff)
+        text_file.close()
+    else:
+        messagebox.showerror('error', 'File not found')
 
 
 # save as func
@@ -265,7 +270,7 @@ def print_file(event=None):
     printer_name = GetDefaultPrinter()
     file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file',
                                         filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-                                        ('Python Files', '*.py')))
+                                                   ('Python Files', '*.py')))
     if file2p:
         if messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
             ShellExecute(0, 'print', file2p, None, '.', 0)
@@ -307,11 +312,9 @@ def hide_toolbar():
     else:
         EgonTE.focus_displayof()
         EgonTE.pack_forget()
-        horizontal_scroll.pack_forget()
         text_scroll.pack_forget()
         toolbar_frame.pack(fill=X, anchor=W)
         text_scroll.pack(side=RIGHT, fill=Y)
-        horizontal_scroll.pack(side=BOTTOM, fill=X)
         EgonTE.pack(fill=BOTH, expand=True, side=BOTTOM)
         EgonTE.focus_set()
         height = 805
@@ -347,7 +350,6 @@ def night():
         edit_menu.config(bg=second_color, fg=_text_color)
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
-        font_box.config(foreground=_text_color)
         font_size.config(foreground=_text_color)
         night_mode = False
     else:
@@ -374,21 +376,8 @@ def night():
         edit_menu.config(bg=second_color, fg=_text_color)
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
-        font_box.config(foreground=_text_color)
         font_size.config(foreground=_text_color)
         night_mode = True
-
-
-# WIP
-def change_font(event=None):
-    global chosen_font
-    chosen_font = font_family.get()
-    # # wb font tuple
-    # # config
-    EgonTE.config(font=(chosen_font))
-    # EgonTE.config(font=sfont)
-    # EgonTE.tag_configure('font', font=chosen_font)
-    # EgonTE.tag_config(font=(chosen_font, font_size))
 
 
 # WIP
@@ -416,7 +405,7 @@ def replace(event=None):
     replace_input = Entry(replace_root, width=20)
     by_text = Label(replace_root, text='by')
     replace_button = Button(replace_root, text='Replace', pady=3)
-    replace_text.grid(row=0, sticky=NSEW, column=0 , columnspan=1)
+    replace_text.grid(row=0, sticky=NSEW, column=0, columnspan=1)
     find_input.grid(row=1, column=0)
     by_text.grid(row=2)
     replace_input.grid(row=3, column=0)
@@ -431,6 +420,7 @@ def replace(event=None):
         new_content = content.replace(find_, replace_)
         EgonTE.delete(1.0, END)
         EgonTE.insert(1.0, new_content)
+
     replace_button.config(command=rep_button)
 
 
@@ -527,9 +517,22 @@ def speech_to_text():
     return query
 
 
-# force the app to quit
+# force the app to quit, warn user if file data is about to be lost
 def exit_app():
-    if messagebox.askyesno('Quit', 'Are you wish to exit?'):
+    global text_changed
+    if text_changed:
+        if messagebox.askyesno('Quit', 'Some changes  warn\'t saved, do you wish to save first?'):
+            save()
+            root.quit()
+            exit_()
+            quit()
+            exit()
+        else:
+            root.quit()
+            exit_()
+            quit()
+            exit()
+    else:
         root.quit()
         exit_()
         quit()
@@ -820,8 +823,114 @@ def url():
             EgonTE.insert(get_pos(), short_url)
         except:
             messagebox.showerror('error', 'Please Paste an  invalid url')
+
     enter.config(command=shorter)
 
+
+def font_helvetica():
+    EgonTE.config(font=('Helvetica', 16))
+
+
+def font_courier():
+    EgonTE.config(font=('Courier', 16))
+
+
+def font_times():
+    EgonTE.config(font=('Times', 16))
+
+
+def font_arial():
+    EgonTE.config(font=('Arial', 16))
+
+
+def font_corbel():
+    EgonTE.config(font=('Corbel', 16))
+
+
+def font_modern():
+    EgonTE.config(font=('Modern', 16))
+
+
+def font_marlett():
+    EgonTE.config(font=('Marlett', 16))
+
+
+def font_rod():
+    EgonTE.config(font=('Rod', 16))
+
+
+def font_symbol():
+    EgonTE.config(font=('Symbol', 16))
+
+
+def reverse_characters():
+    content = EgonTE.get(1.0, END)
+    reversed_content = content[::-1]
+    EgonTE.delete(1.0, END)
+    EgonTE.insert(1.0, reversed_content)
+
+
+def reverse_words():
+    content = EgonTE.get(1.0, END)
+    words = content.split()
+    reversed_words = words[::-1]
+    EgonTE.delete(1.0, END)
+    EgonTE.insert(1.0, reversed_words)
+
+
+def join_words():
+    content = EgonTE.get(1.0, END)
+    words = content.split()
+    joined_words = ''.join(words)
+    EgonTE.delete(1.0, END)
+    EgonTE.insert(1.0, joined_words)
+
+
+def lower_upper():
+    content = EgonTE.get(1.0, END)
+    if content == content.upper():
+        content = content.lower()
+    else:
+        content = content.upper()
+    EgonTE.delete(1.0, END)
+    EgonTE.insert(1.0, content)
+
+
+def generate():
+    generate_root = Toplevel()
+    generate_root.resizable(False, False)
+    characters = list(string.ascii_letters + string.digits)
+    intro_text = Label(generate_root, text='this tool will generate a random sequence')
+    length_entry = Entry(generate_root, width=10)
+    sym_button = Button(generate_root, text='symbols')
+    enter_button = Button(generate_root, text='Enter', padx=40)
+    length_text = Label(generate_root, text='length')
+    intro_text.grid(row=0, column=1)
+    length_text.grid(row=1)
+    length_entry.grid(row=2, column=0)
+    sym_button.grid(row=2, column=2, padx=10)
+    enter_button.grid(row=3, column=1,padx=10)
+    sym = False
+
+    def symbols():
+        global sym
+        sym_button.config(text='symbols ✓')
+        sym = True
+    sym_button.config(command=symbols)
+
+    def generate_sequence():
+        global sym
+        length = int(length_entry.get())
+        if sym:
+            sym_char = "!", "@", "#", "$", "%", "^", "&", "*", "(", ")"
+            for character in sym_char:
+                characters.append(character)
+        shuffle(characters)
+        sequence = []
+        for i in range(length):
+            sequence.append(choice(characters))
+        EgonTE.insert(get_pos(), "".join(sequence))
+    enter_button.config(command=generate_sequence)
 
 # add custom style
 style = ttk.Style()
@@ -831,13 +940,6 @@ frame.pack(pady=5)
 # create toolbar frame
 toolbar_frame = Frame(frame)
 toolbar_frame.pack(fill=X, anchor=W)
-# Font Box
-font_tuple = font.families()
-font_family = StringVar()
-font_box = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family)
-font_box["values"] = font_tuple
-font_box.current(font_tuple.index("Arial"))
-font_box.grid(row=0, column=4, padx=5)
 
 # Size Box
 size_var = IntVar()
@@ -849,21 +951,17 @@ font_size.grid(row=0, column=5, padx=5)
 # create vertical scrollbar
 text_scroll = ttk.Scrollbar(frame)
 text_scroll.pack(side=RIGHT, fill=Y)
-# create horizontal scrollbar
-horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
-horizontal_scroll.pack(side=BOTTOM, fill=X)
+
 # create text box
-# ( chosen font -  W.I.P )
-EgonTE = Text(frame, width=100, height=30, font=chosen_font, selectbackground='blue',
+EgonTE = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue',
               selectforeground='white',
               undo=True,
-              yscrollcommand=text_scroll.set, xscrollcommand=horizontal_scroll.set, wrap=WORD, relief=RIDGE,
+              yscrollcommand=text_scroll.set, wrap=WORD, relief=RIDGE,
               cursor='tcross')
 EgonTE.focus_set()
 EgonTE.pack(fill=BOTH, expand=True)
 # config scrollbar
 text_scroll.config(command=EgonTE.yview)
-horizontal_scroll.config(command=EgonTE.xview)
 # create menu
 menu = Menu(frame)
 root.config(menu=menu)
@@ -891,11 +989,16 @@ edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=EgonTE.edit_
 edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=EgonTE.edit_redo)
 edit_menu.add_separator()
 edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda: select_all('nothing'))
-edit_menu.add_command(label='Clear', accelerator='(ctrl+del)', command=clear)
+edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=clear)
 edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
 edit_menu.add_separator()
-edit_menu.add_command(label='Replace', command=replace)
+edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=replace)
+edit_menu.add_separator()
+edit_menu.add_command(label='reverse characters', command=reverse_characters)
+edit_menu.add_command(label='reverse words', command=reverse_words)
+edit_menu.add_command(label='join words', command=join_words)
+edit_menu.add_command(label='upper/lower', command=lower_upper)
 # tools menu
 tool_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Tools', menu=tool_menu)
@@ -905,6 +1008,7 @@ tool_menu.add_command(label='Random number', command=ins_random)
 tool_menu.add_command(label='Random name', command=ins_random_name)
 tool_menu.add_command(label='Translate', command=translate)
 tool_menu.add_command(label='Url shorter', command=url)
+tool_menu.add_command(label='generate sequence', command=generate)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Colors', menu=color_menu)
@@ -913,6 +1017,19 @@ color_menu.add_command(label='Change all text', command=all_txt_color)
 color_menu.add_separator()
 color_menu.add_command(label='Background', command=bg_color)
 color_menu.add_command(label='Highlight', command=hl_color)
+# fonts menu
+fontMenu = Menu(menu, tearoff=False)
+menu.add_cascade(label="Fonts", menu=fontMenu)
+helvetica = IntVar()
+courier = IntVar()
+fontMenu.add_checkbutton(label="Arial", command=font_arial)
+fontMenu.add_checkbutton(label="Courier", command=font_courier)
+fontMenu.add_checkbutton(label="Helvetica", command=font_helvetica)
+fontMenu.add_checkbutton(label="Times New Roman", command=font_times)
+fontMenu.add_checkbutton(label="Corbel", command=font_corbel)
+fontMenu.add_checkbutton(label="Modern", command=font_modern)
+fontMenu.add_checkbutton(label="marlett", command=font_marlett)
+fontMenu.add_checkbutton(label="symbol", command=font_symbol)
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Options', menu=options_menu)
@@ -960,7 +1077,6 @@ root.bind('<Control-Key-F>', find_text)
 root.bind('<Control-Key-h>', replace)
 root.bind('<Control-Key-H>', replace)
 # special events
-root.bind('<<ComboboxSelected>>', change_font)
 root.bind('<<ComboboxSelected>>', change_font_size)
 root.bind('<<Modified>>', status)
 # buttons creation and placement
@@ -1008,7 +1124,6 @@ cc.set(True)
 cs = BooleanVar()
 cs.set(True)
 
-
 # check marks
 options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
@@ -1021,7 +1136,6 @@ options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False
 
 options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False,
                              compound=LEFT, command=custom_style, variable=cs)
-
 
 # talk button
 talk_button = Button(toolbar_frame, image=STT_IMAGE, relief=FLAT,
