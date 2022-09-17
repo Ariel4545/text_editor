@@ -351,6 +351,7 @@ def night():
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
         font_size.config(foreground=_text_color)
+        fontMenu.config(bg=second_color, fg=_text_color)
         night_mode = False
     else:
         main_color = 'SystemButtonFace'
@@ -377,6 +378,7 @@ def night():
         color_menu.config(bg=second_color, fg=_text_color)
         options_menu.config(bg=second_color, fg=_text_color)
         font_size.config(foreground=_text_color)
+        fontMenu.config(bg=second_color, fg=_text_color)
         night_mode = True
 
 
@@ -583,11 +585,11 @@ def ins_calc():
     clac_root = Toplevel(relief=FLAT)
     clac_root.resizable(False, False)
     clac_root.geometry('150x90')
-    introduction_text = Label(clac_root, text='Enter equation below:')
+    introduction_text = Label(clac_root, text='Enter equation below:', font='arial 10 underline')
     enter = Button(clac_root, text='Enter', command=enter_button, relief=FLAT)
     clac_entry = Entry(clac_root, relief=RIDGE, justify='center')
     show_op = Button(clac_root, text='Show operators', relief=FLAT, command=show_oper)
-    introduction_text.grid(row=0)
+    introduction_text.grid(row=0, padx=10)
     clac_entry.grid(row=1)
     enter.grid(row=2)
     show_op.grid(row=3)
@@ -629,21 +631,20 @@ def ins_random():
 
     ran_num_root = Toplevel()
     ran_num_root.resizable(False, False)
-    ran_num_root.geometry('300x100')
-    introduction_text = Label(ran_num_root, text='Enter numbers below:', justify='center')
+    introduction_text = Label(ran_num_root, text='Enter numbers below:', justify='center', font='arial 10 underline')
     sub_c = Button(ran_num_root, text='submit custom', command=enter_button_custom, relief=FLAT)
     sub_qf = Button(ran_num_root, text='submit quick float', command=enter_button_quick_float, relief=FLAT)
     sub_qi = Button(ran_num_root, text='submit quick int', command=enter_button_quick_int, relief=FLAT)
-    number_entry1 = Entry(ran_num_root, relief=RIDGE, justify='center')
-    number_entry2 = Entry(ran_num_root, relief=RIDGE, justify='center')
-    bt_text = Label(ran_num_root, text='<->')
-    introduction_text.grid(row=0, columnspan=1)
-    number_entry1.grid(row=1, column=0, columnspan=2)
+    number_entry1 = Entry(ran_num_root, relief=RIDGE, justify='center', width=25)
+    number_entry2 = Entry(ran_num_root, relief=RIDGE, justify='center', width=25)
+    bt_text = Label(ran_num_root, text='     Between', font='arial 10 bold')
+    introduction_text.grid(row=0, column=1, columnspan=1)
+    number_entry1.grid(row=1, column=0, padx=10)
     bt_text.grid(row=1, column=1)
-    number_entry2.grid(row=1, column=2)
-    sub_c.grid(row=2, column=0, columnspan=1)
-    sub_qf.grid(row=3, column=0, columnspan=2)
-    sub_qi.grid(row=3, column=1, columnspan=2)
+    number_entry2.grid(row=1, column=2, padx=10)
+    sub_c.grid(row=2, column=1)
+    sub_qf.grid(row=3, column=0)
+    sub_qi.grid(row=3, column=2)
 
 
 def copy_file_path():
@@ -736,7 +737,7 @@ def ins_random_name():
     name_root = Toplevel()
     name_root.resizable(False, False)
     random_name = names.get_full_name()
-    text = Label(name_root, text='Random name that generated:')
+    text = Label(name_root, text='Random name that generated:', font='arial 10 underline')
     rand_name = Label(name_root, text=random_name)
     enter = Button(name_root, text='Submit', command=button)
     re_roll = Button(name_root, text='Re-roll', command=roll)
@@ -808,11 +809,11 @@ def url():
     url_root = Toplevel()
     url_root.resizable(False, False)
     # ui components creation & placement
-    url_text = Label(url_root, text='Enter url below:')
+    url_text = Label(url_root, text='Enter url below:', font='arial 10 underline')
     url_entry = Entry(url_root, relief=GROOVE, width=40)
     enter = Button(url_root, relief=FLAT, text='Enter')
     url_text.grid(row=0)
-    url_entry.grid(row=1)
+    url_entry.grid(row=1, padx=10)
     enter.grid(row=2)
 
     def shorter():
@@ -897,40 +898,63 @@ def lower_upper():
 
 
 def generate():
+    global sym
     generate_root = Toplevel()
     generate_root.resizable(False, False)
     characters = list(string.ascii_letters + string.digits)
-    intro_text = Label(generate_root, text='this tool will generate a random sequence')
+    intro_text = Label(generate_root, text='Generate a random sequence', font='arial 10 underline')
     length_entry = Entry(generate_root, width=10)
-    sym_button = Button(generate_root, text='symbols')
-    enter_button = Button(generate_root, text='Enter', padx=40)
-    length_text = Label(generate_root, text='length')
+    sym_text = Label(generate_root, text='induce symbols?')
+    sym_button = Button(generate_root, text='✖')
+    enter_button = Button(generate_root, text='Enter', width=8, height=2)
+    length_text = Label(generate_root, text='length', padx=10)
     intro_text.grid(row=0, column=1)
-    length_text.grid(row=1)
+    length_text.grid(row=1, column=0, padx=10, columnspan=1)
     length_entry.grid(row=2, column=0)
+    sym_text.grid(row=1, column=2, padx=10)
     sym_button.grid(row=2, column=2, padx=10)
-    enter_button.grid(row=3, column=1,padx=10)
+    enter_button.grid(row=2, column=1, padx=10, pady=8)
     sym = False
 
     def symbols():
         global sym
-        sym_button.config(text='symbols ✓')
+        sym_button.config(text='✓')
         sym = True
+        sym_button.config(command=disable_symbols)
+
+    def disable_symbols():
+        global sym
+        sym_button.config(text='✖')
+        sym = False
+        sym_button.config(command=symbols)
+
     sym_button.config(command=symbols)
 
     def generate_sequence():
-        global sym
-        length = int(length_entry.get())
+        global sym, sym_char
+        try:
+            length = int(length_entry.get())
+        except ValueError:
+            messagebox.showerror('error', 'didn\'t write the length')
+        sym_char = "!", "@", "#", "$", "%", "^", "&", "*", "(", ")"
         if sym:
-            sym_char = "!", "@", "#", "$", "%", "^", "&", "*", "(", ")"
             for character in sym_char:
                 characters.append(character)
+        else:
+            if sym_char:
+                try:
+                    characters.remove('!'), characters.remove('@'), characters.remove('#'), characters.remove('$'),
+                    characters.remove('%'), characters.remove('^'), characters.remove('&'), characters.remove('*'),
+                    characters.remove('('), characters.remove(')')
+                except ValueError:
+                    pass
         shuffle(characters)
         sequence = []
         for i in range(length):
             sequence.append(choice(characters))
         EgonTE.insert(get_pos(), "".join(sequence))
     enter_button.config(command=generate_sequence)
+
 
 # add custom style
 style = ttk.Style()
