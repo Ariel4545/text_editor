@@ -520,7 +520,7 @@ def speech_to_text():
 
 
 # force the app to quit, warn user if file data is about to be lost
-def exit_app():
+def exit_app(event=None):
     global text_changed
     if text_changed:
         if messagebox.askyesno('Quit', 'Some changes  warn\'t saved, do you wish to save first?'):
@@ -647,7 +647,7 @@ def ins_random():
     sub_qi.grid(row=3, column=2)
 
 
-def copy_file_path():
+def copy_file_path(event=None):
     # global selected
     file_name_ = save_as(event='get name')
     root.clipboard_clear()
@@ -864,14 +864,14 @@ def font_symbol():
     EgonTE.config(font=('Symbol', 16))
 
 
-def reverse_characters():
+def reverse_characters(event=None):
     content = EgonTE.get(1.0, END)
     reversed_content = content[::-1]
     EgonTE.delete(1.0, END)
     EgonTE.insert(1.0, reversed_content)
 
 
-def reverse_words():
+def reverse_words(event=None):
     content = EgonTE.get(1.0, END)
     words = content.split()
     reversed_words = words[::-1]
@@ -879,7 +879,7 @@ def reverse_words():
     EgonTE.insert(1.0, reversed_words)
 
 
-def join_words():
+def join_words(event=None):
     content = EgonTE.get(1.0, END)
     words = content.split()
     joined_words = ''.join(words)
@@ -887,7 +887,7 @@ def join_words():
     EgonTE.insert(1.0, joined_words)
 
 
-def lower_upper():
+def lower_upper(event=None):
     content = EgonTE.get(1.0, END)
     if content == content.upper():
         content = content.lower()
@@ -999,9 +999,9 @@ file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
 file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
 file_menu.add_separator()
-file_menu.add_command(label='Copy path', command=copy_file_path)
+file_menu.add_command(label='Copy path',accelerator='(alt+d)', command=copy_file_path)
 file_menu.add_separator()
-file_menu.add_command(label='Exit', command=exit_app)
+file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=exit_app)
 # edit menu
 edit_menu = Menu(menu, tearoff=True)
 menu.add_cascade(label='Edit', menu=edit_menu)
@@ -1019,10 +1019,10 @@ edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_te
 edit_menu.add_separator()
 edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=replace)
 edit_menu.add_separator()
-edit_menu.add_command(label='reverse characters', command=reverse_characters)
-edit_menu.add_command(label='reverse words', command=reverse_words)
-edit_menu.add_command(label='join words', command=join_words)
-edit_menu.add_command(label='upper/lower', command=lower_upper)
+edit_menu.add_command(label='reverse characters', accelerator='(ctrl+shift+c)', command=reverse_characters)
+edit_menu.add_command(label='reverse words', accelerator='(ctrl+shift+r)', command=reverse_words)
+edit_menu.add_command(label='join words', accelerator='(ctrl+shift+j)', command=join_words)
+edit_menu.add_command(label='upper/lower', accelerator='(ctrl+shift+u)', command=lower_upper)
 # tools menu
 tool_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Tools', menu=tool_menu)
@@ -1100,6 +1100,17 @@ root.bind('<Control-Key-f>', find_text)
 root.bind('<Control-Key-F>', find_text)
 root.bind('<Control-Key-h>', replace)
 root.bind('<Control-Key-H>', replace)
+root.bind('<Control-Shift-Key-j>', join_words)
+root.bind('<Control-Shift-Key-J>', join_words)
+root.bind('<Control-Shift-Key-u>', lower_upper)
+root.bind('<Control-Shift-Key-U>', lower_upper)
+root.bind('<Alt-F4>', exit_app)
+root.bind('<Control-Shift-Key-r>', reverse_characters)
+root.bind('<Control-Shift-Key-R>', reverse_characters)
+root.bind('<Control-Shift-Key-c>', reverse_words)
+root.bind('<Control-Shift-Key-C>', reverse_words)
+root.bind('<Alt-Key-d>', copy_file_path)
+root.bind('<Alt-Key-D>', copy_file_path)
 # special events
 root.bind('<<ComboboxSelected>>', change_font_size)
 root.bind('<<Modified>>', status)
