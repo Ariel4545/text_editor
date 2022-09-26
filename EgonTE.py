@@ -953,7 +953,28 @@ def generate():
         for i in range(length):
             sequence.append(choice(characters))
         EgonTE.insert(get_pos(), "".join(sequence))
+
     enter_button.config(command=generate_sequence)
+
+
+def size_up_shortcut(event=None):
+    global font_Size_c
+    font_Size_c += 1
+    try:
+        font_size.current(font_Size_c)
+        change_font_size()
+    except:
+        messagebox.showerror('error', 'font size at max')
+
+
+def size_down_shortcut(event=None):
+    global font_Size_c
+    font_Size_c -= 1
+    try:
+        font_size.current(font_Size_c)
+        change_font_size()
+    except:
+        messagebox.showerror('error', 'font size at minium')
 
 
 # add custom style
@@ -970,7 +991,8 @@ size_var = IntVar()
 size_var.set(16)
 font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="readonly")
 font_size["values"] = tuple(range(8, 80, 2))
-font_size.current(4)  # 16 is at index 5
+font_Size_c = 4
+font_size.current(font_Size_c)  # 16 is at index 5
 font_size.grid(row=0, column=5, padx=5)
 # create vertical scrollbar
 text_scroll = ttk.Scrollbar(frame)
@@ -999,7 +1021,7 @@ file_menu.add_command(label='Save As', command=save_as)
 file_menu.add_separator()
 file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
 file_menu.add_separator()
-file_menu.add_command(label='Copy path',accelerator='(alt+d)', command=copy_file_path)
+file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=copy_file_path)
 file_menu.add_separator()
 file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=exit_app)
 # edit menu
@@ -1111,6 +1133,8 @@ root.bind('<Control-Shift-Key-c>', reverse_words)
 root.bind('<Control-Shift-Key-C>', reverse_words)
 root.bind('<Alt-Key-d>', copy_file_path)
 root.bind('<Alt-Key-D>', copy_file_path)
+root.bind('<Control-Key-plus>', size_up_shortcut)
+root.bind('<Control-Key-minus>', size_down_shortcut)
 # special events
 root.bind('<<ComboboxSelected>>', change_font_size)
 root.bind('<<Modified>>', status)
@@ -1199,6 +1223,7 @@ TOOL_TIP.bind_widget(align_center_button, balloonmsg='Align center (ctrl+e)')
 TOOL_TIP.bind_widget(align_right_button, balloonmsg='Align right (ctrl+r)')
 TOOL_TIP.bind_widget(tts_button, balloonmsg='Text to speach')
 TOOL_TIP.bind_widget(talk_button, balloonmsg='Speach to talk')
+TOOL_TIP.bind_widget(font_size, balloonmsg='upwards - (ctrl++) \n downwards - (ctrl+-)')
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
