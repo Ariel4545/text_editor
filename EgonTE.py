@@ -336,22 +336,11 @@ def night():
         EgonTE.config(bg=second_color, fg=_text_color)
         toolbar_frame.config(bg=main_color)
         # toolbar buttons
-        bold_button.config(bg=third_color, fg=_text_color)
-        italics_button.config(bg=third_color, fg=_text_color)
-        color_button.config(bg=third_color, fg=_text_color)
-        underline_button.config(bg=third_color, fg=_text_color)
-        align_left_button.config(bg=third_color, fg=_text_color)
-        align_center_button.config(bg=third_color, fg=_text_color)
-        align_right_button.config(bg=third_color, fg=_text_color)
-        tts_button.config(bg=third_color, fg=_text_color)
-        talk_button.config(bg=third_color, fg=_text_color)
+        for toolbar_button in toolbar_components:
+            toolbar_button.config(background=third_color)
         # file menu colors
-        file_menu.config(bg=second_color, fg=_text_color)
-        edit_menu.config(bg=second_color, fg=_text_color)
-        color_menu.config(bg=second_color, fg=_text_color)
-        options_menu.config(bg=second_color, fg=_text_color)
-        font_size.config(foreground=_text_color)
-        fontMenu.config(bg=second_color, fg=_text_color)
+        for menu_ in menus_components:
+            menu_.config(background=second_color, foreground=_text_color)
         night_mode = False
     else:
         main_color = 'SystemButtonFace'
@@ -363,22 +352,11 @@ def night():
         EgonTE.config(bg='white', fg=_text_color)
         toolbar_frame.config(bg=main_color)
         # toolbar buttons
-        bold_button.config(bg=second_color, fg=_text_color)
-        italics_button.config(bg=second_color, fg=_text_color)
-        color_button.config(bg=second_color, fg=_text_color)
-        underline_button.config(bg=second_color, fg=_text_color)
-        align_left_button.config(bg=second_color, fg=_text_color)
-        align_center_button.config(bg=second_color, fg=_text_color)
-        align_right_button.config(bg=second_color, fg=_text_color)
-        tts_button.config(bg=second_color, fg=_text_color)
-        talk_button.config(bg=second_color, fg=_text_color)
+        for toolbar_button in toolbar_components:
+            toolbar_button.config(background=second_color)
         # file menu colors
-        file_menu.config(bg=second_color, fg=_text_color)
-        edit_menu.config(bg=second_color, fg=_text_color)
-        color_menu.config(bg=second_color, fg=_text_color)
-        options_menu.config(bg=second_color, fg=_text_color)
-        font_size.config(foreground=_text_color)
-        fontMenu.config(bg=second_color, fg=_text_color)
+        for menu_ in menus_components:
+            menu_.config(background=second_color, foreground=_text_color)
         night_mode = True
 
 
@@ -558,8 +536,10 @@ def ins_calc():
         equation = clac_entry.get()
         try:
             equation = eval(equation)
-        except EXCEPTION:
+        except SyntaxError:
             messagebox.showerror('error', 'didn\'t type valid characters')
+        except NameError:
+            messagebox.showerror('error', 'tool does not support variables')
         equation = str(equation) + ' '
         EgonTE.insert(get_pos(), equation)
         clac_root.destroy()
@@ -739,14 +719,14 @@ def ins_random_name():
     random_name = names.get_full_name()
     text = Label(name_root, text='Random name that generated:', font='arial 10 underline')
     rand_name = Label(name_root, text=random_name)
-    enter = Button(name_root, text='Submit', command=button)
-    re_roll = Button(name_root, text='Re-roll', command=roll)
-    adv_options = Button(name_root, text='Advance options', command=adv_option, state=ACTIVE)
-    text.grid(row=1)
-    rand_name.grid(row=2)
-    enter.grid(row=3)
-    re_roll.grid(row=4)
-    adv_options.grid(row=5)
+    enter = Button(name_root, text='Submit', command=button, relief=RIDGE)
+    re_roll = Button(name_root, text='Re-roll', command=roll, relief=RIDGE)
+    adv_options = Button(name_root, text='Advance options', command=adv_option, state=ACTIVE, relief=RIDGE)
+    text.grid(row=0, padx=10)
+    rand_name.grid(row=1)
+    enter.grid(row=2)
+    re_roll.grid(row=3)
+    adv_options.grid(row=4)
 
 
 def translate():
@@ -963,8 +943,8 @@ def size_up_shortcut(event=None):
     try:
         font_size.current(font_Size_c)
         change_font_size()
-    except:
-        messagebox.showerror('error', 'font size at max')
+    except Exception:
+        messagebox.showerror('error', 'font size at maximum')
 
 
 def size_down_shortcut(event=None):
@@ -973,8 +953,32 @@ def size_down_shortcut(event=None):
     try:
         font_size.current(font_Size_c)
         change_font_size()
-    except:
-        messagebox.showerror('error', 'font size at minium')
+    except Exception:
+        messagebox.showerror('error', 'font size at minimum')
+
+
+def custom_ui_colors(components):
+    if components == 'buttons':
+        selected_color = colorchooser.askcolor()[1]
+        if selected_color:
+            for toolbar_button in toolbar_components:
+                toolbar_button.config(background=selected_color)
+    elif components == 'menus':
+        selected_main_color = colorchooser.askcolor()[1]
+        selected_text_color = colorchooser.askcolor()[1]
+        if selected_main_color and selected_text_color:
+            for menu_ in menus_components:
+                menu_.config(background=selected_main_color, foreground=selected_text_color)
+    elif components == 'app':
+        selected_main_color = colorchooser.askcolor()[1]
+        selected_second_color = colorchooser.askcolor()[1]
+        selected_text_color = colorchooser.askcolor()[1]
+        if selected_main_color and selected_second_color and selected_text_color:
+            root.config(bg=selected_main_color)
+            status_bar.config(bg=selected_main_color, fg=selected_text_color)
+            file_bar.config(bg=selected_main_color, fg=selected_text_color)
+            EgonTE.config(bg=selected_second_color, fg=selected_text_color)
+            toolbar_frame.config(bg=selected_main_color)
 
 
 # add custom style
@@ -1041,10 +1045,10 @@ edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_te
 edit_menu.add_separator()
 edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=replace)
 edit_menu.add_separator()
-edit_menu.add_command(label='reverse characters', accelerator='(ctrl+shift+c)', command=reverse_characters)
-edit_menu.add_command(label='reverse words', accelerator='(ctrl+shift+r)', command=reverse_words)
-edit_menu.add_command(label='join words', accelerator='(ctrl+shift+j)', command=join_words)
-edit_menu.add_command(label='upper/lower', accelerator='(ctrl+shift+u)', command=lower_upper)
+edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)', command=reverse_characters)
+edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=reverse_words)
+edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=join_words)
+edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=lower_upper)
 # tools menu
 tool_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Tools', menu=tool_menu)
@@ -1054,28 +1058,30 @@ tool_menu.add_command(label='Random number', command=ins_random)
 tool_menu.add_command(label='Random name', command=ins_random_name)
 tool_menu.add_command(label='Translate', command=translate)
 tool_menu.add_command(label='Url shorter', command=url)
-tool_menu.add_command(label='generate sequence', command=generate)
+tool_menu.add_command(label='Generate sequence', command=generate)
 # color menu
 color_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='Colors', menu=color_menu)
-color_menu.add_command(label='Change selected text', command=text_color)
-color_menu.add_command(label='Change all text', command=all_txt_color)
-color_menu.add_separator()
+menu.add_cascade(label='Colors+', menu=color_menu)
+color_menu.add_command(label='Whole text', command=all_txt_color)
 color_menu.add_command(label='Background', command=bg_color)
 color_menu.add_command(label='Highlight', command=hl_color)
+color_menu.add_separator()
+color_menu.add_command(label='Buttons color', command=lambda: custom_ui_colors('buttons'))
+color_menu.add_command(label='Menus colors', command=lambda: custom_ui_colors('menus'))
+color_menu.add_command(label='App colors', command=lambda: custom_ui_colors('app'))
 # fonts menu
-fontMenu = Menu(menu, tearoff=False)
-menu.add_cascade(label="Fonts", menu=fontMenu)
+font_menu = Menu(menu, tearoff=False)
+menu.add_cascade(label="Fonts", menu=font_menu)
 helvetica = IntVar()
 courier = IntVar()
-fontMenu.add_checkbutton(label="Arial", command=font_arial)
-fontMenu.add_checkbutton(label="Courier", command=font_courier)
-fontMenu.add_checkbutton(label="Helvetica", command=font_helvetica)
-fontMenu.add_checkbutton(label="Times New Roman", command=font_times)
-fontMenu.add_checkbutton(label="Corbel", command=font_corbel)
-fontMenu.add_checkbutton(label="Modern", command=font_modern)
-fontMenu.add_checkbutton(label="marlett", command=font_marlett)
-fontMenu.add_checkbutton(label="symbol", command=font_symbol)
+font_menu.add_checkbutton(label="Arial", command=font_arial)
+font_menu.add_checkbutton(label="Courier", command=font_courier)
+font_menu.add_checkbutton(label="Helvetica", command=font_helvetica)
+font_menu.add_checkbutton(label="Times New Roman", command=font_times)
+font_menu.add_checkbutton(label="Corbel", command=font_corbel)
+font_menu.add_checkbutton(label="Modern", command=font_modern)
+font_menu.add_checkbutton(label="marlett", command=font_marlett)
+font_menu.add_checkbutton(label="symbol", command=font_symbol)
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Options', menu=options_menu)
@@ -1223,7 +1229,13 @@ TOOL_TIP.bind_widget(align_center_button, balloonmsg='Align center (ctrl+e)')
 TOOL_TIP.bind_widget(align_right_button, balloonmsg='Align right (ctrl+r)')
 TOOL_TIP.bind_widget(tts_button, balloonmsg='Text to speach')
 TOOL_TIP.bind_widget(talk_button, balloonmsg='Speach to talk')
-TOOL_TIP.bind_widget(font_size, balloonmsg='upwards - (ctrl++) \n downwards - (ctrl+-)')
+TOOL_TIP.bind_widget(font_size, balloonmsg='upwards - (ctrl+plus) \n downwards - (ctrl+minus)')
+
+# ui lists
+toolbar_components = [bold_button, italics_button, color_button, underline_button, align_left_button,
+                      align_center_button, align_right_button, tts_button, talk_button, font_size]
+menus_components = [file_menu, edit_menu, tool_menu, color_menu, font_menu, options_menu]
+other_components = [root, status_bar, file_bar, EgonTE, toolbar_frame]
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
