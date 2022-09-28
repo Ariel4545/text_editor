@@ -189,11 +189,17 @@ def bold(event=None):
     bold_font.configure(weight='bold')
     # config
     EgonTE.tag_configure('bold', font=bold_font)
-    current_tags = EgonTE.tag_names('sel.first')
+    current_tags = EgonTE.tag_names('1.0')
     if 'bold' in current_tags:
-        EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
+        if is_marked():
+            EgonTE.tag_remove('bold', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_remove('bold', '1.0', 'end')
     else:
-        EgonTE.tag_add('bold', 'sel.first', 'sel.last')
+        if is_marked():
+            EgonTE.tag_add('bold', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_add('bold', '1.0', 'end')
 
 
 # italics text func
@@ -203,11 +209,17 @@ def italics(event=None):
     italics_font.configure(slant='italic')
     # config
     EgonTE.tag_configure('italics', font=italics_font)
-    current_tags = EgonTE.tag_names('sel.first')
+    current_tags = EgonTE.tag_names('1.0')
     if 'italics' in current_tags:
-        EgonTE.tag_remove('italics', 'sel.first', 'sel.last')
+        if is_marked():
+            EgonTE.tag_remove('italics', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_remove('italics', '1.0', 'end')
     else:
-        EgonTE.tag_add('italics', 'sel.first', 'sel.last')
+        if is_marked():
+            EgonTE.tag_add('italics', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_add('italics', '1.0', 'end')
 
 
 # make the text underline func
@@ -217,17 +229,23 @@ def underline(event=None):
     underline_font.configure(underline=True)
     # config
     EgonTE.tag_configure('underline', font=underline_font)
-    current_tags = EgonTE.tag_names('sel.first')
+    current_tags = EgonTE.tag_names('1.0')
     if 'underline' in current_tags:
-        EgonTE.tag_remove('underline', 'sel.first', 'sel.last')
+        if is_marked():
+            EgonTE.tag_remove('underline', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_remove('underline', '1.0', 'end')
     else:
-        EgonTE.tag_add('underline', 'sel.first', 'sel.last')
+        if is_marked():
+            EgonTE.tag_add('underline', 'sel.first', 'sel.last')
+        else:
+            EgonTE.tag_add('underline', '1.0', 'end')
 
 
 # text color func
 def text_color():
     # color pick
-    selected_color = colorchooser.askcolor()[1]
+    selected_color = colorchooser.askcolor(title='Text color')[1]
     if selected_color:
         # create
         color_font = font.Font(EgonTE, EgonTE.cget('font'))
@@ -240,27 +258,27 @@ def text_color():
 
             else:
                 EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
-        except EXCEPTION:
+        except:
             messagebox.showerror('error', 'didn\'t selected text')
 
 
 # background color func
 def bg_color():
-    selected_color = colorchooser.askcolor()[1]
+    selected_color = colorchooser.askcolor(title='Background color')[1]
     if selected_color:
         EgonTE.config(bg=selected_color)
 
 
 # all color txt func
 def all_txt_color(event=None):
-    color = colorchooser.askcolor()[1]
+    color = colorchooser.askcolor(title='Text color')[1]
     if color:
         EgonTE.config(fg=color)
 
 
 # highlight color func
 def hl_color():
-    color = colorchooser.askcolor()[1]
+    color = colorchooser.askcolor(title='Highlight color')[1]
     if color:
         EgonTE.config(selectbackground=color)
 
@@ -372,7 +390,10 @@ def change_font_size(event=None):
     EgonTE.tag_configure('size', font=size)
     current_tags = EgonTE.tag_names('1.0')
     if not 'size' in current_tags:
-        EgonTE.tag_add('size', '1.0', END)
+        if font_size.get() == '4':
+            EgonTE.tag_remove('size', '1.0', END)
+        else:
+            EgonTE.tag_add('size', '1.0', END)
 
 
 def replace(event=None):
@@ -406,7 +427,10 @@ def replace(event=None):
 
 # align Left func
 def align_left(event=None):
-    text_content = EgonTE.get('sel.first', 'sel.last')
+    try:
+        text_content = EgonTE.get('sel.first', 'sel.last')
+    except:
+        messagebox.showerror('error', 'mark the whole line in order to align')
     EgonTE.tag_config("left", justify=LEFT)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "left")
@@ -414,7 +438,10 @@ def align_left(event=None):
 
 # Align Center func
 def align_center(event=None):
-    text_content = EgonTE.get('sel.first', 'sel.last')
+    try:
+        text_content = EgonTE.get('sel.first', 'sel.last')
+    except:
+        messagebox.showerror('error', 'mark the whole line in order to align')
     EgonTE.tag_config("center", justify=CENTER)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "center")
@@ -422,7 +449,10 @@ def align_center(event=None):
 
 # Align Right func
 def align_right(event=None):
-    text_content = EgonTE.get('sel.first', 'sel.last')
+    try:
+        text_content = EgonTE.get('sel.first', 'sel.last')
+    except:
+        messagebox.showerror('error', 'mark the whole line in order to align')
     EgonTE.tag_config("right", justify=RIGHT)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "right")
@@ -443,7 +473,10 @@ def status(event=None):
 def text_to_speech():
     global tts
     tts = pyttsx3.init()
-    content = EgonTE.get('sel.first', 'sel.last')
+    try:
+        content = EgonTE.get('sel.first', 'sel.last')
+    except:
+        content = EgonTE.get('1.0', 'end')
     tts.say(content)
     tts.runAndWait()
 
@@ -809,38 +842,47 @@ def url():
 
 
 def font_helvetica():
+    delete_tags()
     EgonTE.config(font=('Helvetica', 16))
 
 
 def font_courier():
+    delete_tags()
     EgonTE.config(font=('Courier', 16))
 
 
 def font_times():
+    delete_tags()
     EgonTE.config(font=('Times', 16))
 
 
 def font_arial():
+    delete_tags()
     EgonTE.config(font=('Arial', 16))
 
 
 def font_corbel():
+    delete_tags()
     EgonTE.config(font=('Corbel', 16))
 
 
 def font_modern():
+    delete_tags()
     EgonTE.config(font=('Modern', 16))
 
 
 def font_marlett():
+    delete_tags()
     EgonTE.config(font=('Marlett', 16))
 
 
 def font_rod():
+    delete_tags()
     EgonTE.config(font=('Rod', 16))
 
 
 def font_symbol():
+    delete_tags()
     EgonTE.config(font=('Symbol', 16))
 
 
@@ -959,26 +1001,39 @@ def size_down_shortcut(event=None):
 
 def custom_ui_colors(components):
     if components == 'buttons':
-        selected_color = colorchooser.askcolor()[1]
+        selected_color = colorchooser.askcolor(title='Buttons background color')[1]
         if selected_color:
             for toolbar_button in toolbar_components:
                 toolbar_button.config(background=selected_color)
     elif components == 'menus':
-        selected_main_color = colorchooser.askcolor()[1]
-        selected_text_color = colorchooser.askcolor()[1]
+        selected_main_color = colorchooser.askcolor(title='Menu color')[1]
+        selected_text_color = colorchooser.askcolor(title='Menu text color')[1]
         if selected_main_color and selected_text_color:
             for menu_ in menus_components:
                 menu_.config(background=selected_main_color, foreground=selected_text_color)
     elif components == 'app':
-        selected_main_color = colorchooser.askcolor()[1]
-        selected_second_color = colorchooser.askcolor()[1]
-        selected_text_color = colorchooser.askcolor()[1]
+        selected_main_color = colorchooser.askcolor(title='Frames color')[1]
+        selected_second_color = colorchooser.askcolor(title='Text box color')[1]
+        selected_text_color = colorchooser.askcolor(title='Text color')[1]
         if selected_main_color and selected_second_color and selected_text_color:
             root.config(bg=selected_main_color)
             status_bar.config(bg=selected_main_color, fg=selected_text_color)
             file_bar.config(bg=selected_main_color, fg=selected_text_color)
             EgonTE.config(bg=selected_second_color, fg=selected_text_color)
             toolbar_frame.config(bg=selected_main_color)
+
+
+# checks if text in the main text box is being marked
+def is_marked():
+    if EgonTE.tag_ranges('sel'):
+        return True
+    else:
+        return False
+
+
+# tags and configurations of the same thing is clashing all the time \:
+def delete_tags():
+    EgonTE.tag_delete('bold', 'underline', 'italics', 'size', 'colored_txt')
 
 
 # add custom style
