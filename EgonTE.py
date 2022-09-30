@@ -554,13 +554,71 @@ def exit_app(event=None):
 
 # find if text exists in the specific file
 def find_text(event=None):
-    search_text = simpledialog.askstring("Find", "Enter Text")
-    text_data = EgonTE.get('1.0', END + '-1c')
-    occurs = text_data.lower().count(search_text.lower())
-    if text_data.lower().count(search_text.lower()):
-        search_label = messagebox.showinfo("EgonTE:", f"{search_text} has {str(occurs)} occurrences")
-    else:
-        search_label = messagebox.showinfo("EgonTE:", "No match found")
+    global cpt_settings, by_characters
+
+    def match_by_capitalization():
+        global cpt_settings
+
+        def disable():
+            global cpt_settings
+            cpt_settings = 'c'
+            capitalize_button.config(command=match_by_capitalization, text='by capitalization ✓')
+
+        cpt_settings = 'unc'
+        capitalize_button.config(text='by capitalization ✖', command=disable)
+
+    def match_by_word():
+        global by_characters
+
+        def disable():
+            global by_characters
+            by_word.config(command=match_by_word, text='by characters ✓')
+            by_characters = True
+
+        by_word.config(text='by words ✓', command=disable)
+        by_characters = False
+
+    def enter():
+        global cpt_settings, by_characters
+        text_data = EgonTE.get('1.0', END + '-1c')
+        # by word/character settings
+        if by_characters:
+            pass
+        else:
+            text_data = text_data.split(' ')
+        # capitalize settings
+        if cpt_settings == 'unc':
+            text_data_ = text_data.lower()
+            entry_data = text_entry.get().lower()
+            occurs = text_data_.count(entry_data)
+            if text_data_.count(entry_data):
+                search_label = messagebox.showinfo("EgonTE:", f"{entry_data} has {str(occurs)} occurrences")
+            else:
+                search_label = messagebox.showinfo("EgonTE:", "No match found")
+        elif cpt_settings == 'c':
+            occurs = text_data.count(text_entry.get())
+            if text_data.count(text_entry.get()):
+                search_label = messagebox.showinfo("EgonTE:", f"{text_entry.get()} has {str(occurs)} occurrences")
+            else:
+                search_label = messagebox.showinfo("EgonTE:", "No match found")
+
+    # window
+    search_text_root = Tk()
+    search_text_root.resizable(False, False)
+    # var
+    cpt_settings = 'c'
+    by_characters = True
+    # buttons
+    text = Label(search_text_root, text='Search text', font='arial 14 underline')
+    text_entry = Entry(search_text_root)
+    enter_button = Button(search_text_root, command=enter, text='Enter')
+    capitalize_button = Button(search_text_root, command=match_by_capitalization, text='by capitalization ✓')
+    by_word = Button(search_text_root, command=match_by_word, text='by characters ✓', state=ACTIVE)
+    text.grid(row=0, column=1)
+    text_entry.grid(row=1, column=1)
+    enter_button.grid(row=2, column=1)
+    capitalize_button.grid(row=2, column=0, pady=6, padx=5)
+    by_word.grid(row=2, column=2, padx=10)
 
 
 # insert mathematics calculation to the text box
@@ -1291,6 +1349,7 @@ toolbar_components = [bold_button, italics_button, color_button, underline_butto
                       align_center_button, align_right_button, tts_button, talk_button, font_size]
 menus_components = [file_menu, edit_menu, tool_menu, color_menu, font_menu, options_menu]
 other_components = [root, status_bar, file_bar, EgonTE, toolbar_frame]
+
 root.mainloop()
 
 # contact - reedit = arielo_o, discord - Arielp2#4011
