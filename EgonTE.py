@@ -16,6 +16,7 @@ from googletrans import Translator  # req version 3.1.0a0
 from pyshorteners import Shortener
 from os import getcwd
 import string
+import pandas
 
 # window creation
 root = Tk()
@@ -251,15 +252,17 @@ def text_color():
         color_font = font.Font(EgonTE, EgonTE.cget('font'))
         # config
         EgonTE.tag_configure('colored_txt', font=color_font, foreground=selected_color)
-        try:
-            current_tags = EgonTE.tag_names('sel.first')
-            if 'colored_txt' in current_tags:
+        current_tags = EgonTE.tag_names('1.0')
+        if 'underline' in current_tags:
+            if is_marked():
                 EgonTE.tag_remove('colored_txt', 'sel.first', 'sel.last')
-
             else:
+                EgonTE.tag_remove('colored_txt', '1.0', 'end')
+        else:
+            if is_marked():
                 EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
-        except:
-            messagebox.showerror('error', 'didn\'t selected text')
+            else:
+                EgonTE.tag_add('colored_txt', '1.0', 'end')
 
 
 # background color func
@@ -427,21 +430,24 @@ def replace(event=None):
 
 # align Left func
 def align_left(event=None):
-    try:
+    if is_marked():
         text_content = EgonTE.get('sel.first', 'sel.last')
-    except:
-        messagebox.showerror('error', 'mark the whole line in order to align')
+    else:
+        EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
+        text_content = EgonTE.get('insert linestart', 'insert lineend')
     EgonTE.tag_config("left", justify=LEFT)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "left")
 
 
+
 # Align Center func
 def align_center(event=None):
-    try:
+    if is_marked():
         text_content = EgonTE.get('sel.first', 'sel.last')
-    except:
-        messagebox.showerror('error', 'mark the whole line in order to align')
+    else:
+        EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
+        text_content = EgonTE.get('insert linestart', 'insert lineend')
     EgonTE.tag_config("center", justify=CENTER)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "center")
@@ -449,10 +455,11 @@ def align_center(event=None):
 
 # Align Right func
 def align_right(event=None):
-    try:
+    if is_marked():
         text_content = EgonTE.get('sel.first', 'sel.last')
-    except:
-        messagebox.showerror('error', 'mark the whole line in order to align')
+    else:
+        EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
+        text_content = EgonTE.get('insert linestart', 'insert lineend')
     EgonTE.tag_config("right", justify=RIGHT)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "right")
@@ -1094,6 +1101,25 @@ def delete_tags():
     EgonTE.tag_delete('bold', 'underline', 'italics', 'size', 'colored_txt')
 
 
+def special_files_import(file_type):
+    pandas.options.display.max_rows = 9999
+    special_file = filedialog.askopenfilename(title='open \'special\' special_file', filetypes=(('excel', '*.xlsx'),
+                                              ('json', '*.json'), ('xml', '*.xml'), ('csv', '*.csv')))
+    if special_file:
+        try:
+            if file_type == 'excel':
+                content = pandas.read_excel(special_file).to_string()
+            elif file_type == 'csv':
+                content = pandas.read_csv(special_file).to_string()
+            elif file_type == 'json':
+                content = pandas.read_json(special_file).to_string()
+            elif file_type == 'xml':
+                content = pandas.read_xml(special_file).to_string()
+            EgonTE.insert('end', content)
+        except:
+            messagebox.showerror('error', 'wrong match between selected special_file to special_file\'s type')
+
+
 # add custom style
 style = ttk.Style()
 style.theme_use('clam')
@@ -1139,6 +1165,11 @@ file_menu.add_separator()
 file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
 file_menu.add_separator()
 file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=copy_file_path)
+file_menu.add_separator()
+file_menu.add_command(label='Import EXCEL file', accelerator='', command=lambda: special_files_import('excel'))
+file_menu.add_command(label='Import CSV file', accelerator='', command=lambda: special_files_import('csv'))
+file_menu.add_command(label='Import JSON file', accelerator='', command=lambda: special_files_import('json'))
+file_menu.add_command(label='Import XML file', accelerator='', command=lambda: special_files_import('xml'))
 file_menu.add_separator()
 file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=exit_app)
 # edit menu
