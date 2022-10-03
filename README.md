@@ -12,8 +12,9 @@ Stunning extras - translate, calculate & many more 📩.
 Enjoy night mode 🌙.  
 Many settings and customization options to the software itself ⚙️.  
 
-## Quick preview
-![quick_preview](https://user-images.githubusercontent.com/95249974/193637139-089cf8be-6843-4b4d-b3b4-a4bd52824b0c.gif)
+## Quick preview 💎
+![quick_preview](https://user-images.githubusercontent.com/95249974/193637139-089cf8be-6843-4b4d-b3b4-a4bd52824b0c.gif)  
+__(footage taken from 1.0.7 version)__
 
 ## Personal goal 🌟
 my personal goal with this project is to learn Tkinter and while  
