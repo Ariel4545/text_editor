@@ -1,19 +1,16 @@
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
 
 ## features 🔥
-1. save & open text files and more 💾.
-2. customize the color of your text 🌈.
-3. customize the tones of your text - bold , italics, underline 📋.
-4. edit your text with many operations - redo, undo, select all ,clear , copy, paste ect ⚙️.
-5. be able to print your files 🖨️.
-6. be able to listen to your writings 📣.
-7. be able to convert speak to text 🎤. 
-8. be able to search text in your document 🔎.
-9. enjoy night mode 🌙.  
-10. amaizing tools - translate, calculate & many more 📩.  
-11. change text's size 📊.  
-12. replace one text by others with a great tool 🔧.  
-13. change text's fonts 🗚.
+Basic file actions - save, open, make a new & many more 💾.  
+Change text size & font 🗚.  
+Change the color of your text 🌈.  
+Change the style of the font of your text - bold, italics, underline 📋.  
+Edit your text with many tools 🔧.  
+Be able to print your files 🖨️.  
+Listen to your writings & write through speaking 📣.  
+Stunning extras - translate, calculate & many more 📩.  
+Enjoy night mode 🌙.  
+Many settings and customization options to the software itself ⚙️.  
 
 ## personal goal 🌟
 my personal goal with this project is to learn Tkinter and while  
