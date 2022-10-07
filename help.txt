@@ -1,0 +1,21 @@
+
+Marking:
+Egon Text Editor works quite differently from other text editing programs,
+something that can work differently between each character you will choose to change.
+The simplest way to change something text related is by marking it.
+But if you will not mark something,
+Egon Text Editor will select automatically for you what it will affect depending on what tool you're willing to use:
+Bold, Italics, underline, text color & text to speech - will choose the entire file
+Align right, Align center, Align left - will select the line you're on
+
+Import non-text file:
+Egon-Text-Editor will let you import some nontext file types to your text file.
+It works by selecting to file type in the file menu and then selecting the file you want (with the same type),
+and then it will convert it to text and append it to where you are in the Text file.
+
+File bar & Status bar:
+The File bar & Status bar are two labels at the bottom of the program,
+They notify you about two things:
+Status bar - number of words & characters that the file has.
+File bar - file name, date and time of saving the file, file state, etc.
+You can turn off these labels by using Settings.
