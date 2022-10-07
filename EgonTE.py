@@ -18,6 +18,12 @@ from os import getcwd
 import string
 import pandas
 
+try:
+    import polyglot
+except ImportError:
+    RA = False
+
+
 # window creation
 root = Tk()
 width = 1250
@@ -43,7 +49,8 @@ text_changed = False
 global random_name, types, gender
 global file_name
 global engine, tts
-text_changed = False
+selected = False
+
 
 # icons - size=32x32
 BOLD_IMAGE = PhotoImage(file='assets/bold.png')
@@ -151,7 +158,7 @@ def cut(x):
     if not x:
         selected = root.clipboard_get()
     else:
-        if EgonTE.selection_get():
+        if is_marked():
             # grab
             selected = EgonTE.selection_get()
             # del
@@ -163,23 +170,18 @@ def cut(x):
 # copy func
 def copy(x):
     global selected
-    if not x:
-        selected = root.clipboard_get()
-        if EgonTE.selection_get():
-            # grab
-            selected = EgonTE.selection_get()
-            root.clipboard_clear()
-            root.clipboard_append(selected)
+    if is_marked():
+        # grab
+        root.clipboard_clear()
+        selected = EgonTE.selection_get()
+        root.clipboard_append(selected)
 
 
 # paste func
 def paste(x):
     global selected
-    if not x:
-        selected = root.clipboard_get()
-    else:
-        if selected:
-            EgonTE.insert(get_pos(), selected)
+    if selected:
+        EgonTE.insert(get_pos(), selected)
 
 
 # bold text func
@@ -381,6 +383,13 @@ def night():
         night_mode = True
 
 
+def change_font(event):
+    global chosen_font
+    chosen_font = font_family.get()
+    delete_tags()
+    EgonTE.configure(font=(chosen_font, 16))
+
+
 # WIP
 def change_font_size(event=None):
     global chosen_size
@@ -438,7 +447,6 @@ def align_left(event=None):
     EgonTE.tag_config("left", justify=LEFT)
     EgonTE.delete('sel.first', 'sel.last')
     EgonTE.insert(INSERT, text_content, "left")
-
 
 
 # Align Center func
@@ -635,12 +643,11 @@ def ins_calc():
         try:
             equation = eval(equation)
         except SyntaxError:
-            messagebox.showerror('error', 'didn\'t type valid characters')
+            messagebox.showerror('error', 'type some  invalid characters')
         except NameError:
-            messagebox.showerror('error', 'tool does not support variables')
+            messagebox.showerror('error', 'calculation tool support only arithmetics & modulus')
         equation = str(equation) + ' '
         EgonTE.insert(get_pos(), equation)
-        clac_root.destroy()
 
     def show_oper():
         global add_sub, mul_div, pow_
@@ -848,7 +855,7 @@ def translate():
     languages = StringVar()
     # combo box
     auto_detect = ttk.Combobox(translate_root, width=20, textvariable=auto_detect_string, state='readonly',
-                               font=('arial', 10, 'bold'), )
+                               font=('arial', 10, 'bold'))
 
     choose_langauge = ttk.Combobox(translate_root, width=20, textvariable=languages, state='readonly',
                                    font=('arial', 10, 'bold'))
@@ -906,51 +913,6 @@ def url():
     enter.config(command=shorter)
 
 
-def font_helvetica():
-    delete_tags()
-    EgonTE.config(font=('Helvetica', 16))
-
-
-def font_courier():
-    delete_tags()
-    EgonTE.config(font=('Courier', 16))
-
-
-def font_times():
-    delete_tags()
-    EgonTE.config(font=('Times', 16))
-
-
-def font_arial():
-    delete_tags()
-    EgonTE.config(font=('Arial', 16))
-
-
-def font_corbel():
-    delete_tags()
-    EgonTE.config(font=('Corbel', 16))
-
-
-def font_modern():
-    delete_tags()
-    EgonTE.config(font=('Modern', 16))
-
-
-def font_marlett():
-    delete_tags()
-    EgonTE.config(font=('Marlett', 16))
-
-
-def font_rod():
-    delete_tags()
-    EgonTE.config(font=('Rod', 16))
-
-
-def font_symbol():
-    delete_tags()
-    EgonTE.config(font=('Symbol', 16))
-
-
 def reverse_characters(event=None):
     content = EgonTE.get(1.0, END)
     reversed_content = content[::-1]
@@ -981,7 +943,13 @@ def lower_upper(event=None):
     else:
         content = content.upper()
     EgonTE.delete(1.0, END)
+    unacceptable_line_removal(content)
     EgonTE.insert(1.0, content)
+
+
+# a function to fix random appeared bug - not working at the moment
+def unacceptable_line_removal(content):
+    list(content[-1]).pop(-1)
 
 
 def generate():
@@ -1023,27 +991,37 @@ def generate():
             length = int(length_entry.get())
         except ValueError:
             messagebox.showerror('error', 'didn\'t write the length')
-        sym_char = "!", "@", "#", "$", "%", "^", "&", "*", "(", ")"
-        if sym:
-            for character in sym_char:
-                characters.append(character)
+        if length < 25000:
+            approved = True
         else:
-            if sym_char:
-                try:
-                    characters.remove('!'), characters.remove('@'), characters.remove('#'), characters.remove('$'),
-                    characters.remove('%'), characters.remove('^'), characters.remove('&'), characters.remove('*'),
-                    characters.remove('('), characters.remove(')')
-                except ValueError:
-                    pass
-        shuffle(characters)
-        sequence = []
-        for i in range(length):
-            sequence.append(choice(characters))
-        EgonTE.insert(get_pos(), "".join(sequence))
+            if messagebox.askyesno('EgonTE', '25000 characters or more will cause lag,'
+                                             ' are you sure you want to proceed?'):
+                approved = True
+            else:
+                approved = False
+        if approved:
+            sym_char = "!", "@", "#", "$", "%", "^", "&", "*", "(", ")"
+            if sym:
+                for character in sym_char:
+                    characters.append(character)
+            else:
+                if sym_char:
+                    try:
+                        characters.remove('!'), characters.remove('@'), characters.remove('#'), characters.remove('$'),
+                        characters.remove('%'), characters.remove('^'), characters.remove('&'), characters.remove('*'),
+                        characters.remove('('), characters.remove(')')
+                    except ValueError:
+                        pass
+            shuffle(characters)
+            sequence = []
+            for i in range(length):
+                sequence.append(choice(characters))
+            EgonTE.insert(get_pos(), "".join(sequence))
 
     enter_button.config(command=generate_sequence)
 
 
+# font size up by 1 iterations
 def size_up_shortcut(event=None):
     global font_Size_c
     font_Size_c += 1
@@ -1054,6 +1032,7 @@ def size_up_shortcut(event=None):
         messagebox.showerror('error', 'font size at maximum')
 
 
+# font size down by 1 iterations
 def size_down_shortcut(event=None):
     global font_Size_c
     font_Size_c -= 1
@@ -1098,26 +1077,99 @@ def is_marked():
 
 # tags and configurations of the same thing is clashing all the time \:
 def delete_tags():
+    global font_Size_c
     EgonTE.tag_delete('bold', 'underline', 'italics', 'size', 'colored_txt')
+    font_Size_c = 4
+    font_size.current(font_Size_c)
 
 
 def special_files_import(file_type):
+    # to make the functions write the whole file even if its huge
     pandas.options.display.max_rows = 9999
-    special_file = filedialog.askopenfilename(title='open \'special\' special_file', filetypes=(('excel', '*.xlsx'),
-                                              ('json', '*.json'), ('xml', '*.xml'), ('csv', '*.csv')))
-    if special_file:
-        try:
-            if file_type == 'excel':
-                content = pandas.read_excel(special_file).to_string()
-            elif file_type == 'csv':
-                content = pandas.read_csv(special_file).to_string()
-            elif file_type == 'json':
-                content = pandas.read_json(special_file).to_string()
-            elif file_type == 'xml':
-                content = pandas.read_xml(special_file).to_string()
-            EgonTE.insert('end', content)
-        except:
-            messagebox.showerror('error', 'wrong match between selected special_file to special_file\'s type')
+    content = ''
+    if file_type == 'excel':
+        special_file = filedialog.askopenfilename(title='open excel file',
+                                                  filetypes=(('excel', '*.xlsx'), ('all', '*.*')))
+        if special_file:
+            content = pandas.read_excel(special_file).to_string()
+    elif file_type == 'csv':
+        special_file = filedialog.askopenfilename(title='open csv file',
+                                                  filetypes=(('csv', '*.csv'), ('all', '*.*')))
+        if special_file:
+            content = pandas.read_csv(special_file).to_string()
+    elif file_type == 'json':
+        special_file = filedialog.askopenfilename(title='open json file',
+                                                  filetypes=(('json', '*.json'), ('all', '*.*')))
+        if special_file:
+            content = pandas.read_json(special_file).to_string()
+    elif file_type == 'xml':
+        special_file = filedialog.askopenfilename(title='open xml file',
+                                                  filetypes=(('xml', '*.xml'), ('all', '*.*')))
+        if special_file:
+            content = pandas.read_xml(special_file).to_string()
+
+    EgonTE.insert(get_pos(), content)
+
+
+# a window that have explanations confusing features
+def e_help():
+    # window
+    help_root = Toplevel()
+    help_root.resizable(False, False)
+    help_root.config(bg='white')
+    # putting the lines in order
+    lines = []
+    with open('help.txt') as ht:
+        for line in ht:
+            lines.append(line)
+    #
+    help_root_frame = Frame()
+    frame.pack(pady=5)
+    help_text_scroll = ttk.Scrollbar(help_root_frame)
+    help_text_scroll.pack(side=RIGHT, fill=Y)
+    # labels
+    title = Label(help_root, text='Help', font='arial 16 bold underline', justify='left')
+    text = Text(help_root, font='arial 12', borderwidth=3, bg='light grey', state='normal',
+                yscrollcommand=help_text_scroll.set)
+    # add lines
+    text.delete('1.0', END)
+    text.insert('1.0', lines)
+    text.config(state='disabled')
+    # placing
+    title.grid(row=0)
+    text.grid(row=1)
+
+
+def right_align_language_support():
+    if EgonTE.get('1.0', 'end'):
+        lan = polyglot.Text(EgonTE.get('1.0', 'end')).language.name
+        if lan == 'Arabic' or 'Hebrew' or 'Persian' or 'Pashto' or 'Urdu' or 'Kashmiri' or 'Sindhi':
+            align_right()
+
+
+def search_www():
+    ser_root = Toplevel()
+    ser_root.resizable(False, False)
+
+    def enter():
+        if entry_box.get() != '':
+            open_(entry_box.get())
+
+    def copy_from_text():
+        if is_marked():
+            entry_box.insert('end', EgonTE.get('sel.first', 'sel.last'))
+        else:
+            entry_box.insert('end', EgonTE.get('1.0', 'end'))
+
+    title = Label(ser_root, text='Search with google', font='arial 14 underline')
+    entry_box = Entry(ser_root, relief=GROOVE, width=40)
+    enter_button = Button(ser_root, relief=FLAT, command=enter, text='Enter')
+    from_text_button = Button(ser_root, relief=FLAT, command=copy_from_text, text='Copy from text')
+
+    title.grid(row=0, column=0, padx=10, pady=3)
+    entry_box.grid(row=1, column=0, padx=10)
+    enter_button.grid(row=2, column=0)
+    from_text_button.grid(row=3, column=0, pady=5)
 
 
 # add custom style
@@ -1128,6 +1180,15 @@ frame.pack(pady=5)
 # create toolbar frame
 toolbar_frame = Frame(frame)
 toolbar_frame.pack(fill=X, anchor=W)
+
+
+# font
+font_tuple = font.families()
+font_family = StringVar()
+font_ui = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family, state="readonly")
+font_ui["values"] = font_tuple
+font_ui.current(font_tuple.index("Arial"))
+font_ui.grid(row=0, column=4, padx=5)
 
 # Size Box
 size_var = IntVar()
@@ -1203,6 +1264,7 @@ tool_menu.add_command(label='Random name', command=ins_random_name)
 tool_menu.add_command(label='Translate', command=translate)
 tool_menu.add_command(label='Url shorter', command=url)
 tool_menu.add_command(label='Generate sequence', command=generate)
+tool_menu.add_command(label='Search online', command=search_www)
 # color menu
 color_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Colors+', menu=color_menu)
@@ -1213,22 +1275,12 @@ color_menu.add_separator()
 color_menu.add_command(label='Buttons color', command=lambda: custom_ui_colors('buttons'))
 color_menu.add_command(label='Menus colors', command=lambda: custom_ui_colors('menus'))
 color_menu.add_command(label='App colors', command=lambda: custom_ui_colors('app'))
-# fonts menu
-font_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label="Fonts", menu=font_menu)
-helvetica = IntVar()
-courier = IntVar()
-font_menu.add_checkbutton(label="Arial", command=font_arial)
-font_menu.add_checkbutton(label="Courier", command=font_courier)
-font_menu.add_checkbutton(label="Helvetica", command=font_helvetica)
-font_menu.add_checkbutton(label="Times New Roman", command=font_times)
-font_menu.add_checkbutton(label="Corbel", command=font_corbel)
-font_menu.add_checkbutton(label="Modern", command=font_modern)
-font_menu.add_checkbutton(label="marlett", command=font_marlett)
-font_menu.add_checkbutton(label="symbol", command=font_symbol)
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Options', menu=options_menu)
+# help page
+help_menu = Menu(menu, tearoff=False)
+menu.add_cascade(label='Help', command=e_help)
 # github page
 github_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='GitHub', command=github)
@@ -1241,12 +1293,12 @@ file_bar.pack(fill=X, side=RIGHT, ipady=5)
 # add shortcuts
 root.bind("<Control-o>", open_file)
 root.bind("<Control-O>", open_file)
-root.bind('<Control-Key-x>', cut)
-root.bind('<Control-Key-X>', cut)
-root.bind('<Control-Key-v>', paste)
-root.bind('<Control-Key-V>', paste)
-root.bind('<Control-Key-c>', copy)
-root.bind('<Control-Key-C>', copy)
+root.bind('<Control-Key-x>', lambda event: cut(True))
+root.bind('<Control-Key-X>', lambda event: cut(True))
+root.bind('<Control-Key-v>', lambda event: paste(True))
+root.bind('<Control-Key-V>', lambda event: paste(True))
+root.bind('<Control-Key-c>', lambda event: copy(True))
+root.bind('<Control-Key-C>', lambda event: copy(True))
 root.bind('<Control-Key-s>', save)
 root.bind('<Control-Key-S>', save)
 root.bind('<Control-Key-a>', select_all)
@@ -1286,7 +1338,8 @@ root.bind('<Alt-Key-D>', copy_file_path)
 root.bind('<Control-Key-plus>', size_up_shortcut)
 root.bind('<Control-Key-minus>', size_down_shortcut)
 # special events
-root.bind('<<ComboboxSelected>>', change_font_size)
+font_size.bind('<<ComboboxSelected>>', change_font_size)
+font_ui.bind("<<ComboboxSelected>>", change_font)
 root.bind('<<Modified>>', status)
 # buttons creation and placement
 bold_button = Button(toolbar_frame, image=BOLD_IMAGE, command=bold, relief=FLAT)
@@ -1336,7 +1389,7 @@ cs.set(True)
 # check marks
 options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
                              compound=LEFT, command=night)
-options_menu.add_checkbutton(label="Status Bar", onvalue=True, offvalue=False,
+options_menu.add_checkbutton(label="Status Bars", onvalue=True, offvalue=False,
                              variable=show_statusbar, compound=LEFT, command=hide_statusbars)
 options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
                              variable=show_toolbar, compound=LEFT, command=hide_toolbar)
@@ -1355,6 +1408,7 @@ talk_button.grid(row=0, column=10, padx=5)
 align_left_button.configure(command=align_left)
 align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
+
 
 # opening sentence
 op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
@@ -1378,8 +1432,11 @@ TOOL_TIP.bind_widget(font_size, balloonmsg='upwards - (ctrl+plus) \n downwards -
 # ui lists
 toolbar_components = [bold_button, italics_button, color_button, underline_button, align_left_button,
                       align_center_button, align_right_button, tts_button, talk_button, font_size]
-menus_components = [file_menu, edit_menu, tool_menu, color_menu, font_menu, options_menu]
+menus_components = [file_menu, edit_menu, tool_menu, color_menu, options_menu]
 other_components = [root, status_bar, file_bar, EgonTE, toolbar_frame]
+
+if RA:
+    right_align_language_support()
 
 root.mainloop()
 
