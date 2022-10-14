@@ -4,13 +4,15 @@ Egon Text Editor works quite differently from other text editing programs,
 something that can work differently between each character you will choose to change.
 The simplest way to change something text related is by marking it.
 But if you will not mark something,
-Egon Text Editor will select automatically for you what it will affect depending on what tool you're willing to use:
+Egon Text Editor will select automatically for you what it will affect depending on what
+tool you're willing to use:
 Bold, Italics, underline, text color & text to speech - will choose the entire file
 Align right, Align center, Align left - will select the line you're on
 
-Import non-text file:
+Import nontext file:
 Egon-Text-Editor will let you import some nontext file types to your text file.
-It works by selecting to file type in the file menu and then selecting the file you want (with the same type),
+It works by selecting to file type in the file menu and then selecting the file you want
+(with the same type),
 and then it will convert it to text and append it to where you are in the Text file.
 
 File bar & Status bar:
@@ -19,3 +21,18 @@ They notify you about two things:
 Status bar - number of words & characters that the file has.
 File bar - file name, date and time of saving the file, file state, etc.
 You can turn off these labels by using Settings.
+
+Search online:
+Search online is a tool that will open a new tab in your default browser,
+ and then search by domain.
+There is a button 'copy from file' it has two possible operations :
+1. When text is marked it will add up to the text box only what is marked
+2. When text isn't marked it will add up to the text box the whole text file
+
+Custom UI colors:
+There are three options to change the Egon Text Editor predefined colors
+ to your custom ones (aside from text color):
+1.  Button colors - buttons' background color
+2. Menu colors - Menus Background & text colors
+3. App colors - text box color, status & file bar colors, toolbar colors,
+ frame color, text color (until 1.0.9 version)
