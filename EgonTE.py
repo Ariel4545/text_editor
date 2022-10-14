@@ -20,9 +20,10 @@ import pandas
 
 try:
     import polyglot
+
+    RA = True
 except ImportError:
     RA = False
-
 
 # window creation
 root = Tk()
@@ -33,7 +34,8 @@ screen_height = root.winfo_screenheight()
 placement_x = round((screen_width / 2) - (width / 2))
 placement_y = round((screen_height / 2) - (height / 2))
 root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
-root.title('Egon Text editor')
+ver = '1.0.9'
+root.title(f'Egon Text editor - {ver}')
 root.resizable(False, False)
 
 # add and use logo
@@ -50,7 +52,8 @@ global random_name, types, gender
 global file_name
 global engine, tts
 selected = False
-
+predefined_cursor, predefined_style = '', ''
+bars_active = True
 
 # icons - size=32x32
 BOLD_IMAGE = PhotoImage(file='assets/bold.png')
@@ -173,15 +176,14 @@ def copy(x):
     if is_marked():
         # grab
         root.clipboard_clear()
-        selected = EgonTE.selection_get()
-        root.clipboard_append(selected)
+        root.clipboard_append(EgonTE.selection_get())
 
 
 # paste func
 def paste(x):
     global selected
     if selected:
-        EgonTE.insert(get_pos(), selected)
+        EgonTE.insert(get_pos(), root.clipboard_get())
 
 
 # bold text func
@@ -312,16 +314,19 @@ def clear(event=None):
 # hide file bar & status bar func
 def hide_statusbars():
     global show_statusbar
+    global bars_active
     if show_statusbar:
         status_bar.pack_forget()
         file_bar.pack_forget()
-        root.geometry(f'{width}x{height - 10}')
+        root.geometry(f'{width}x{height - 30}')
         show_statusbar = False
+        bars_active = False
     else:
         status_bar.pack(side=LEFT)
         file_bar.pack(side=RIGHT)
-        root.geometry(f'{width}x{height}')
+        root.geometry(f'{width}x{height - 20}')
         show_statusbar = True
+        bars_active = True
 
 
 #  hide tool bar func
@@ -390,7 +395,6 @@ def change_font(event):
     EgonTE.configure(font=(chosen_font, 16))
 
 
-# WIP
 def change_font_size(event=None):
     global chosen_size
     chosen_size = size_var.get()
@@ -445,8 +449,11 @@ def align_left(event=None):
         EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
         text_content = EgonTE.get('insert linestart', 'insert lineend')
     EgonTE.tag_config("left", justify=LEFT)
-    EgonTE.delete('sel.first', 'sel.last')
-    EgonTE.insert(INSERT, text_content, "left")
+    try:
+        EgonTE.delete('sel.first', 'sel.last')
+        EgonTE.insert(INSERT, text_content, "left")
+    except:
+        messagebox.showerror('error', 'choose a line content')
 
 
 # Align Center func
@@ -457,8 +464,11 @@ def align_center(event=None):
         EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
         text_content = EgonTE.get('insert linestart', 'insert lineend')
     EgonTE.tag_config("center", justify=CENTER)
-    EgonTE.delete('sel.first', 'sel.last')
-    EgonTE.insert(INSERT, text_content, "center")
+    try:
+        EgonTE.delete('sel.first', 'sel.last')
+        EgonTE.insert(INSERT, text_content, "center")
+    except:
+        messagebox.showerror('error', 'choose a line with content')
 
 
 # Align Right func
@@ -469,8 +479,11 @@ def align_right(event=None):
         EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
         text_content = EgonTE.get('insert linestart', 'insert lineend')
     EgonTE.tag_config("right", justify=RIGHT)
-    EgonTE.delete('sel.first', 'sel.last')
-    EgonTE.insert(INSERT, text_content, "right")
+    try:
+        EgonTE.delete('sel.first', 'sel.last')
+        EgonTE.insert(INSERT, text_content, "right")
+    except:
+        messagebox.showerror('error', 'choose a line with content')
 
 
 # get & display character and word count with status bar
@@ -480,7 +493,8 @@ def status(event=None):
         text_changed = True
         words = len(EgonTE.get(1.0, "end-1c").split())
         characters = len(EgonTE.get(1.0, "end-1c"))
-        status_bar.config(text=f'Characters:{characters} Words: {words}')
+        lines = int((EgonTE.index(END)).split('.')[0]) - 1
+        status_bar.config(text=f'Lines:{lines} Characters:{characters} Words:{words}')
     EgonTE.edit_modified(False)
 
 
@@ -503,7 +517,7 @@ def read_text(**kwargs):
     if 'text' in kwargs:
         ttr = kwargs['text']
     else:
-        ttr = EgonTE.get(1.0, 'end')  # get EgonTE content
+        ttr = EgonTE.get(1.0, 'end')
     engine.say(ttr)
     engine.runAndWait()
     engine.stop()
@@ -594,31 +608,80 @@ def find_text(event=None):
         by_characters = False
 
     def enter():
-        global cpt_settings, by_characters
+        global cpt_settings, by_characters, offset, starting_index, ending_index
         text_data = EgonTE.get('1.0', END + '-1c')
         # by word/character settings
-        if by_characters:
-            pass
-        else:
+        if not by_characters:
             text_data = text_data.split(' ')
+
         # capitalize settings
         if cpt_settings == 'unc':
-            text_data_ = text_data.lower()
-            entry_data = text_entry.get().lower()
-            occurs = text_data_.count(entry_data)
-            if text_data_.count(entry_data):
-                search_label = messagebox.showinfo("EgonTE:", f"{entry_data} has {str(occurs)} occurrences")
-            else:
-                search_label = messagebox.showinfo("EgonTE:", "No match found")
+            text_data = str(text_data).lower()
+            entry_data = (text_entry.get()).lower()
+            occurs = str(text_data.count(text_entry.get())).lower()
         elif cpt_settings == 'c':
+            text_data = str(text_data)
+            entry_data = text_entry.get()
             occurs = text_data.count(text_entry.get())
-            if text_data.count(text_entry.get()):
-                search_label = messagebox.showinfo("EgonTE:", f"{text_entry.get()} has {str(occurs)} occurrences")
-            else:
-                search_label = messagebox.showinfo("EgonTE:", "No match found")
+
+        # check if text occurs
+        if text_data.count(entry_data):
+            search_label = messagebox.showinfo("EgonTE:", f"{entry_data} has {str(occurs)} occurrences")
+
+            # select first match
+            starting_index = EgonTE.search(entry_data, '1.0', END)
+            if starting_index:
+                offset = '+%dc' % len(entry_data)
+                ending_index = starting_index + offset
+                EgonTE.tag_add(SEL, starting_index, ending_index)
+
+            if int(occurs) > 1:
+                # navigation window
+
+                def down(si, ei):
+                    global ending_index, starting_index
+                    EgonTE.tag_remove(SEL, '1.0', END)
+                    starting_index = EgonTE.search(entry_data, ei, END)
+                    if si:
+                        offset = '+%dc' % len(entry_data)
+                        ending_index = starting_index + offset
+                        print(f'str:{starting_index} end:{ending_index}')
+                        EgonTE.tag_add(SEL, starting_index, ending_index)
+                        starting_index = ending_index
+                    button_up.config(state=ACTIVE)
+
+                def up(si, ei):
+                    global starting_index, ending_index
+                    EgonTE.tag_remove(SEL, '1.0', END)
+                    starting_index = EgonTE.search(entry_data,'1.0' , si)
+                    if si:
+                        offset = '+%dc' % len(entry_data)
+                        ending_index = starting_index + offset
+                        print(f'str:{starting_index} end:{ending_index}')
+                        EgonTE.tag_add(SEL, starting_index, ending_index)
+                        ending_index = starting_index
+
+                search_text_root.destroy()
+                nav_root = Toplevel()
+                nav_root.resizable(False, False)
+                # title
+                title = Label(nav_root, text=f'navigate trough the {str(occurs)} occurrences of "{entry_data}"',
+                              font='arial 12 underline')
+                # buttons ↑
+                button_up = Button(nav_root, text='Reset', command=lambda: up(starting_index, ending_index), width=5
+                                   ,state=DISABLED)
+                button_down = Button(nav_root, text='↓', command=lambda: down(starting_index, ending_index), width=5)
+                # placing
+                title.grid(row=0, padx=5)
+                button_up.grid(row=1)
+                button_down.grid(row=2)
+
+
+        else:
+            search_label = messagebox.showinfo("EgonTE:", "No match found")
 
     # window
-    search_text_root = Tk()
+    search_text_root = Toplevel()
     search_text_root.resizable(False, False)
     # var
     cpt_settings = 'c'
@@ -635,6 +698,9 @@ def find_text(event=None):
     capitalize_button.grid(row=2, column=0, pady=6, padx=5)
     by_word.grid(row=2, column=2, padx=10)
 
+    if is_marked():
+        text_entry.insert('end', EgonTE.get('sel.first', 'sel.last'))
+
 
 # insert mathematics calculation to the text box
 def ins_calc():
@@ -643,7 +709,7 @@ def ins_calc():
         try:
             equation = eval(equation)
         except SyntaxError:
-            messagebox.showerror('error', 'type some  invalid characters')
+            messagebox.showerror('error', 'typed some  invalid characters')
         except NameError:
             messagebox.showerror('error', 'calculation tool support only arithmetics & modulus')
         equation = str(equation) + ' '
@@ -679,9 +745,13 @@ def ins_calc():
     enter.grid(row=2)
     show_op.grid(row=3)
 
+    if is_marked():
+        if str(EgonTE.get('sel.first', 'sel.last')).isnumeric():
+            clac_entry.insert('end', EgonTE.get('sel.first', 'sel.last'))
+
 
 # insert the current date & time to the text box
-def dt():
+def dt(event=None):
     EgonTE.insert(get_pos(), get_time() + ' ')
 
 
@@ -694,7 +764,7 @@ def ins_random():
                 num_1 = int(number_entry1.get())
                 num_2 = int(number_entry2.get())
             except ValueError:
-                messagebox.showerror('error', 'didn\'t type valid characters')
+                messagebox.showerror('error', 'didn\'t typed valid characters')
             rand = randint(num_1, num_2)
             rand = str(rand) + ' '
             EgonTE.insert(get_pos(), rand)
@@ -731,6 +801,20 @@ def ins_random():
     sub_qf.grid(row=3, column=0)
     sub_qi.grid(row=3, column=2)
 
+    if is_marked():
+        ran_numbers = EgonTE.get('sel.first', 'sel.last')
+        numbers_separation = ran_numbers.split(' ')
+        if str(ran_numbers[0]).isnumeric():
+            print(numbers_separation)
+            number_entry1.insert('end', numbers_separation[0])
+        try:
+            number_entry2.insert('end', numbers_separation[1])
+        except IndexError:
+            pass
+    else:
+        number_entry1.insert('end', randint(1, 10))
+        number_entry2.insert('end', randint(10, 1000))
+
 
 def copy_file_path(event=None):
     # global selected
@@ -741,25 +825,27 @@ def copy_file_path(event=None):
 
 # change between the default and custom cursor
 def custom_cursor():
-    global cc
-    if not cc:
-        EgonTE.config(cursor='tcross')
-        cc = True
-    else:
-        EgonTE.config(cursor='arrow')
+    global cc, predefined_cursor
+    if cc:
+        predefined_cursor = 'tcross'
+        EgonTE.config(cursor=predefined_cursor)
         cc = False
+    else:
+        predefined_cursor = 'xterm'
+        EgonTE.config(cursor=predefined_cursor)
+        cc = True
 
 
 # change between the default and custom style
 def custom_style():
-    global cs
+    global cs, predefined_style
     if not cs:
-        style.theme_use('clam')
-        EgonTE.config(relief=RIDGE)
+        predefined_style = 'clam'
+        style.theme_use(predefined_style)
         cs = True
     else:
-        style.theme_use('vista')
-        EgonTE.config(relief=FLAT)
+        predefined_style = 'vista'
+        style.theme_use(predefined_style)
         cs = False
 
 
@@ -846,9 +932,14 @@ def translate():
             output = translator.translate(to_translate, dest=cl)
             EgonTE.insert(get_pos(), output.text)
 
+    def copy_from_file():
+        if is_marked():
+            translate_box.insert('end', EgonTE.get('sel.first', 'sel.last'))
+        else:
+            translate_box.insert('end', EgonTE.get('1.0', 'end'))
+
     # window
     translate_root = Toplevel()
-    translate_root.geometry('252x246')
     translate_root.resizable(False, False)
     # string variables
     auto_detect_string = StringVar()
@@ -878,15 +969,17 @@ def translate():
         'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa''Yiddish', 'Yoruba', 'Zulu',
     )
     # translate box & button
-    translate_box = Text(translate_root, width=30, height=10, borderwidth=5, relief=RIDGE)
+    translate_box = Text(translate_root, width=30, height=10, borderwidth=5)
     button_ = Button(translate_root, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'),
-                     cursor='tcross',
+                     cursor=predefined_cursor,
                      command=button)
+    copy_from = Button(translate_root, text='Copy from file', relief=FLAT, command=copy_from_file)
     # placing the objects in the window
     auto_detect.grid(row=0)
     choose_langauge.grid(row=1)
     translate_box.grid(row=2)
     button_.grid(row=3)
+    copy_from.grid(row=4)
 
 
 def url():
@@ -908,9 +1001,12 @@ def url():
             short_url = s.tinyurl.short(urls)
             EgonTE.insert(get_pos(), short_url)
         except:
-            messagebox.showerror('error', 'Please Paste an  invalid url')
+            messagebox.showerror('error', 'Please Paste a valid url')
 
     enter.config(command=shorter)
+
+    if is_marked():
+        url_entry.insert('end', EgonTE.get('sel.first', 'sel.last'))
 
 
 def reverse_characters(event=None):
@@ -943,13 +1039,14 @@ def lower_upper(event=None):
     else:
         content = content.upper()
     EgonTE.delete(1.0, END)
-    unacceptable_line_removal(content)
+    # unacceptable_line_removal()
     EgonTE.insert(1.0, content)
 
 
 # a function to fix random appeared bug - not working at the moment
-def unacceptable_line_removal(content):
-    list(content[-1]).pop(-1)
+def unacceptable_line_removal(content=None):
+    # list(content[-1]).pop(-1)
+    EgonTE.delete("end-2l","end-1l")
 
 
 def generate():
@@ -1063,7 +1160,7 @@ def custom_ui_colors(components):
             root.config(bg=selected_main_color)
             status_bar.config(bg=selected_main_color, fg=selected_text_color)
             file_bar.config(bg=selected_main_color, fg=selected_text_color)
-            EgonTE.config(bg=selected_second_color, fg=selected_text_color)
+            EgonTE.config(bg=selected_second_color)
             toolbar_frame.config(bg=selected_main_color)
 
 
@@ -1123,21 +1220,26 @@ def e_help():
         for line in ht:
             lines.append(line)
     #
-    help_root_frame = Frame()
+    help_root_frame = Frame(help_root)
     frame.pack(pady=5)
+    title_frame = Frame(help_root_frame)
+    title_frame.pack()
     help_text_scroll = ttk.Scrollbar(help_root_frame)
-    help_text_scroll.pack(side=RIGHT, fill=Y)
     # labels
-    title = Label(help_root, text='Help', font='arial 16 bold underline', justify='left')
-    text = Text(help_root, font='arial 12', borderwidth=3, bg='light grey', state='normal',
-                yscrollcommand=help_text_scroll.set)
+    title = Label(title_frame, text='Help', font='arial 16 bold underline', justify='left')
+    text = Text(help_root_frame, font='arial 10', borderwidth=3, bg='light grey', state='normal',
+                yscrollcommand=help_text_scroll.set, relief=RIDGE, wrap=WORD)
+    text.focus_set()
     # add lines
     text.delete('1.0', END)
     text.insert('1.0', lines)
     text.config(state='disabled')
     # placing
-    title.grid(row=0)
-    text.grid(row=1)
+    help_root_frame.pack(pady=3)
+    title.pack(fill=X, anchor=W)
+    help_text_scroll.pack(side=RIGHT, fill=Y)
+    text.pack(fill=BOTH, expand=True)
+    help_text_scroll.config(command=text.yview)
 
 
 def right_align_language_support():
@@ -1155,7 +1257,7 @@ def search_www():
         if entry_box.get() != '':
             open_(entry_box.get())
 
-    def copy_from_text():
+    def copy_from_file():
         if is_marked():
             entry_box.insert('end', EgonTE.get('sel.first', 'sel.last'))
         else:
@@ -1164,23 +1266,211 @@ def search_www():
     title = Label(ser_root, text='Search with google', font='arial 14 underline')
     entry_box = Entry(ser_root, relief=GROOVE, width=40)
     enter_button = Button(ser_root, relief=FLAT, command=enter, text='Enter')
-    from_text_button = Button(ser_root, relief=FLAT, command=copy_from_text, text='Copy from text')
+    from_text_button = Button(ser_root, relief=FLAT, command=copy_from_file, text='Copy from text')
 
     title.grid(row=0, column=0, padx=10, pady=3)
     entry_box.grid(row=1, column=0, padx=10)
     enter_button.grid(row=2, column=0)
     from_text_button.grid(row=3, column=0, pady=5)
 
+    if is_marked():
+        entry_box.insert('end', EgonTE.get('sel.first', 'sel.last'))
 
+
+def advance_options():
+    global file_, status_, bars_active, show_statusbar
+    global predefined_cursor, predefined_style
+
+    def change_button_color(button_family, button):
+        if button_family == 'cursors':
+            for adv_cursor_b in adv_cursor_bs:
+                adv_cursor_b.config(bg='SystemButtonFace')
+            if button == 'arrow':
+                arrow_button.config(bg='grey')
+            elif button == 'tcross':
+                tcross_button.config(bg='grey')
+            elif button == 'fleur':
+                fleur_button.config(bg='grey')
+            elif button == 'pencil':
+                pencil_button.config(bg='grey')
+            elif button == 'crosshair':
+                crosshair_button.config(bg='grey')
+            elif button == 'xterm':
+                xterm_button.config(bg='grey')
+        elif button_family == 'styles':
+            for adv_style_b in adv_style_bs:
+                adv_style_b.config(bg='SystemButtonFace')
+            if button == 'clam':
+                style_clam.config(bg='grey')
+            elif button == 'vista':
+                style_vista.config(bg='grey')
+            elif button == 'classic':
+                style_classic.config(bg='grey')
+        elif button_family == 'relief':
+            for adv_reliefs_b in adv_reliefs_bs:
+                adv_reliefs_b.config(bg='SystemButtonFace')
+            if button == 'ridge':
+                relief_ridge.config(bg='grey')
+            elif button == 'groove':
+                relief_groove.config(bg='grey')
+            elif button == 'flat':
+                relief_flat.config(bg='grey')
+
+    def adv_custom_cursor(cursor):
+        global predefined_cursor
+        EgonTE.config(cursor=cursor)
+        change_button_color('cursors', cursor)
+        predefined_cursor = cursor
+
+    def hide_(wth):
+        global file_, status_, show_statusbar, bars_active
+        if wth == 'statusbar':
+            if status_:
+                status_bar.pack_forget()
+                root.geometry(f'{width}x{height -30}')
+                status_ = False
+            else:
+                status_bar.pack(side=LEFT)
+                root.geometry(f'{width}x{height-20}')
+                status_ = True
+        elif wth == 'filebar':
+            if file_:
+                file_bar.pack_forget()
+                root.geometry(f'{width}x{height - 30}')
+                file_ = False
+            else:
+                file_bar.pack(side=RIGHT)
+                root.geometry(f'{width}x{height-20}')
+                file_ = True
+        # link to the basic options
+        if not status_ and file_ == False:
+            show_statusbar = True
+            bars_active = True
+        else:
+            show_statusbar = False
+            bars_active = False
+
+    def change_style(style_):
+        global predefined_style
+        style.theme_use(style_)
+        change_button_color('styles', style_)
+        predefined_style = style_
+
+    def change_relief(relief_):
+        global predefined_relief
+        EgonTE.config(relief=relief_)
+        change_button_color('relief', relief_)
+        predefined_relief = relief_
+
+    # window
+    opt_root = Toplevel()
+    opt_root.resizable(False, False)
+    # var
+    if bars_active:
+        status_ = BooleanVar()
+        status_.set(True)
+        file_ = BooleanVar()
+        file_.set(True)
+        show_statusbar = BooleanVar()
+        show_statusbar.set(True)
+        show_statusbar = True
+    else:
+        status_ = BooleanVar()
+        status_.set(False)
+        file_ = BooleanVar()
+        file_.set(False)
+        show_statusbar = BooleanVar()
+        show_statusbar.set(False)
+        show_statusbar = False
+    button_width = 8
+    font_ = 'arial 10 underline'
+    # ui
+    opt_title = Label(opt_root, text='Advance Options', font='calibri 16 bold')
+    cursor_title = Label(opt_root, text='Advance Cursor configuration', font=font_)
+    tcross_button = Button(opt_root, text='tcross', command=lambda: adv_custom_cursor('tcross'), width=button_width)
+    arrow_button = Button(opt_root, text='arrow', command=lambda: adv_custom_cursor('arrow'), width=button_width)
+    crosshair_button = Button(opt_root, text='crosshair',
+                              command=lambda: adv_custom_cursor('crosshair'), width=button_width)
+    pencil_button = Button(opt_root, text='pencil', command=lambda: adv_custom_cursor('pencil'), width=button_width)
+    fleur_button = Button(opt_root, text='fleur', command=lambda: adv_custom_cursor('fleur'), width=button_width)
+    xterm_button = Button(opt_root, text='xterm', command=lambda: adv_custom_cursor('xterm'), width=button_width)
+    hide_title = Label(opt_root, text='Advance hide status & file bar', font=font_)
+    filebar_check = Checkbutton(opt_root, text='filebar', command=lambda: hide_('filebar'), variable=status_)
+    statusbar_check = Checkbutton(opt_root, text='statusbar', command=lambda: hide_('statusbar'), variable=file_)
+    style_title = Label(opt_root, text='Advance style configuration', font=font_)
+    style_clam = Button(opt_root, text='clam', command=lambda: change_style('clam'), width=button_width)
+    style_classic = Button(opt_root, text='classic', command=lambda: change_style('classic'), width=button_width)
+    style_vista = Button(opt_root, text='vista', command=lambda: change_style('vista'), width=button_width)
+    relief_title = Label(opt_root, text='Advance relief configuration', font=font_)
+    relief_flat = Button(opt_root, text='flat', command=lambda: change_relief('flat'), width=button_width)
+    relief_ridge = Button(opt_root, text='ridge', command=lambda: change_relief('ridge'), width=button_width)
+    relief_groove = Button(opt_root, text='groove', command=lambda: change_relief('groove'), width=button_width)
+
+    # placing
+    opt_title.grid(row=0, column=1, pady=5)
+    cursor_title.grid(row=1, column=1)
+    tcross_button.grid(row=2, column=0)
+    arrow_button.grid(row=2, column=1)
+    crosshair_button.grid(row=2, column=2, padx=3)
+    pencil_button.grid(row=3, column=0)
+    fleur_button.grid(row=3, column=1)
+    xterm_button.grid(row=3, column=2)
+    hide_title.grid(row=4, column=1)
+    filebar_check.grid(row=5, column=0)
+    statusbar_check.grid(row=5, column=2)
+    style_title.grid(row=6, column=1)
+    style_clam.grid(row=7, column=0)
+    style_classic.grid(row=7, column=1)
+    style_vista.grid(row=7, column=2)
+    relief_title.grid(row=8, column=1)
+    relief_flat.grid(row=9, column=0)
+    relief_ridge.grid(row=9, column=1)
+    relief_groove.grid(row=9, column=2, pady=3)
+    # buttons list
+    adv_cursor_bs = [tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button]
+    adv_style_bs = [style_clam, style_vista, style_classic]
+    adv_reliefs_bs = [relief_groove, relief_flat, relief_ridge]
+    # button
+    if predefined_cursor or predefined_style or predefined_relief:
+        change_button_color('cursors', predefined_cursor)
+        change_button_color('styles', predefined_style)
+        change_button_color('relief', predefined_relief)
+
+
+def goto(event=None):
+    def enter():
+        word = goto_input.get()
+        starting_index = EgonTE.search(word, '1.0', END)
+        offset = '+%dc' % len(word)
+        if starting_index:
+            ending_index = starting_index + offset
+            index = EgonTE.search(word, ending_index, END)
+        EgonTE.mark_set("insert", ending_index)
+
+    # window
+    goto_root = Toplevel()
+    goto_root.resizable(False, False)
+    # ui components
+    goto_text = Label(goto_root, text='Enter the word that you wish to go to:', font='arial 10 underline')
+    goto_input = Entry(goto_root, width=20)
+    goto_button = Button(goto_root, text='Go to', pady=3, command=enter)
+    goto_text.grid(row=0, sticky=NSEW, column=0, padx=3)
+    goto_input.grid(row=3, column=0)
+    goto_button.grid(row=4, column=0, pady=5)
+
+
+# pre-defined options
+predefined_cursor = 'xterm'
+predefined_style = 'clam'
+predefined_relief = 'ridge'
 # add custom style
 style = ttk.Style()
-style.theme_use('clam')
+style.theme_use(predefined_style)
 frame = Frame(root)
 frame.pack(pady=5)
 # create toolbar frame
 toolbar_frame = Frame(frame)
 toolbar_frame.pack(fill=X, anchor=W)
-
 
 # font
 font_tuple = font.families()
@@ -1201,13 +1491,12 @@ font_size.grid(row=0, column=5, padx=5)
 # create vertical scrollbar
 text_scroll = ttk.Scrollbar(frame)
 text_scroll.pack(side=RIGHT, fill=Y)
-
 # create text box
 EgonTE = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue',
               selectforeground='white',
               undo=True,
-              yscrollcommand=text_scroll.set, wrap=WORD, relief=RIDGE,
-              cursor='tcross')
+              yscrollcommand=text_scroll.set, wrap=WORD, relief=predefined_relief,
+              cursor=predefined_cursor)
 EgonTE.focus_set()
 EgonTE.pack(fill=BOTH, expand=True)
 # config scrollbar
@@ -1247,8 +1536,8 @@ edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda
 edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=clear)
 edit_menu.add_separator()
 edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
-edit_menu.add_separator()
 edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=replace)
+edit_menu.add_command(label='Go to', accelerator='(ctrl+g)', command=goto)
 edit_menu.add_separator()
 edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)', command=reverse_characters)
 edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=reverse_words)
@@ -1258,7 +1547,7 @@ edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command
 tool_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Tools', menu=tool_menu)
 tool_menu.add_command(label='Calculation', command=ins_calc)
-tool_menu.add_command(label='Current datetime', command=dt)
+tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=dt)
 tool_menu.add_command(label='Random number', command=ins_random)
 tool_menu.add_command(label='Random name', command=ins_random_name)
 tool_menu.add_command(label='Translate', command=translate)
@@ -1278,6 +1567,34 @@ color_menu.add_command(label='App colors', command=lambda: custom_ui_colors('app
 # options menu
 options_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Options', menu=options_menu)
+# boolean tk vars
+show_statusbar = BooleanVar()
+show_statusbar.set(True)
+
+show_toolbar = BooleanVar()
+show_toolbar.set(True)
+
+night_mode = BooleanVar()
+
+cc = BooleanVar()
+cc.set(False)
+
+cs = BooleanVar()
+cs.set(True)
+# check marks
+options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
+                             compound=LEFT, command=night)
+options_menu.add_checkbutton(label="Status Bars", onvalue=True, offvalue=False,
+                             variable=show_statusbar, compound=LEFT, command=hide_statusbars)
+options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
+                             variable=show_toolbar, compound=LEFT, command=hide_toolbar)
+options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False,
+                             compound=LEFT, command=custom_cursor)
+
+options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False,
+                             compound=LEFT, command=custom_style, variable=cs)
+options_menu.add_separator()
+options_menu.add_command(label='Advance options', command=advance_options)
 # help page
 help_menu = Menu(menu, tearoff=False)
 menu.add_cascade(label='Help', command=e_help)
@@ -1337,6 +1654,9 @@ root.bind('<Alt-Key-d>', copy_file_path)
 root.bind('<Alt-Key-D>', copy_file_path)
 root.bind('<Control-Key-plus>', size_up_shortcut)
 root.bind('<Control-Key-minus>', size_down_shortcut)
+root.bind('<F5>', dt)
+root.bind('<Control-Key-g>', goto)
+root.bind('<Control-Key-G>', goto)
 # special events
 font_size.bind('<<ComboboxSelected>>', change_font_size)
 font_ui.bind("<<ComboboxSelected>>", change_font)
@@ -1371,34 +1691,6 @@ tts_button = Button(toolbar_frame, image=TTS_IMAGE, relief=FLAT,
                     )
 tts_button.grid(row=0, column=9, padx=5)
 
-# boolean tk vars
-show_statusbar = BooleanVar()
-show_statusbar.set(True)
-
-show_toolbar = BooleanVar()
-show_toolbar.set(True)
-
-night_mode = BooleanVar()
-
-cc = BooleanVar()
-cc.set(True)
-
-cs = BooleanVar()
-cs.set(True)
-
-# check marks
-options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
-                             compound=LEFT, command=night)
-options_menu.add_checkbutton(label="Status Bars", onvalue=True, offvalue=False,
-                             variable=show_statusbar, compound=LEFT, command=hide_statusbars)
-options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
-                             variable=show_toolbar, compound=LEFT, command=hide_toolbar)
-options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False,
-                             compound=LEFT, command=custom_cursor, variable=cc)
-
-options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False,
-                             compound=LEFT, command=custom_style, variable=cs)
-
 # talk button
 talk_button = Button(toolbar_frame, image=STT_IMAGE, relief=FLAT,
                      command=lambda: Thread(target=speech_to_text).start())
@@ -1408,7 +1700,6 @@ talk_button.grid(row=0, column=10, padx=5)
 align_left_button.configure(command=align_left)
 align_center_button.configure(command=align_center)
 align_right_button.configure(command=align_right)
-
 
 # opening sentence
 op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
