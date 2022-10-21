@@ -16,7 +16,7 @@ from googletrans import Translator  # req version 3.1.0a0
 from pyshorteners import Shortener
 from os import getcwd
 import string
-import pandas
+import pandas, numpy
 
 try:
     import polyglot
@@ -25,49 +25,340 @@ try:
 except ImportError:
     RA = False
 
+
 # window creation
-root = Tk()
-width = 1250
-height = 830
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-placement_x = round((screen_width / 2) - (width / 2))
-placement_y = round((screen_height / 2) - (height / 2))
-root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
-ver = '1.0.9'
-root.title(f'Egon Text editor - {ver}')
-root.resizable(False, False)
+def window(moa):
+    global root, text_changed, predefined_cursor, predefined_style, bars_active, TOOL_TIP, width, height, EgonTE, \
+        file_bar, status_bar, text_scroll, toolbar_frame, toolbar_components, menus_components, font_family, size_var, \
+        font_style, font_size, style, frame, predefined_relief, night_mode, other_components, font_Size_c, \
+        show_statusbar, ww, horizontal_scroll, show_toolbar
+    global BOLD_IMAGE, UNDERLINE_IMAGE, ITALICS_IMAGE, COLORS_IMAGE, ALIGN_LEFT_IMAGE, ALIGN_CENTER_IMAGE, \
+        ALIGN_RIGHT_IMAGE, TTS_IMAGE, STT_IMAGE
+    root = Tk()
+    width = 1250
+    height = 830
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    placement_x = round((screen_width / 2) - (width / 2))
+    placement_y = round((screen_height / 2) - (height / 2))
+    root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
+    ver = '1.0.9'
+    root.title(f'Egon Text editor - {ver}')
+    root.resizable(False, True)
+    root.maxsize(1250, 930)
+    load_images()
 
-# add and use logo
-LOGO = PhotoImage(file='ETE_icon.png')
-root.iconphoto(False, LOGO)
+    if moa == 'main':
+        # add and use logo
+        LOGO = PhotoImage(file='ETE_icon.png')
+        root.iconphoto(False, LOGO)
 
-# basic settings for the code
-global open_status_name
-open_status_name = False
-global selected
-global cc
-text_changed = False
-global random_name, types, gender
-global file_name
-global engine, tts
-selected = False
-predefined_cursor, predefined_style = '', ''
-bars_active = True
+    # basic settings for the code
+    global open_status_name
+    open_status_name = False
+    global selected
+    global cc
+    text_changed = False
+    global random_name, types, gender
+    global file_name
+    global engine, tts
+    selected = False
+    predefined_cursor, predefined_style = '', ''
+    bars_active = True
 
-# icons - size=32x32
-BOLD_IMAGE = PhotoImage(file='assets/bold.png')
-UNDERLINE_IMAGE = PhotoImage(file='assets/underlined-text.png')
-ITALICS_IMAGE = PhotoImage(file='assets/italics.png')
-COLORS_IMAGE = PhotoImage(file='assets/edition.png')
-ALIGN_LEFT_IMAGE = PhotoImage(file='assets/left-align.png')
-ALIGN_CENTER_IMAGE = PhotoImage(file=f'assets/center-align.png')
-ALIGN_RIGHT_IMAGE = PhotoImage(file='assets/right-align.png')
-TTS_IMAGE = PhotoImage(file='assets/tts(1).png')
-STT_IMAGE = PhotoImage(file="assets/speech-icon-19(1).png")
+    # create toll tip, for the toolbar buttons (with shortcuts)
+    TOOL_TIP = Balloon(root)
 
-# create toll tip, for the toolbar buttons (with shortcuts)
-TOOL_TIP = Balloon(root)
+    # pre-defined options
+    predefined_cursor = 'xterm'
+    predefined_style = 'clam'
+    predefined_relief = 'ridge'
+    # add custom style
+    style = ttk.Style()
+    style.theme_use(predefined_style)
+    frame = Frame(root)
+    frame.pack(pady=5)
+    # create toolbar frame
+    toolbar_frame = Frame(frame)
+    toolbar_frame.pack(fill=X, anchor=W)
+
+    # font
+    font_tuple = font.families()
+    font_family = StringVar()
+    font_ui = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family, state="readonly")
+    font_ui["values"] = font_tuple
+    font_ui.current(font_tuple.index("Arial"))
+    font_ui.grid(row=0, column=4, padx=5)
+
+    # Size Box
+    size_var = IntVar()
+    size_var.set(16)
+    font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="readonly")
+    font_size["values"] = tuple(range(8, 80, 2))
+    font_Size_c = 4
+    font_size.current(font_Size_c)  # 16 is at index 5
+    font_size.grid(row=0, column=5, padx=5)
+    # create vertical scrollbar
+    text_scroll = ttk.Scrollbar(frame)
+    text_scroll.pack(side=RIGHT, fill=Y)
+    # horizontal scrollbar
+    horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
+    # create text box
+    EgonTE = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue',
+                  selectforeground='white',
+                  undo=True,
+                  yscrollcommand=text_scroll.set, wrap=WORD, relief=predefined_relief,
+                  cursor=predefined_cursor)
+    EgonTE.focus_set()
+    EgonTE.pack(fill=BOTH, expand=True)
+    # config scrollbars
+    text_scroll.config(command=EgonTE.yview)
+    EgonTE.config(xscrollcommand=horizontal_scroll.set)
+    horizontal_scroll.config(command=EgonTE.xview)
+    # create menu
+    menu = Menu(frame)
+    root.config(menu=menu)
+    # file menu
+    file_menu = Menu(menu, tearoff=False)
+    menu.add_cascade(label='File', menu=file_menu)
+    file_menu.add_command(label='New', accelerator='(ctrl+n)', command=new_file)
+    file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=open_file)
+    file_menu.add_command(label='Save', command=save, accelerator='(ctrl+s)')
+    file_menu.add_command(label='Save As', command=save_as)
+    file_menu.add_command(label='New window', command=lambda: window('alt'), state=DISABLED)
+    file_menu.add_separator()
+    file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
+    file_menu.add_separator()
+    file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=copy_file_path)
+    file_menu.add_separator()
+    file_menu.add_command(label='Import EXCEL file', accelerator='', command=lambda: special_files_import('excel'))
+    file_menu.add_command(label='Import CSV file', accelerator='', command=lambda: special_files_import('csv'))
+    file_menu.add_command(label='Import JSON file', accelerator='', command=lambda: special_files_import('json'))
+    file_menu.add_command(label='Import XML file', accelerator='', command=lambda: special_files_import('xml'))
+    file_menu.add_separator()
+    file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=exit_app)
+    # edit menu
+    edit_menu = Menu(menu, tearoff=True)
+    menu.add_cascade(label='Edit', menu=edit_menu)
+    edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: cut(True))
+    edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: copy(True))
+    edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: paste(True))
+    edit_menu.add_separator()
+    edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=EgonTE.edit_undo)
+    edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=EgonTE.edit_redo)
+    edit_menu.add_separator()
+    edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda: select_all('nothing'))
+    edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=clear)
+    edit_menu.add_separator()
+    edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
+    edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=replace)
+    edit_menu.add_command(label='Go to', accelerator='(ctrl+g)', command=goto)
+    edit_menu.add_separator()
+    edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)', command=reverse_characters)
+    edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=reverse_words)
+    edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=join_words)
+    edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=lower_upper)
+    # tools menu
+    tool_menu = Menu(menu, tearoff=False)
+    menu.add_cascade(label='Tools', menu=tool_menu)
+    tool_menu.add_command(label='Calculation', command=ins_calc)
+    tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=dt)
+    tool_menu.add_command(label='Random number', command=ins_random)
+    tool_menu.add_command(label='Random name', command=ins_random_name)
+    tool_menu.add_command(label='Translate', command=translate)
+    tool_menu.add_command(label='Url shorter', command=url)
+    tool_menu.add_command(label='Generate sequence', command=generate)
+    tool_menu.add_command(label='Search online', command=search_www)
+    tool_menu.add_command(label='Sort numbers', command=sort)
+    # color menu
+    color_menu = Menu(menu, tearoff=False)
+    menu.add_cascade(label='Colors+', menu=color_menu)
+    color_menu.add_command(label='Whole text', command=all_txt_color)
+    color_menu.add_command(label='Background', command=bg_color)
+    color_menu.add_command(label='Highlight', command=hl_color)
+    color_menu.add_separator()
+    color_menu.add_command(label='Buttons color', command=lambda: custom_ui_colors('buttons'))
+    color_menu.add_command(label='Menus colors', command=lambda: custom_ui_colors('menus'))
+    color_menu.add_command(label='App colors', command=lambda: custom_ui_colors('app'))
+    # options menu
+    options_menu = Menu(menu, tearoff=False)
+    menu.add_cascade(label='Options', menu=options_menu)
+    # boolean tk vars
+    show_statusbar = BooleanVar()
+    show_statusbar.set(True)
+
+    show_toolbar = BooleanVar()
+    show_toolbar.set(True)
+
+    night_mode = BooleanVar()
+
+    cc = BooleanVar()
+    cc.set(False)
+
+    cs = BooleanVar()
+    cs.set(True)
+
+    ww = BooleanVar()
+    ww.set(True)
+
+    # check marks
+    options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
+                                 compound=LEFT, command=night)
+    options_menu.add_checkbutton(label="Status Bars", onvalue=True, offvalue=False,
+                                 variable=show_statusbar, compound=LEFT, command=hide_statusbars)
+    options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
+                                 variable=show_toolbar, compound=LEFT, command=hide_toolbar)
+    options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False,
+                                 compound=LEFT, command=custom_cursor)
+    options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False,
+                                 compound=LEFT, command=custom_style, variable=cs)
+    options_menu.add_checkbutton(label="Word warp", onvalue=True, offvalue=False,
+                                 compound=LEFT, command=word_warp, variable=ww)
+    options_menu.add_separator()
+    options_menu.add_command(label='Advance options', command=advance_options)
+    # help page
+    menu.add_cascade(label='Help', command=e_help)
+    # github page
+    menu.add_cascade(label='GitHub', command=github)
+    # add status bar
+    status_bar = Label(root, text='Lines:1 Characters:0 Words:0')
+    status_bar.pack(fill=X, side=LEFT, ipady=5)
+    # add file bar
+    file_bar = Label(root, text='')
+    file_bar.pack(fill=X, side=RIGHT, ipady=5)
+    # add shortcuts
+    root.bind("<Control-o>", open_file)
+    root.bind("<Control-O>", open_file)
+    root.bind('<Control-Key-x>', lambda event: cut(True))
+    root.bind('<Control-Key-X>', lambda event: cut(True))
+    root.bind('<Control-Key-v>', lambda event: paste(True))
+    root.bind('<Control-Key-V>', lambda event: paste(True))
+    root.bind('<Control-Key-c>', lambda event: copy(True))
+    root.bind('<Control-Key-C>', lambda event: copy(True))
+    root.bind('<Control-Key-s>', save)
+    root.bind('<Control-Key-S>', save)
+    root.bind('<Control-Key-a>', select_all)
+    root.bind('<Control-Key-A>', select_all)
+    root.bind('<Control-Key-b>', bold)
+    root.bind('<Control-Key-B>', bold)
+    root.bind('<Control-Key-i>', italics)
+    root.bind('<Control-Key-I>', italics)
+    root.bind('<Control-Key-u>', underline)
+    root.bind('<Control-Key-U>', underline)
+    root.bind('<Control-Key-l>', align_left)
+    root.bind('<Control-Key-L>', align_left)
+    root.bind('<Control-Key-e>', align_center)
+    root.bind('<Control-Key-E>', align_center)
+    root.bind('<Control-Key-r>', align_right)
+    root.bind('<Control-Key-R>', align_right)
+    root.bind('<Control-Key-p>', print_file)
+    root.bind('<Control-Key-P>', print_file)
+    root.bind('<Control-Key-n>', new_file)
+    root.bind('<Control-Key-N>', new_file)
+    root.bind('<Control-Key-Delete>', clear)
+    root.bind('<Control-Key-f>', find_text)
+    root.bind('<Control-Key-F>', find_text)
+    root.bind('<Control-Key-h>', replace)
+    root.bind('<Control-Key-H>', replace)
+    root.bind('<Control-Shift-Key-j>', join_words)
+    root.bind('<Control-Shift-Key-J>', join_words)
+    root.bind('<Control-Shift-Key-u>', lower_upper)
+    root.bind('<Control-Shift-Key-U>', lower_upper)
+    root.bind('<Alt-F4>', exit_app)
+    root.bind('<Control-Shift-Key-r>', reverse_characters)
+    root.bind('<Control-Shift-Key-R>', reverse_characters)
+    root.bind('<Control-Shift-Key-c>', reverse_words)
+    root.bind('<Control-Shift-Key-C>', reverse_words)
+    root.bind('<Alt-Key-d>', copy_file_path)
+    root.bind('<Alt-Key-D>', copy_file_path)
+    root.bind('<Control-Key-plus>', size_up_shortcut)
+    root.bind('<Control-Key-minus>', size_down_shortcut)
+    root.bind('<F5>', dt)
+    root.bind('<Control-Key-g>', goto)
+    root.bind('<Control-Key-G>', goto)
+    # special events
+    font_size.bind('<<ComboboxSelected>>', change_font_size)
+    font_ui.bind("<<ComboboxSelected>>", change_font)
+    root.bind('<<Modified>>', status)
+    # buttons creation and placement
+    bold_button = Button(toolbar_frame, image=BOLD_IMAGE, command=bold, relief=FLAT)
+    bold_button.grid(row=0, column=0, sticky=W, padx=2)
+
+    italics_button = Button(toolbar_frame, image=ITALICS_IMAGE, command=italics, relief=FLAT)
+    italics_button.grid(row=0, column=1, sticky=W, padx=2)
+
+    underline_button = Button(toolbar_frame, image=UNDERLINE_IMAGE, command=underline, relief=FLAT)
+    underline_button.grid(row=0, column=2, sticky=W, padx=2)
+
+    color_button = Button(toolbar_frame, image=COLORS_IMAGE, command=text_color, relief=FLAT)
+    color_button.grid(row=0, column=3, padx=5)
+
+    align_left_button = Button(toolbar_frame, image=ALIGN_LEFT_IMAGE, relief=FLAT)
+    align_left_button.grid(row=0, column=6, padx=5)
+
+    # align center button
+    align_center_button = Button(toolbar_frame, image=ALIGN_CENTER_IMAGE, relief=FLAT)
+    align_center_button.grid(row=0, column=7, padx=5)
+
+    # align right button
+    align_right_button = Button(toolbar_frame, image=ALIGN_RIGHT_IMAGE, relief=FLAT)
+    align_right_button.grid(row=0, column=8, padx=5)
+
+    # tts button
+    tts_button = Button(toolbar_frame, image=TTS_IMAGE, relief=FLAT,
+                        command=lambda: Thread(target=text_to_speech).start(),
+                        )
+    tts_button.grid(row=0, column=9, padx=5)
+
+    # talk button
+    talk_button = Button(toolbar_frame, image=STT_IMAGE, relief=FLAT,
+                         command=lambda: Thread(target=speech_to_text).start())
+    talk_button.grid(row=0, column=10, padx=5)
+
+    # buttons config
+    align_left_button.configure(command=align_left)
+    align_center_button.configure(command=align_center)
+    align_right_button.configure(command=align_right)
+
+    # opening sentence
+    op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
+               'If I did it you can do way more than that', 'Don\'t give up!',
+               'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback']
+    op_msg = choice(op_msgs)
+    EgonTE.insert('1.0', op_msg)
+
+    # add tooltips to the buttons
+    TOOL_TIP.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
+    TOOL_TIP.bind_widget(italics_button, balloonmsg='Italics (ctrl+i)')
+    TOOL_TIP.bind_widget(color_button, balloonmsg='Change colors')
+    TOOL_TIP.bind_widget(underline_button, balloonmsg='Underline (ctrl+u)')
+    TOOL_TIP.bind_widget(align_left_button, balloonmsg='Align left (ctrl+l)')
+    TOOL_TIP.bind_widget(align_center_button, balloonmsg='Align center (ctrl+e)')
+    TOOL_TIP.bind_widget(align_right_button, balloonmsg='Align right (ctrl+r)')
+    TOOL_TIP.bind_widget(tts_button, balloonmsg='Text to speach')
+    TOOL_TIP.bind_widget(talk_button, balloonmsg='Speach to talk')
+    TOOL_TIP.bind_widget(font_size, balloonmsg='upwards - (ctrl+plus) \n downwards - (ctrl+minus)')
+
+    # ui lists
+    toolbar_components = [bold_button, italics_button, color_button, underline_button, align_left_button,
+                          align_center_button, align_right_button, tts_button, talk_button, font_size]
+    menus_components = [file_menu, edit_menu, tool_menu, color_menu, options_menu]
+    other_components = [root, status_bar, file_bar, EgonTE, toolbar_frame]
+
+
+def load_images():
+    global BOLD_IMAGE, UNDERLINE_IMAGE, ITALICS_IMAGE, ALIGN_LEFT_IMAGE, ALIGN_CENTER_IMAGE, \
+        ALIGN_RIGHT_IMAGE, TTS_IMAGE, STT_IMAGE, COLORS_IMAGE
+    # icons - size=32x32
+    BOLD_IMAGE = PhotoImage(file='assets/bold.png')
+    UNDERLINE_IMAGE = PhotoImage(file='assets/underlined-text.png')
+    ITALICS_IMAGE = PhotoImage(file='assets/italics.png')
+    COLORS_IMAGE = PhotoImage(file='assets/edition.png')
+    ALIGN_LEFT_IMAGE = PhotoImage(file='assets/left-align.png')
+    ALIGN_CENTER_IMAGE = PhotoImage(file=f'assets/center-align.png')
+    ALIGN_RIGHT_IMAGE = PhotoImage(file='assets/right-align.png')
+    TTS_IMAGE = PhotoImage(file='assets/tts(1).png')
+    STT_IMAGE = PhotoImage(file="assets/speech-icon-19(1).png")
 
 
 # current time for the file bar
@@ -118,7 +409,7 @@ def open_file(event=None):
         EgonTE.insert(END, stuff)
         text_file.close()
     else:
-        messagebox.showerror('error', 'File not found')
+        messagebox.showerror('error', 'File not found / selected')
 
 
 # save as func
@@ -396,8 +687,12 @@ def change_font(event):
 
 
 def change_font_size(event=None):
-    global chosen_size
+    global chosen_size, font_Size_c
     chosen_size = size_var.get()
+    font_Size_c = (chosen_size - 8) // 2
+    # font_Size_c = font_size.get()
+    # print(font_Size_c)
+    font_size.current(font_Size_c)
     # EgonTE.configure(font=(chosen_font, chosen_size))
 
     size = font.Font(EgonTE, EgonTE.cget('font'))
@@ -488,7 +783,7 @@ def align_right(event=None):
 
 # get & display character and word count with status bar
 def status(event=None):
-    global text_changed
+    global text_changed, lines
     if EgonTE.edit_modified():
         text_changed = True
         words = len(EgonTE.get(1.0, "end-1c").split())
@@ -653,7 +948,7 @@ def find_text(event=None):
                 def up(si, ei):
                     global starting_index, ending_index
                     EgonTE.tag_remove(SEL, '1.0', END)
-                    starting_index = EgonTE.search(entry_data,'1.0' , si)
+                    starting_index = EgonTE.search(entry_data, '1.0', si)
                     if si:
                         offset = '+%dc' % len(entry_data)
                         ending_index = starting_index + offset
@@ -669,7 +964,7 @@ def find_text(event=None):
                               font='arial 12 underline')
                 # buttons ↑
                 button_up = Button(nav_root, text='Reset', command=lambda: up(starting_index, ending_index), width=5
-                                   ,state=DISABLED)
+                                   , state=DISABLED)
                 button_down = Button(nav_root, text='↓', command=lambda: down(starting_index, ending_index), width=5)
                 # placing
                 title.grid(row=0, padx=5)
@@ -849,6 +1144,21 @@ def custom_style():
         cs = False
 
 
+def word_warp():
+    global ww, horizontal_scroll
+    if not ww:
+        EgonTE.config(wrap=WORD)
+        root.geometry(f'{width}x{height - 10}')
+        horizontal_scroll.pack_forget()
+        ww = True
+    else:
+        root.geometry(f'{width}x{height + 10}')
+        horizontal_scroll.pack(side=BOTTOM, fill=X)
+        EgonTE.config(wrap=NONE)
+
+        ww = False
+
+
 def ins_random_name():
     global random_name
 
@@ -1014,6 +1324,7 @@ def reverse_characters(event=None):
     reversed_content = content[::-1]
     EgonTE.delete(1.0, END)
     EgonTE.insert(1.0, reversed_content)
+    unacceptable_line_removal(type='characters')
 
 
 def reverse_words(event=None):
@@ -1021,14 +1332,15 @@ def reverse_words(event=None):
     words = content.split()
     reversed_words = words[::-1]
     EgonTE.delete(1.0, END)
+    unacceptable_line_removal()
     EgonTE.insert(1.0, reversed_words)
-
 
 def join_words(event=None):
     content = EgonTE.get(1.0, END)
     words = content.split()
     joined_words = ''.join(words)
     EgonTE.delete(1.0, END)
+    unacceptable_line_removal()
     EgonTE.insert(1.0, joined_words)
 
 
@@ -1039,14 +1351,16 @@ def lower_upper(event=None):
     else:
         content = content.upper()
     EgonTE.delete(1.0, END)
-    # unacceptable_line_removal()
+    unacceptable_line_removal(content, 'upper_lower')
     EgonTE.insert(1.0, content)
 
 
-# a function to fix random appeared bug - not working at the moment
-def unacceptable_line_removal(content=None):
-    # list(content[-1]).pop(-1)
-    EgonTE.delete("end-2l","end-1l")
+# a function to fix random appeared bug
+def unacceptable_line_removal(content=None, type=None):
+            if lines < 2:
+                EgonTE.delete("end-2l", "end-1l")
+            else:
+                EgonTE.delete(1.0, 2.0)
 
 
 def generate():
@@ -1214,11 +1528,18 @@ def e_help():
     help_root = Toplevel()
     help_root.resizable(False, False)
     help_root.config(bg='white')
+
     # putting the lines in order
-    lines = []
-    with open('help.txt') as ht:
-        for line in ht:
-            lines.append(line)
+    def place_lines():
+        lines = []
+        text.delete('1.0', END)
+        with open('help.txt') as ht:
+            for line in ht:
+                text.insert('end', line)
+
+    # lines = str(lines)
+    # lines.remove('{')
+    # lines.remove('}')
     #
     help_root_frame = Frame(help_root)
     frame.pack(pady=5)
@@ -1231,8 +1552,7 @@ def e_help():
                 yscrollcommand=help_text_scroll.set, relief=RIDGE, wrap=WORD)
     text.focus_set()
     # add lines
-    text.delete('1.0', END)
-    text.insert('1.0', lines)
+    place_lines()
     text.config(state='disabled')
     # placing
     help_root_frame.pack(pady=3)
@@ -1322,28 +1642,28 @@ def advance_options():
         change_button_color('cursors', cursor)
         predefined_cursor = cursor
 
-    def hide_(wth):
+    def hide_(bar):
         global file_, status_, show_statusbar, bars_active
-        if wth == 'statusbar':
+        if bar == 'statusbar':
             if status_:
                 status_bar.pack_forget()
-                root.geometry(f'{width}x{height -30}')
+                root.geometry(f'{width}x{height - 30}')
                 status_ = False
             else:
                 status_bar.pack(side=LEFT)
-                root.geometry(f'{width}x{height-20}')
+                root.geometry(f'{width}x{height - 20}')
                 status_ = True
-        elif wth == 'filebar':
+        elif bar == 'filebar':
             if file_:
                 file_bar.pack_forget()
                 root.geometry(f'{width}x{height - 30}')
                 file_ = False
             else:
                 file_bar.pack(side=RIGHT)
-                root.geometry(f'{width}x{height-20}')
+                root.geometry(f'{width}x{height - 20}')
                 file_ = True
         # link to the basic options
-        if not status_ and file_ == False:
+        if status_ and file_:
             show_statusbar = True
             bars_active = True
         else:
@@ -1365,25 +1685,28 @@ def advance_options():
     # window
     opt_root = Toplevel()
     opt_root.resizable(False, False)
-    # var
-    if bars_active:
-        status_ = BooleanVar()
-        status_.set(True)
-        file_ = BooleanVar()
-        file_.set(True)
-        show_statusbar = BooleanVar()
-        show_statusbar.set(True)
-        show_statusbar = True
-    else:
-        status_ = BooleanVar()
-        status_.set(False)
-        file_ = BooleanVar()
-        file_.set(False)
-        show_statusbar = BooleanVar()
-        show_statusbar.set(False)
-        show_statusbar = False
+
+    def predefined_checkbuttons():
+        global file_, status_, show_statusbar
+        if bars_active:
+            status_ = BooleanVar()
+            status_.set(True)
+            file_ = BooleanVar()
+            file_.set(True)
+            show_statusbar = BooleanVar()
+            show_statusbar.set(True)
+            show_statusbar = True
+        else:
+            status_ = BooleanVar()
+            status_.set(False)
+            file_ = BooleanVar()
+            file_.set(False)
+            show_statusbar = BooleanVar()
+            show_statusbar.set(False)
+            show_statusbar = False
     button_width = 8
     font_ = 'arial 10 underline'
+    predefined_checkbuttons()
     # ui
     opt_title = Label(opt_root, text='Advance Options', font='calibri 16 bold')
     cursor_title = Label(opt_root, text='Advance Cursor configuration', font=font_)
@@ -1459,272 +1782,43 @@ def goto(event=None):
     goto_button.grid(row=4, column=0, pady=5)
 
 
-# pre-defined options
-predefined_cursor = 'xterm'
-predefined_style = 'clam'
-predefined_relief = 'ridge'
-# add custom style
-style = ttk.Style()
-style.theme_use(predefined_style)
-frame = Frame(root)
-frame.pack(pady=5)
-# create toolbar frame
-toolbar_frame = Frame(frame)
-toolbar_frame.pack(fill=X, anchor=W)
+def sort():
+    def sort_():
+        sort_data = sort_input.get('1.0', 'end')
+        sort_data_sorted = (sorted(sort_data)) # if I can use .sort prop the bug will be fixed
+        # sort_data_sorted = (''.join(str(sorted((sort_data.split(' '))))).replace(('['), ' '))
+        # sort_data_sorted = sort_data_sorted.replace(']', '')
+        # sort_data_sorted = sort_data_sorted.replace('\'', '')
+        # sort_data_sorted = sort_data_sorted.replace('\n', '')
+        sort_input.delete('1.0', 'end')
+        print(sort_data_sorted)
+        for num in range(1,len(sort_data_sorted)):
+            if num and num != ' ':
+                sort_input.insert('insert lineend',f'{sort_data_sorted[num]}')
 
-# font
-font_tuple = font.families()
-font_family = StringVar()
-font_ui = ttk.Combobox(toolbar_frame, width=30, textvariable=font_family, state="readonly")
-font_ui["values"] = font_tuple
-font_ui.current(font_tuple.index("Arial"))
-font_ui.grid(row=0, column=4, padx=5)
 
-# Size Box
-size_var = IntVar()
-size_var.set(16)
-font_size = ttk.Combobox(toolbar_frame, width=5, textvariable=size_var, state="readonly")
-font_size["values"] = tuple(range(8, 80, 2))
-font_Size_c = 4
-font_size.current(font_Size_c)  # 16 is at index 5
-font_size.grid(row=0, column=5, padx=5)
-# create vertical scrollbar
-text_scroll = ttk.Scrollbar(frame)
-text_scroll.pack(side=RIGHT, fill=Y)
-# create text box
-EgonTE = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue',
-              selectforeground='white',
-              undo=True,
-              yscrollcommand=text_scroll.set, wrap=WORD, relief=predefined_relief,
-              cursor=predefined_cursor)
-EgonTE.focus_set()
-EgonTE.pack(fill=BOTH, expand=True)
-# config scrollbar
-text_scroll.config(command=EgonTE.yview)
-# create menu
-menu = Menu(frame)
-root.config(menu=menu)
-# file menu
-file_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='File', menu=file_menu)
-file_menu.add_command(label='New', accelerator='(ctrl+n)', command=new_file)
-file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=open_file)
-file_menu.add_command(label='Save', command=save, accelerator='(ctrl+s)')
-file_menu.add_command(label='Save As', command=save_as)
-file_menu.add_separator()
-file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=print_file)
-file_menu.add_separator()
-file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=copy_file_path)
-file_menu.add_separator()
-file_menu.add_command(label='Import EXCEL file', accelerator='', command=lambda: special_files_import('excel'))
-file_menu.add_command(label='Import CSV file', accelerator='', command=lambda: special_files_import('csv'))
-file_menu.add_command(label='Import JSON file', accelerator='', command=lambda: special_files_import('json'))
-file_menu.add_command(label='Import XML file', accelerator='', command=lambda: special_files_import('xml'))
-file_menu.add_separator()
-file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=exit_app)
-# edit menu
-edit_menu = Menu(menu, tearoff=True)
-menu.add_cascade(label='Edit', menu=edit_menu)
-edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: cut(True))
-edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: copy(True))
-edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: paste(True))
-edit_menu.add_separator()
-edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=EgonTE.edit_undo)
-edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=EgonTE.edit_redo)
-edit_menu.add_separator()
-edit_menu.add_command(label='Select All', accelerator='(ctrl+a)', command=lambda: select_all('nothing'))
-edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=clear)
-edit_menu.add_separator()
-edit_menu.add_command(label="Find Text", accelerator='(ctrl+f)', command=find_text)
-edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=replace)
-edit_menu.add_command(label='Go to', accelerator='(ctrl+g)', command=goto)
-edit_menu.add_separator()
-edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)', command=reverse_characters)
-edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=reverse_words)
-edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=join_words)
-edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=lower_upper)
-# tools menu
-tool_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='Tools', menu=tool_menu)
-tool_menu.add_command(label='Calculation', command=ins_calc)
-tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=dt)
-tool_menu.add_command(label='Random number', command=ins_random)
-tool_menu.add_command(label='Random name', command=ins_random_name)
-tool_menu.add_command(label='Translate', command=translate)
-tool_menu.add_command(label='Url shorter', command=url)
-tool_menu.add_command(label='Generate sequence', command=generate)
-tool_menu.add_command(label='Search online', command=search_www)
-# color menu
-color_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='Colors+', menu=color_menu)
-color_menu.add_command(label='Whole text', command=all_txt_color)
-color_menu.add_command(label='Background', command=bg_color)
-color_menu.add_command(label='Highlight', command=hl_color)
-color_menu.add_separator()
-color_menu.add_command(label='Buttons color', command=lambda: custom_ui_colors('buttons'))
-color_menu.add_command(label='Menus colors', command=lambda: custom_ui_colors('menus'))
-color_menu.add_command(label='App colors', command=lambda: custom_ui_colors('app'))
-# options menu
-options_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='Options', menu=options_menu)
-# boolean tk vars
-show_statusbar = BooleanVar()
-show_statusbar.set(True)
+    def enter():
+        for character in list(str(sort_input.get('1.0', 'end'))):
+            if str(character).isdigit():
+                EgonTE.insert(get_pos(), sort_input.get('1.0', 'end'))
+                break
 
-show_toolbar = BooleanVar()
-show_toolbar.set(True)
+    # window
+    sort_root = Toplevel()
+    sort_root.resizable(False, False)
+    # ui components
+    sort_text = Label(sort_root, text='Enter the numbers you wish to sort:', font='arial 10 underline')
+    sort_input = Text(sort_root, width=20, height=10)
+    sort_button = Button(sort_root, text='Sort', command=sort_)
+    sort_insert = Button(sort_root, text='Insert', command=enter)
+    sort_text.grid(row=0, sticky=NSEW, column=0, padx=3)
+    sort_input.grid(row=1, column=0)
+    sort_button.grid(row=2, column=0)
+    sort_insert.grid(row=3, column=0, pady=5)
 
-night_mode = BooleanVar()
 
-cc = BooleanVar()
-cc.set(False)
-
-cs = BooleanVar()
-cs.set(True)
-# check marks
-options_menu.add_checkbutton(label="Night mode", onvalue=True, offvalue=False,
-                             compound=LEFT, command=night)
-options_menu.add_checkbutton(label="Status Bars", onvalue=True, offvalue=False,
-                             variable=show_statusbar, compound=LEFT, command=hide_statusbars)
-options_menu.add_checkbutton(label="Tool Bar", onvalue=True, offvalue=False,
-                             variable=show_toolbar, compound=LEFT, command=hide_toolbar)
-options_menu.add_checkbutton(label="Custom cursor", onvalue=True, offvalue=False,
-                             compound=LEFT, command=custom_cursor)
-
-options_menu.add_checkbutton(label="Custom style", onvalue=True, offvalue=False,
-                             compound=LEFT, command=custom_style, variable=cs)
-options_menu.add_separator()
-options_menu.add_command(label='Advance options', command=advance_options)
-# help page
-help_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='Help', command=e_help)
-# github page
-github_menu = Menu(menu, tearoff=False)
-menu.add_cascade(label='GitHub', command=github)
-# add status bar
-status_bar = Label(root, text='Characters:0 Words:0')
-status_bar.pack(fill=X, side=LEFT, ipady=5)
-# add file bar
-file_bar = Label(root, text='')
-file_bar.pack(fill=X, side=RIGHT, ipady=5)
-# add shortcuts
-root.bind("<Control-o>", open_file)
-root.bind("<Control-O>", open_file)
-root.bind('<Control-Key-x>', lambda event: cut(True))
-root.bind('<Control-Key-X>', lambda event: cut(True))
-root.bind('<Control-Key-v>', lambda event: paste(True))
-root.bind('<Control-Key-V>', lambda event: paste(True))
-root.bind('<Control-Key-c>', lambda event: copy(True))
-root.bind('<Control-Key-C>', lambda event: copy(True))
-root.bind('<Control-Key-s>', save)
-root.bind('<Control-Key-S>', save)
-root.bind('<Control-Key-a>', select_all)
-root.bind('<Control-Key-A>', select_all)
-root.bind('<Control-Key-b>', bold)
-root.bind('<Control-Key-B>', bold)
-root.bind('<Control-Key-i>', italics)
-root.bind('<Control-Key-I>', italics)
-root.bind('<Control-Key-u>', underline)
-root.bind('<Control-Key-U>', underline)
-root.bind('<Control-Key-l>', align_left)
-root.bind('<Control-Key-L>', align_left)
-root.bind('<Control-Key-e>', align_center)
-root.bind('<Control-Key-E>', align_center)
-root.bind('<Control-Key-r>', align_right)
-root.bind('<Control-Key-R>', align_right)
-root.bind('<Control-Key-p>', print_file)
-root.bind('<Control-Key-P>', print_file)
-root.bind('<Control-Key-n>', new_file)
-root.bind('<Control-Key-N>', new_file)
-root.bind('<Control-Key-Delete>', clear)
-root.bind('<Control-Key-f>', find_text)
-root.bind('<Control-Key-F>', find_text)
-root.bind('<Control-Key-h>', replace)
-root.bind('<Control-Key-H>', replace)
-root.bind('<Control-Shift-Key-j>', join_words)
-root.bind('<Control-Shift-Key-J>', join_words)
-root.bind('<Control-Shift-Key-u>', lower_upper)
-root.bind('<Control-Shift-Key-U>', lower_upper)
-root.bind('<Alt-F4>', exit_app)
-root.bind('<Control-Shift-Key-r>', reverse_characters)
-root.bind('<Control-Shift-Key-R>', reverse_characters)
-root.bind('<Control-Shift-Key-c>', reverse_words)
-root.bind('<Control-Shift-Key-C>', reverse_words)
-root.bind('<Alt-Key-d>', copy_file_path)
-root.bind('<Alt-Key-D>', copy_file_path)
-root.bind('<Control-Key-plus>', size_up_shortcut)
-root.bind('<Control-Key-minus>', size_down_shortcut)
-root.bind('<F5>', dt)
-root.bind('<Control-Key-g>', goto)
-root.bind('<Control-Key-G>', goto)
-# special events
-font_size.bind('<<ComboboxSelected>>', change_font_size)
-font_ui.bind("<<ComboboxSelected>>", change_font)
-root.bind('<<Modified>>', status)
-# buttons creation and placement
-bold_button = Button(toolbar_frame, image=BOLD_IMAGE, command=bold, relief=FLAT)
-bold_button.grid(row=0, column=0, sticky=W, padx=2)
-
-italics_button = Button(toolbar_frame, image=ITALICS_IMAGE, command=italics, relief=FLAT)
-italics_button.grid(row=0, column=1, sticky=W, padx=2)
-
-underline_button = Button(toolbar_frame, image=UNDERLINE_IMAGE, command=underline, relief=FLAT)
-underline_button.grid(row=0, column=2, sticky=W, padx=2)
-
-color_button = Button(toolbar_frame, image=COLORS_IMAGE, command=text_color, relief=FLAT)
-color_button.grid(row=0, column=3, padx=5)
-
-align_left_button = Button(toolbar_frame, image=ALIGN_LEFT_IMAGE, relief=FLAT)
-align_left_button.grid(row=0, column=6, padx=5)
-
-# align center button
-align_center_button = Button(toolbar_frame, image=ALIGN_CENTER_IMAGE, relief=FLAT)
-align_center_button.grid(row=0, column=7, padx=5)
-
-# align right button
-align_right_button = Button(toolbar_frame, image=ALIGN_RIGHT_IMAGE, relief=FLAT)
-align_right_button.grid(row=0, column=8, padx=5)
-
-# tts button
-tts_button = Button(toolbar_frame, image=TTS_IMAGE, relief=FLAT,
-                    command=lambda: Thread(target=text_to_speech).start(),
-                    )
-tts_button.grid(row=0, column=9, padx=5)
-
-# talk button
-talk_button = Button(toolbar_frame, image=STT_IMAGE, relief=FLAT,
-                     command=lambda: Thread(target=speech_to_text).start())
-talk_button.grid(row=0, column=10, padx=5)
-
-# buttons config
-align_left_button.configure(command=align_left)
-align_center_button.configure(command=align_center)
-align_right_button.configure(command=align_right)
-
-# opening sentence
-op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
-           'If I did it you can do way more than that', 'Don\'t give up!',
-           'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback']
-op_msg = choice(op_msgs)
-EgonTE.insert('1.0', op_msg)
-
-# add tooltips to the buttons
-TOOL_TIP.bind_widget(bold_button, balloonmsg='Bold (ctrl+b)')
-TOOL_TIP.bind_widget(italics_button, balloonmsg='Italics (ctrl+i)')
-TOOL_TIP.bind_widget(color_button, balloonmsg='Change colors')
-TOOL_TIP.bind_widget(underline_button, balloonmsg='Underline (ctrl+u)')
-TOOL_TIP.bind_widget(align_left_button, balloonmsg='Align left (ctrl+l)')
-TOOL_TIP.bind_widget(align_center_button, balloonmsg='Align center (ctrl+e)')
-TOOL_TIP.bind_widget(align_right_button, balloonmsg='Align right (ctrl+r)')
-TOOL_TIP.bind_widget(tts_button, balloonmsg='Text to speach')
-TOOL_TIP.bind_widget(talk_button, balloonmsg='Speach to talk')
-TOOL_TIP.bind_widget(font_size, balloonmsg='upwards - (ctrl+plus) \n downwards - (ctrl+minus)')
-
-# ui lists
-toolbar_components = [bold_button, italics_button, color_button, underline_button, align_left_button,
-                      align_center_button, align_right_button, tts_button, talk_button, font_size]
-menus_components = [file_menu, edit_menu, tool_menu, color_menu, options_menu]
-other_components = [root, status_bar, file_bar, EgonTE, toolbar_frame]
+if __name__ == '__main__':
+    window('main')
 
 if RA:
     right_align_language_support()
