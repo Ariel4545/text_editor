@@ -25,6 +25,7 @@ try:
 except ImportError:
     RA = False
 
+global translate_root, sort_root
 
 # window creation
 def window(moa):
@@ -42,9 +43,10 @@ def window(moa):
     placement_x = round((screen_width / 2) - (width / 2))
     placement_y = round((screen_height / 2) - (height / 2))
     root.geometry(f'{width}x{height}+{placement_x}+{placement_y}')
-    ver = '1.0.9'
+    ver = '1.0.9.5'
     root.title(f'Egon Text editor - {ver}')
     root.resizable(False, True)
+    root.minsize(1250, 830)
     root.maxsize(1250, 930)
     load_images()
 
@@ -1124,10 +1126,20 @@ def custom_cursor():
     if cc:
         predefined_cursor = 'tcross'
         EgonTE.config(cursor=predefined_cursor)
+        try:
+            sort_input.config(cursor=predefined_cursor)
+            translate_box.config(cursor=predefined_cursor)
+        except BaseException:
+            pass
         cc = False
     else:
         predefined_cursor = 'xterm'
         EgonTE.config(cursor=predefined_cursor)
+        try:
+            sort_input.config(cursor=predefined_cursor)
+            translate_box.config(cursor=predefined_cursor)
+        except BaseException:
+            pass
         cc = True
 
 
@@ -1231,6 +1243,8 @@ def ins_random_name():
 
 
 def translate():
+    global translate_root, translate_box
+
     def button():
         to_translate = translate_box.get("1.0", "end-1c")
         cl = choose_langauge.get()
@@ -1279,9 +1293,9 @@ def translate():
         'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa''Yiddish', 'Yoruba', 'Zulu',
     )
     # translate box & button
-    translate_box = Text(translate_root, width=30, height=10, borderwidth=5)
+    translate_box = Text(translate_root, width=30, height=10, borderwidth=5, cursor=predefined_cursor,
+                         relief=predefined_relief)
     button_ = Button(translate_root, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'),
-                     cursor=predefined_cursor,
                      command=button)
     copy_from = Button(translate_root, text='Copy from file', relief=FLAT, command=copy_from_file)
     # placing the objects in the window
@@ -1639,6 +1653,11 @@ def advance_options():
     def adv_custom_cursor(cursor):
         global predefined_cursor
         EgonTE.config(cursor=cursor)
+        try:
+            sort_input.config(cursor=cursor)
+            translate_box.config(cursor=cursor)
+        except BaseException:
+            pass
         change_button_color('cursors', cursor)
         predefined_cursor = cursor
 
@@ -1679,6 +1698,11 @@ def advance_options():
     def change_relief(relief_):
         global predefined_relief
         EgonTE.config(relief=relief_)
+        try:
+            sort_input.config(relief=relief_)
+            translate_box.config(relief=relief_)
+        except BaseException:
+            pass
         change_button_color('relief', relief_)
         predefined_relief = relief_
 
@@ -1783,19 +1807,38 @@ def goto(event=None):
 
 
 def sort():
+    global mode_, sort_data_sorted, str_loop, sort_rot, sort_input
     def sort_():
+        global mode_, sort_data_sorted, str_loop
         sort_data = sort_input.get('1.0', 'end')
-        sort_data_sorted = (sorted(sort_data)) # if I can use .sort prop the bug will be fixed
+        sort_data_sorted = (sorted(sort_data))
         # sort_data_sorted = (''.join(str(sorted((sort_data.split(' '))))).replace(('['), ' '))
         # sort_data_sorted = sort_data_sorted.replace(']', '')
         # sort_data_sorted = sort_data_sorted.replace('\'', '')
         # sort_data_sorted = sort_data_sorted.replace('\n', '')
+        print(mode_)
+        print(str_loop)
         sort_input.delete('1.0', 'end')
-        print(sort_data_sorted)
-        for num in range(1,len(sort_data_sorted)):
-            if num and num != ' ':
+        if mode_ == 'dec':
+            for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
+                sort_input.insert('insert linestart',f'{sort_data_sorted[num]}')
+        else:
+            for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
                 sort_input.insert('insert lineend',f'{sort_data_sorted[num]}')
 
+
+    def mode():
+        global mode_, str_loop, end_loop
+        if mode_ == 'asc':
+            mode_ = 'dec'
+            mode_button.config(text='Mode: descending')
+            str_loop = 0
+            end_loop = 1
+        else:
+            mode_ = 'asc'
+            mode_button.config(text='Mode: ascending')
+            str_loop = 1
+            end_loop = 0
 
     def enter():
         for character in list(str(sort_input.get('1.0', 'end'))):
@@ -1806,15 +1849,35 @@ def sort():
     # window
     sort_root = Toplevel()
     sort_root.resizable(False, False)
+    # variable
+    mode_ = 'asc'
+    str_loop = 1
+    end_loop = 0
     # ui components
+    sort_frame = Frame(sort_root)
+    sort_scroll = ttk.Scrollbar(sort_frame)
     sort_text = Label(sort_root, text='Enter the numbers you wish to sort:', font='arial 10 underline')
-    sort_input = Text(sort_root, width=20, height=10)
+    sort_input = Text(sort_frame, width=20, height=15, yscrollcommand=sort_scroll.set, wrap=WORD,
+                      cursor=predefined_cursor, relief=predefined_relief)
+
     sort_button = Button(sort_root, text='Sort', command=sort_)
+    mode_button = Button(sort_root, text='Mode: ascending', command=mode)
     sort_insert = Button(sort_root, text='Insert', command=enter)
-    sort_text.grid(row=0, sticky=NSEW, column=0, padx=3)
-    sort_input.grid(row=1, column=0)
-    sort_button.grid(row=2, column=0)
-    sort_insert.grid(row=3, column=0, pady=5)
+    sort_text.pack(fill=X, anchor=W)
+    sort_frame.pack(pady=3)
+    sort_scroll.pack(side=RIGHT, fill=Y)
+    sort_input.pack(fill=BOTH, expand=True)
+    sort_scroll.config(command=sort_input.yview)
+    sort_button.pack()
+    mode_button.pack()
+    sort_insert.pack()
+    # sort_text.grid(row=0, sticky=NSEW, column=0, padx=3)
+    # sort_input.grid(row=1, column=0)
+    # sort_frame.grid(row=1)
+    # sort_scroll.grid(row=1, column=1)
+    # sort_button.grid(row=2, column=0)
+    # mode_button.grid(row=3, column=0)
+    # sort_insert.grid(row=4, column=0, pady=5)
 
 
 if __name__ == '__main__':
