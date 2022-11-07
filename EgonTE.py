@@ -10,13 +10,14 @@ from random import choice, randint, random, shuffle
 from speech_recognition import Recognizer, Microphone
 from sys import exit as exit_
 from datetime import datetime
-from webbrowser import open as open_
+import webbrowser
 import names
 from googletrans import Translator  # req version 3.1.0a0
 from pyshorteners import Shortener
 from os import getcwd
 import string
 import pandas
+from socket import gethostname
 
 try:
     import polyglot
@@ -317,7 +318,7 @@ class Window(Tk):
         # opening sentence
         op_msgs = ['Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
                    'If I did it you can do way more than that', 'Don\'t give up!',
-                   'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback']
+                   'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback', f'hi {gethostname()}']
         op_msg = choice(op_msgs)
         self.EgonTE.insert('1.0', op_msg)
 
@@ -362,7 +363,7 @@ class Window(Tk):
 
     # open the GitHub page
     def github(self):
-        open_('https://github.com/Ariel4545/text_editor')
+        webbrowser.open('https://github.com/Ariel4545/text_editor')
 
     def undo(self):
         return self.EgonTE.edit_undo()
@@ -1519,8 +1520,23 @@ class Window(Tk):
         ser_root.resizable(False, False)
 
         def enter():
-            if entry_box.get() != '':
-                open_(entry_box.get())
+            if not (str(br_modes.get()) == 'default'):
+                if entry_box.get() != '':
+                    try:
+                        b = webbrowser.get(using=br_modes.get())
+                        if entry_box.get() != '':
+                            if ser_var.get() == 'current tab':
+                                b.open(entry_box.get())
+                            else:
+                                b.open_new_tab(entry_box.get())
+                    except webbrowser.Error:
+                        messagebox.showerror('Error', 'browser was not found')
+            else:
+                if entry_box.get() != '':
+                    if str(ser_var.get()) == 'current tab':
+                        webbrowser.open(entry_box.get())
+                    else:
+                        webbrowser.open_new_tab(entry_box.get())
 
         def copy_from_file():
             if self.is_marked():
@@ -1533,10 +1549,48 @@ class Window(Tk):
         enter_button = Button(ser_root, relief=FLAT, command=enter, text='Enter')
         from_text_button = Button(ser_root, relief=FLAT, command=copy_from_file, text='Copy from text')
 
-        title.grid(row=0, column=0, padx=10, pady=3)
-        entry_box.grid(row=1, column=0, padx=10)
-        enter_button.grid(row=2, column=0)
-        from_text_button.grid(row=3, column=0, pady=5)
+        title.grid(row=0, column=1, padx=10, pady=3)
+        entry_box.grid(row=1, column=1, padx=10)
+        enter_button.grid(row=2, column=1)
+        from_text_button.grid(row=3, column=1, pady=5)
+
+        # advance options
+        def adv():
+            # ui changes
+            adv_button.grid_forget()
+            tab_title.grid(row=4, column=0)
+            tab_modes.grid(row=5, column=0)
+            browser_title.grid(row=4, column=2)
+            br_modes.grid(row=5, column=2)
+
+            # browser register to select
+            chrome_path = "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+            webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
+
+            firefox_path = "C:/Program Files/Mozilla Firefox/firefox.exe"
+            webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(firefox_path))
+            print(gethostname())
+            opera_path = f"C:/Users/{gethostname()}/AppData/Local/Programs/Opera/opera.exe"
+            webbrowser.register('opera', None, webbrowser.BackgroundBrowser(opera_path))
+
+            edge_path = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+            webbrowser.register('edge', None, webbrowser.BackgroundBrowser(edge_path))
+
+        adv_button = Button(ser_root, text='Advance options', command=adv, relief=FLAT)
+
+        tab_title = Label(ser_root, text='Tabs options', font='arial 10 underline')
+        ser_var = StringVar()
+        tab_modes = ttk.Combobox(ser_root, width=10, textvariable=ser_var, state="readonly")
+        tab_modes['values'] = ['current tab', 'new tab']
+        tab_modes.current(0)
+
+        browser_title = Label(ser_root, text='Browser options', font='arial 10 underline')
+        br_var = StringVar()
+        br_modes = ttk.Combobox(ser_root, width=10, textvariable=br_var, state="readonly")
+        br_modes['values'] = ['default', 'firefox', 'chrome', 'opera', 'edge']
+        br_modes.current(0)
+
+        adv_button.grid(row=4, column=1)
 
         if self.is_marked():
             entry_box.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
@@ -1614,7 +1668,7 @@ class Window(Tk):
             if self.status_ and self.file_:
                 self.show_statusbar.set(True)
                 self.bars_active = True
-            elif not(self.status_ and self.file_):
+            elif not (self.status_ and self.file_):
                 self.show_statusbar.set(False)
                 self.bars_active = False
 
@@ -1661,7 +1715,6 @@ class Window(Tk):
         self.def_val1 = IntVar()
         self.def_val2 = IntVar()
 
-
         button_width = 8
         font_ = 'arial 10 underline'
         predefined_checkbuttons()
@@ -1677,7 +1730,8 @@ class Window(Tk):
         xterm_button = Button(opt_root, text='xterm', command=lambda: adv_custom_cursor('xterm'), width=button_width)
         hide_title = Label(opt_root, text='Advance hide status & file bar', font=font_)
         filebar_check = Checkbutton(opt_root, text='filebar', command=lambda: hide_('filebar'), variable=self.def_val1)
-        statusbar_check = Checkbutton(opt_root, text='statusbar', command=lambda: hide_('statusbar'), variable=self.def_val2)
+        statusbar_check = Checkbutton(opt_root, text='statusbar', command=lambda: hide_('statusbar'),
+                                      variable=self.def_val2)
         style_title = Label(opt_root, text='Advance style configuration', font=font_)
         style_clam = Button(opt_root, text='clam', command=lambda: change_style('clam'), width=button_width)
         style_classic = Button(opt_root, text='classic', command=lambda: change_style('classic'), width=button_width)
