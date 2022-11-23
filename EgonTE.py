@@ -18,6 +18,7 @@ from os import getcwd
 import string
 import pandas
 from socket import gethostname
+from  PyDictionary import PyDictionary
 
 try:
     import polyglot
@@ -40,12 +41,15 @@ class Window(Tk):
         placement_x = round((screen_width / 2) - (self.width / 2))
         placement_y = round((screen_height / 2) - (self.height / 2))
         self.geometry(f'{self.width}x{self.height}+{placement_x}+{placement_y}')
-        ver = '1.9.6'
+        ver = '1.9.8'
         self.title(f'Egon Text editor - {ver}')
         self.resizable(False, True)
         self.minsize(1250, 830)
         self.maxsize(1250, 930)
         self.load_images()
+        self.protocol("WM_DELETE_WINDOW", self.exit_app)
+        self.file_name = ''
+        self.text_changed = False
 
         LOGO = PhotoImage(file='ETE_icon.png')
         self.iconphoto(False, LOGO)
@@ -158,6 +162,7 @@ class Window(Tk):
         tool_menu.add_command(label='Generate sequence', command=self.generate)
         tool_menu.add_command(label='Search online', command=self.search_www)
         tool_menu.add_command(label='Sort numbers', command=self.sort)
+        tool_menu.add_command(label='Dictionary', command=lambda: Thread(target=self.dictionary()).start())
         # color menu
         color_menu = Menu(menu, tearoff=False)
         menu.add_cascade(label='Colors+', menu=color_menu)
@@ -212,7 +217,7 @@ class Window(Tk):
         options_menu.add_separator()
         options_menu.add_command(label='Advance options', command=self.advance_options)
         # help page
-        menu.add_cascade(label='Help', command=self.e_help)
+        menu.add_cascade(label='Help', command=self.e_help, bitmap='info')
         # github page
         menu.add_cascade(label='GitHub', command=self.github)
         # add status bar
@@ -370,8 +375,7 @@ class Window(Tk):
 
     # create file func
     def new_file(self, event=None):
-        global file_name
-        file_name = ''
+        self.file_name = ''
         self.EgonTE.delete("1.0", END)
         self.file_bar.config(text='New file')
 
@@ -380,7 +384,6 @@ class Window(Tk):
 
     # open file func
     def open_file(self, event=None):
-        global file_name
         self.EgonTE.delete("1.0", END)
         text_file = filedialog.askopenfilename(initialdir=getcwd(), title='Open file',
                                                filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
@@ -388,10 +391,10 @@ class Window(Tk):
         if text_file:
             global open_status_name
             open_status_name = text_file
-            file_name = text_file
-            self.file_bar.config(text=f'Opened file: {GetShortPathName(file_name)}')
-            file_name.replace('C:/EgonTE/', '')
-            file_name.replace('C:/users', '')
+            self.file_name = text_file
+            self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
+            self.file_name.replace('C:/EgonTE/', '')
+            self.file_name.replace('C:/users', '')
             text_file = open(text_file, 'r')
             stuff = text_file.read()
             self.EgonTE.insert(END, stuff)
@@ -401,33 +404,32 @@ class Window(Tk):
 
     # save as func
     def save_as(self, event=None):
-        global file_name
         if event == None:
             text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir='C:/EgonTE', title='Save File',
                                                      filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                                 ('Python Files', '*.py')))
             if text_file:
-                file_name = text_file
-                file_name = file_name.replace('C:/EgonTE', '')
-                self.file_bar.config(text=f'Saved: {file_name} - {self.get_time()}')
+                self.file_name = text_file
+                self.file_name = self.file_name.replace('C:/EgonTE', '')
+                self.file_bar.config(text=f'Saved: {self.file_name} - {self.get_time()}')
 
                 text_file = open(text_file, 'w')
                 text_file.write(self.EgonTE.get(1.0, END))
                 text_file.close()
         if event == 'get name':
             try:
-                return file_name
+                return self.file_name
             except NameError:
                 messagebox.showerror('error', 'You cant copy a file name if you doesn\'t use a file ')
 
     # save func
     def save(self, event=None):
-        global open_status_name, file_name
+        global open_status_name
         if open_status_name:
             text_file = open(open_status_name, 'w')
             text_file.write(self.EgonTE.get(1.0, END))
             text_file.close()
-            self.file_bar.config(text=f'Saved: {file_name} - {self.get_time()}')
+            self.file_bar.config(text=f'Saved: {self.file_name} - {self.get_time()}')
         else:
             self.save_as(event=None)
 
@@ -742,9 +744,9 @@ class Window(Tk):
 
     # get & display character and word count with status bar
     def status(self, event=None):
-        global text_changed, lines
+        global lines
         if self.EgonTE.edit_modified():
-            text_changed = True
+            self.text_changed = True
             words = len(self.EgonTE.get(1.0, "end-1c").split())
             characters = len(self.EgonTE.get(1.0, "end-1c"))
             lines = int((self.EgonTE.index(END)).split('.')[0]) - 1
@@ -810,24 +812,24 @@ class Window(Tk):
 
     # force the app to quit, warn user if file data is about to be lost
     def exit_app(self, event=None):
-        global text_changed
-        if text_changed:
-            if messagebox.askyesno('Quit', 'Some changes  warn\'t saved, do you wish to save first?'):
-                self.save()
-                self.quit()
-                exit_()
-                quit()
-                exit()
+        if self.text_changed:
+            if self.file_name:
+                if messagebox.askyesno('Quit', 'Some changes  warn\'t saved, do you wish to save first?'):
+                    self.save()
+                    self.quit()
+                    exit_()
+                    quit()
+                    exit()
+                else:
+                    self.quit()
+                    exit_()
+                    quit()
+                    exit()
             else:
                 self.quit()
                 exit_()
                 quit()
                 exit()
-        else:
-            self.quit()
-            exit_()
-            quit()
-            exit()
 
     # find if text exists in the specific file
     def find_text(self, event=None):
@@ -932,6 +934,7 @@ class Window(Tk):
         # window
         search_text_root = Toplevel()
         search_text_root.resizable(False, False)
+        search_text_root.attributes('-alpha', '0.95')
         # var
         cpt_settings = 'c'
         by_characters = True
@@ -983,6 +986,7 @@ class Window(Tk):
 
         clac_root = Toplevel(relief=FLAT)
         clac_root.resizable(False, False)
+        clac_root.attributes('-alpha', '0.95')
         clac_root.geometry('150x90')
         introduction_text = Label(clac_root, text='Enter equation below:', font='arial 10 underline')
         enter = Button(clac_root, text='Enter', command=enter_button, relief=FLAT)
@@ -1032,6 +1036,7 @@ class Window(Tk):
 
         ran_num_root = Toplevel()
         ran_num_root.resizable(False, False)
+        ran_num_root.attributes('-alpha', '0.95')
         introduction_text = Label(ran_num_root, text='Enter numbers below:', justify='center',
                                   font='arial 10 underline')
         sub_c = Button(ran_num_root, text='submit custom', command=enter_button_custom, relief=FLAT)
@@ -1171,6 +1176,7 @@ class Window(Tk):
 
         name_root = Toplevel()
         name_root.resizable(False, False)
+        name_root.attributes('-alpha', '0.95')
         random_name = names.get_full_name()
         text = Label(name_root, text='Random name that generated:', font='arial 10 underline')
         rand_name = Label(name_root, text=random_name)
@@ -1206,6 +1212,7 @@ class Window(Tk):
         # window
         translate_root = Toplevel()
         translate_root.resizable(False, False)
+        translate_root.attributes('-alpha', '0.95')
         # string variables
         auto_detect_string = StringVar()
         languages = StringVar()
@@ -1254,6 +1261,7 @@ class Window(Tk):
         # window
         url_root = Toplevel()
         url_root.resizable(False, False)
+        url_root.attributes('-alpha', '0.95')
         # ui components creation & placement
         url_text = Label(url_root, text='Enter url below:', font='arial 10 underline')
         url_entry = Entry(url_root, relief=GROOVE, width=40)
@@ -1320,6 +1328,7 @@ class Window(Tk):
         global sym
         generate_root = Toplevel()
         generate_root.resizable(False, False)
+        generate_root.attributes('-alpha', '0.95')
         characters = list(string.ascii_letters + string.digits)
         intro_text = Label(generate_root, text='Generate a random sequence', font='arial 10 underline')
         length_entry = Entry(generate_root, width=10)
@@ -1518,6 +1527,7 @@ class Window(Tk):
     def search_www(self):
         ser_root = Toplevel()
         ser_root.resizable(False, False)
+        ser_root.attributes('-alpha', '0.95')
 
         def enter():
             if not (str(br_modes.get()) == 'default'):
@@ -1569,7 +1579,7 @@ class Window(Tk):
 
             firefox_path = "C:/Program Files/Mozilla Firefox/firefox.exe"
             webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(firefox_path))
-            print(gethostname())
+            
             opera_path = f"C:/Users/{gethostname()}/AppData/Local/Programs/Opera/opera.exe"
             webbrowser.register('opera', None, webbrowser.BackgroundBrowser(opera_path))
 
@@ -1689,6 +1699,10 @@ class Window(Tk):
             change_button_color('relief', relief_)
             self.predefined_relief = relief_
 
+        def change_transparency():
+            tranc = int(transparency_config.get()) / 100
+            self.attributes('-alpha', tranc)
+
         # window
         opt_root = Toplevel()
         opt_root.resizable(False, False)
@@ -1741,6 +1755,10 @@ class Window(Tk):
         relief_ridge = Button(opt_root, text='ridge', command=lambda: change_relief('ridge'), width=button_width)
         relief_groove = Button(opt_root, text='groove', command=lambda: change_relief('groove'), width=button_width)
 
+        transparency_title = Label(opt_root, text='Transparency configuration', font=font_)
+        transparency_config = Scale(opt_root, from_=0, to=100 , orient='horizontal')
+        transparency_set = Button(opt_root, text='Change transparency', command=change_transparency)
+
         # placing
         opt_title.grid(row=0, column=1, pady=5)
         cursor_title.grid(row=1, column=1)
@@ -1761,6 +1779,9 @@ class Window(Tk):
         relief_flat.grid(row=9, column=0)
         relief_ridge.grid(row=9, column=1)
         relief_groove.grid(row=9, column=2, pady=3)
+        transparency_title.grid(row=10, column=1)
+        transparency_config.grid(row=11, column=1)
+        transparency_set.grid(row=12, column=1)
         # buttons list
         adv_cursor_bs = [tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button]
         adv_style_bs = [style_clam, style_vista, style_classic]
@@ -1833,6 +1854,7 @@ class Window(Tk):
         # window
         sort_root = Toplevel()
         sort_root.resizable(False, False)
+        sort_root.attributes('-alpha', '0.95')
         # variable
         mode_ = 'asc'
         str_loop = 1
@@ -1863,9 +1885,33 @@ class Window(Tk):
         # mode_button.grid(row=3, column=0)
         # sort_insert.grid(row=4, column=0, pady=5)
 
+    def dictionary(self):
+        def search():
+            meaning_box.configure(state=NORMAL)
+            meaning_box.delete('1.0', 'end')
+            dict_ = PyDictionary()
+            def_ = dict_.meaning(dict_entry.get())
+
+            for key, value in def_.items():
+                meaning_box.insert(END, key + '\n\n')
+                for values in value:
+                    meaning_box.insert(END, f'-{values}\n\n')
+            meaning_box.configure(state=DISABLED)
+
+        dict_root = Toplevel()
+        dict_root.resizable(False, False)
+        dict_root.attributes('-alpha', '0.95')
+        dict_entry = Entry(dict_root)
+        dict_search = Button(dict_root, text='Search meaning', command=search)
+        meaning_box = Text(dict_root,  height=15, width=50, wrap=WORD)
+        meaning_box.configure(state=DISABLED)
+
+        dict_entry.grid(row=1)
+        dict_search.grid(row=2)
+        meaning_box.grid(row=3)
+
     if RA:
         right_align_language_support()
-
 
 if __name__ == '__main__':
     app = Window()
