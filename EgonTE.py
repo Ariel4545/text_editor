@@ -41,7 +41,7 @@ class Window(Tk):
         placement_x = round((screen_width / 2) - (self.width / 2))
         placement_y = round((screen_height / 2) - (self.height / 2))
         self.geometry(f'{self.width}x{self.height}+{placement_x}+{placement_y}')
-        ver = '1.9.8'
+        ver = '1.9.9'
         self.title(f'Egon Text editor - {ver}')
         self.resizable(False, True)
         self.minsize(1250, 830)
@@ -217,7 +217,7 @@ class Window(Tk):
         options_menu.add_separator()
         options_menu.add_command(label='Advance options', command=self.advance_options)
         # help page
-        menu.add_cascade(label='Help', command=self.e_help, bitmap='info')
+        menu.add_cascade(label='Help', command=self.e_help)
         # github page
         menu.add_cascade(label='GitHub', command=self.github)
         # add status bar
@@ -315,6 +315,11 @@ class Window(Tk):
                              command=lambda: Thread(target=self.speech_to_text).start())
         talk_button.grid(row=0, column=10, padx=5)
 
+        vKeyboard_button = Button(self.toolbar_frame, image=KEY_IMAGE, relief=FLAT,
+                             command=lambda: Thread(target=self.virtual_keyboard()).start())
+
+        vKeyboard_button.grid(row=0, column=11, padx=5)
+
         # buttons config
         align_left_button.configure(command=self.align_left)
         align_center_button.configure(command=self.align_center)
@@ -347,7 +352,7 @@ class Window(Tk):
 
     def load_images(self):
         global BOLD_IMAGE, UNDERLINE_IMAGE, ITALICS_IMAGE, ALIGN_LEFT_IMAGE, ALIGN_CENTER_IMAGE, \
-            ALIGN_RIGHT_IMAGE, TTS_IMAGE, STT_IMAGE, COLORS_IMAGE
+            ALIGN_RIGHT_IMAGE, TTS_IMAGE, STT_IMAGE, COLORS_IMAGE, KEY_IMAGE
         # icons - size=32x32
         BOLD_IMAGE = PhotoImage(file='assets/bold.png')
         UNDERLINE_IMAGE = PhotoImage(file='assets/underlined-text.png')
@@ -358,6 +363,7 @@ class Window(Tk):
         ALIGN_RIGHT_IMAGE = PhotoImage(file='assets/right-align.png')
         TTS_IMAGE = PhotoImage(file='assets/tts(1).png')
         STT_IMAGE = PhotoImage(file="assets/speech-icon-19(1).png")
+        KEY_IMAGE = PhotoImage(file='assets/key(1).png')
 
     # current time for the file bar
     def get_time(self):
@@ -812,7 +818,7 @@ class Window(Tk):
 
     # force the app to quit, warn user if file data is about to be lost
     def exit_app(self, event=None):
-        if self.text_changed:
+        if self.text_changed or (self.EgonTE.get('1.0', 'end')):
             if self.file_name:
                 if messagebox.askyesno('Quit', 'Some changes  warn\'t saved, do you wish to save first?'):
                     self.save()
@@ -1909,6 +1915,157 @@ class Window(Tk):
         dict_entry.grid(row=1)
         dict_search.grid(row=2)
         meaning_box.grid(row=3)
+
+    def virtual_keyboard(self):
+        key = Toplevel()  # key window name
+        key.attributes('-alpha', '0.90')
+        # key.iconbitmap('add icon link And Directory name')    # icon add
+
+        # function coding start
+
+        exp = " "  # global variable
+
+        # showing all data in display
+
+        def press(num):
+            global exp
+            self.EgonTE.insert(self.get_pos(), num)
+
+        def tab():
+            exp = "    "
+            self.EgonTE.insert(self.get_pos(), exp)
+
+        # Size window size
+        key.geometry('630x200')  # normal size
+        key.resizable(False, False)
+        # end window size
+
+        key.configure(bg='black')  # add background color
+        # 40
+        q = ttk.Button(key, text='Q', width=6, command=lambda: press('Q'))
+        q.grid(row=1, column=0, ipady=10)
+
+        w = ttk.Button(key, text='W', width=6, command=lambda: press('W'))
+        w.grid(row=1, column=1, ipady=10)
+
+        E = ttk.Button(key, text='E', width=6, command=lambda: press('E'))
+        E.grid(row=1, column=2, ipady=10)
+
+        R = ttk.Button(key, text='R', width=6, command=lambda: press('R'))
+        R.grid(row=1, column=3, ipady=10)
+
+        T = ttk.Button(key, text='T', width=6, command=lambda: press('T'))
+        T.grid(row=1, column=4, ipady=10)
+
+        Y = ttk.Button(key, text='Y', width=6, command=lambda: press('Y'))
+        Y.grid(row=1, column=5, ipady=10)
+
+        U = ttk.Button(key, text='U', width=6, command=lambda: press('U'))
+        U.grid(row=1, column=6, ipady=10)
+
+        I = ttk.Button(key, text='I', width=6, command=lambda: press('I'))
+        I.grid(row=1, column=7, ipady=10)
+
+        O = ttk.Button(key, text='O', width=6, command=lambda: press('O'))
+        O.grid(row=1, column=8, ipady=10)
+
+        P = ttk.Button(key, text='P', width=6, command=lambda: press('P'))
+        P.grid(row=1, column=9, ipady=10)
+
+        cur = ttk.Button(key, text='{', width=6, command=lambda: press('{'))
+        cur.grid(row=1, column=10, ipady=10)
+
+        cur_c = ttk.Button(key, text='}', width=6, command=lambda: press('}'))
+        cur_c.grid(row=1, column=11, ipady=10)
+
+        back_slash = ttk.Button(key, text='\\', width=6, command=lambda: press('\\'))
+        back_slash.grid(row=1, column=10, ipady=10)
+
+        A = ttk.Button(key, text='A', width=6, command=lambda: press('A'))
+        A.grid(row=2, column=0, ipady=10)
+
+        S = ttk.Button(key, text='S', width=6, command=lambda: press('S'))
+        S.grid(row=2, column=1, ipady=10)
+
+        D = ttk.Button(key, text='D', width=6, command=lambda: press('D'))
+        D.grid(row=2, column=2, ipady=10)
+
+        F = ttk.Button(key, text='F', width=6, command=lambda: press('F'))
+        F.grid(row=2, column=3, ipady=10)
+
+        G = ttk.Button(key, text='G', width=6, command=lambda: press('G'))
+        G.grid(row=2, column=4, ipady=10)
+
+        H = ttk.Button(key, text='H', width=6, command=lambda: press('H'))
+        H.grid(row=2, column=5, ipady=10)
+
+        J = ttk.Button(key, text='J', width=6, command=lambda: press('J'))
+        J.grid(row=2, column=6, ipady=10)
+
+        K = ttk.Button(key, text='K', width=6, command=lambda: press('K'))
+        K.grid(row=2, column=7, ipady=10)
+
+        L = ttk.Button(key, text='L', width=6, command=lambda: press('L'))
+        L.grid(row=2, column=8, ipady=10)
+
+        semi_co = ttk.Button(key, text=';', width=6, command=lambda: press(';'))
+        semi_co.grid(row=2, column=9, ipady=10)
+
+        d_colon = ttk.Button(key, text='"', width=6, command=lambda: press('"'))
+        d_colon.grid(row=2, column=10, ipady=10)
+
+        Z = ttk.Button(key, text='Z', width=6, command=lambda: press('Z'))
+        Z.grid(row=3, column=0, ipady=10)
+
+        X = ttk.Button(key, text='X', width=6, command=lambda: press('X'))
+        X.grid(row=3, column=1, ipady=10)
+
+        C = ttk.Button(key, text='C', width=6, command=lambda: press('C'))
+        C.grid(row=3, column=2, ipady=10)
+
+        V = ttk.Button(key, text='V', width=6, command=lambda: press('V'))
+        V.grid(row=3, column=3, ipady=10)
+
+        B = ttk.Button(key, text='B', width=6, command=lambda: press('B'))
+        B.grid(row=3, column=4, ipady=10)
+
+        N = ttk.Button(key, text='N', width=6, command=lambda: press('N'))
+        N.grid(row=3, column=5, ipady=10)
+
+        M = ttk.Button(key, text='M', width=6, command=lambda: press('M'))
+        M.grid(row=3, column=6, ipady=10)
+
+        left = ttk.Button(key, text='<', width=6, command=lambda: press('<'))
+        left.grid(row=3, column=7, ipady=10)
+
+        right = ttk.Button(key, text='>', width=6, command=lambda: press('>'))
+        right.grid(row=3, column=8, ipady=10)
+
+        slas = ttk.Button(key, text='/', width=6, command=lambda: press('/'))
+        slas.grid(row=3, column=9, ipady=10)
+
+        q_mark = ttk.Button(key, text='?', width=6, command=lambda: press('?'))
+        q_mark.grid(row=3, column=10, ipady=10)
+
+        coma = ttk.Button(key, text=',', width=6, command=lambda: press(','))
+        coma.grid(row=3, column=11, ipady=10)
+
+        dot = ttk.Button(key, text='.', width=6, command=lambda: press('.'))
+        dot.grid(row=2, column=11, ipady=10)
+
+        space = ttk.Button(key, text='Space', width=6, command=lambda: press(' '))
+        space.grid(row=4, columnspan=7, ipadx=160, ipady=10)
+
+        open_b = ttk.Button(key, text='(', width=6, command=lambda: press('('))
+        open_b.grid(row=4, column=7, ipady=10)
+
+        close_b = ttk.Button(key, text=')', width=6, command=lambda: press(')'))
+        close_b.grid(row=4, column=8, ipady=10)
+
+        tap = ttk.Button(key, text='Tab', width=6, command=tab)
+        tap.grid(row=4, column=9, ipady=10)
+
+        key.mainloop()  # using ending point
 
     if RA:
         right_align_language_support()
