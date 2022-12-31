@@ -19,6 +19,9 @@ import string
 import pandas
 from socket import gethostname
 from  PyDictionary import PyDictionary
+from pyperclip import copy
+import emoji
+import wikipedia
 
 try:
     import polyglot
@@ -41,11 +44,11 @@ class Window(Tk):
         placement_x = round((screen_width / 2) - (self.width / 2))
         placement_y = round((screen_height / 2) - (self.height / 2))
         self.geometry(f'{self.width}x{self.height}+{placement_x}+{placement_y}')
-        ver = '1.9.9'
+        ver = '1.10.0'
         self.title(f'Egon Text editor - {ver}')
-        self.resizable(False, True)
-        self.minsize(1250, 830)
-        self.maxsize(1250, 930)
+        #self.resizable(False, True)
+        # self.minsize(1250, 830)
+        # self.maxsize(1250, 930)
         self.load_images()
         self.protocol("WM_DELETE_WINDOW", self.exit_app)
         self.file_name = ''
@@ -65,10 +68,10 @@ class Window(Tk):
         self.style = ttk.Style()
         self.style.theme_use(self.predefined_style)
         frame = Frame(self)
-        frame.pack(pady=5)
+        frame.pack(expand=True, fill=BOTH, padx=15)
         # create toolbar frame
         self.toolbar_frame = Frame(frame)
-        self.toolbar_frame.pack(fill=X, anchor=W)
+        self.toolbar_frame.pack(fill=X, anchor=W, side=TOP)
 
         # font
         font_tuple = font.families()
@@ -87,12 +90,14 @@ class Window(Tk):
         self.font_size.current(font_Size_c)  # 16 is at index 5
         self.font_size.grid(row=0, column=5, padx=5)
         # create vertical scrollbar
-        self.text_scroll = ttk.Scrollbar(frame)
+        self.eFrame = Frame(frame)
+        self.eFrame.pack(fill=BOTH, expand=True)
+        self.text_scroll = ttk.Scrollbar(self.eFrame)
         self.text_scroll.pack(side=RIGHT, fill=Y)
         # horizontal scrollbar
         self.horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
         # create text box
-        self.EgonTE = Text(frame, width=100, height=30, font=('arial', 16), selectbackground='blue',
+        self.EgonTE = Text(self.eFrame, width=100, height=1, font=('arial', 16), selectbackground='blue',
                            selectforeground='white',
                            undo=True,
                            yscrollcommand=self.text_scroll.set, wrap=WORD, relief=self.predefined_relief,
@@ -106,6 +111,7 @@ class Window(Tk):
         # create menu
         menu = Menu(frame)
         self.config(menu=menu)
+
         # file menu
         file_menu = Menu(menu, tearoff=False)
         menu.add_cascade(label='File', menu=file_menu)
@@ -113,28 +119,21 @@ class Window(Tk):
         file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=self.open_file)
         file_menu.add_command(label='Save', command=self.save, accelerator='(ctrl+s)')
         file_menu.add_command(label='Save As', command=self.save_as)
-        file_menu.add_command(label='New window', command=lambda: Window(), state=ACTIVE)
+        file_menu.add_command(label='New window', command=lambda: new_window(Window), state=DISABLED)
         file_menu.add_separator()
         file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=self.print_file)
         file_menu.add_separator()
         file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=self.copy_file_path)
         file_menu.add_separator()
-        file_menu.add_command(label='Import EXCEL file', accelerator='',
-                              command=lambda: self.special_files_import(file_type='excel'))
-        file_menu.add_command(label='Import CSV file', accelerator='',
-                              command=lambda: self.special_files_import(file_type='csv'))
-        file_menu.add_command(label='Import JSON file', accelerator='',
-                              command=lambda: self.special_files_import(file_type='json'))
-        file_menu.add_command(label='Import XML file', accelerator='',
-                              command=lambda: self.special_files_import(file_type='xml'))
+        file_menu.add_command(label='Import file', command=self.special_files_import)
         file_menu.add_separator()
         file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=self.exit_app)
         # edit menu
         edit_menu = Menu(menu, tearoff=True)
         menu.add_cascade(label='Edit', menu=edit_menu)
         edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: self.cut(x=True))
-        edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: self.copy(x=True))
-        edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: self.paste(x=True))
+        edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: self.copy())
+        edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: self.paste())
         edit_menu.add_separator()
         edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=self.EgonTE.edit_undo)
         edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=self.EgonTE.edit_redo)
@@ -150,6 +149,8 @@ class Window(Tk):
         edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=self.reverse_words)
         edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=self.join_words)
         edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=self.lower_upper)
+        edit_menu.add_command(label='Sort by characters', accelerator='', command=self.sort_by_characters)
+        edit_menu.add_command(label='Sort by words', accelerator='', command=self.sort_by_words)
         # tools menu
         tool_menu = Menu(menu, tearoff=False)
         menu.add_cascade(label='Tools', menu=tool_menu)
@@ -162,7 +163,8 @@ class Window(Tk):
         tool_menu.add_command(label='Generate sequence', command=self.generate)
         tool_menu.add_command(label='Search online', command=self.search_www)
         tool_menu.add_command(label='Sort numbers', command=self.sort)
-        tool_menu.add_command(label='Dictionary', command=lambda: Thread(target=self.dictionary()).start())
+        tool_menu.add_command(label='Dictionary', command=lambda: Thread(target=self.dictionary('dict')).start())
+        tool_menu.add_command(label='Wikipedia', command=lambda: Thread(target=self.dictionary('wiki')).start())
         # color menu
         color_menu = Menu(menu, tearoff=False)
         menu.add_cascade(label='Colors+', menu=color_menu)
@@ -214,6 +216,7 @@ class Window(Tk):
                                      compound=LEFT, command=self.custom_style, variable=self.cs)
         options_menu.add_checkbutton(label="Word warp", onvalue=True, offvalue=False,
                                      compound=LEFT, command=self.word_warp, variable=self.ww)
+        options_menu.add_command(label='Detect emojis', command=lambda: self.emoji_detection(via_settings=True))
         options_menu.add_separator()
         options_menu.add_command(label='Advance options', command=self.advance_options)
         # help page
@@ -221,20 +224,22 @@ class Window(Tk):
         # github page
         menu.add_cascade(label='GitHub', command=self.github)
         # add status bar
-        self.status_bar = Label(self, text='Lines:1 Characters:0 Words:0')
-        self.status_bar.pack(fill=X, side=LEFT, ipady=5)
+        status_frame = Frame(frame, height=20)
+        status_frame.pack(fill=BOTH, anchor=S, side=BOTTOM)
+        self.status_bar = Label(status_frame, text='Lines:1 Characters:0 Words:0', pady=5)
+        self.status_bar.pack(fill=Y, side=LEFT)
         # add file bar
-        self.file_bar = Label(self, text='')
-        self.file_bar.pack(fill=X, side=RIGHT, ipady=5)
+        self.file_bar = Label(status_frame, text='')
+        self.file_bar.pack(fill=Y, side=RIGHT)
         # add shortcuts
         self.bind("<Control-o>", self.open_file)
         self.bind("<Control-O>", self.open_file)
-        self.bind('<Control-Key-x>', lambda event: self.cut(True))
-        self.bind('<Control-Key-X>', lambda event: self.cut(True))
-        self.bind('<Control-Key-v>', lambda event: self.paste(True))
-        self.bind('<Control-Key-V>', lambda event: self.paste(True))
-        self.bind('<Control-Key-c>', lambda event: self.copy(True))
-        self.bind('<Control-Key-C>', lambda event: self.copy(True))
+        # self.bind('<Control-Key-x>', lambda event: self.cut(True))
+        self.bind('<<Cut>>', lambda event: self.cut(True))
+        # self.bind('<Control-Key-v>', lambda event: self.paste())
+        #self.bind('<<Paste>>', self.paste)
+        self.bind('<<Copy>>', lambda event: self.copy(True))
+        # self.bind('<Control-Key-C>', lambda event: self.copy(True))
         self.bind('<Control-Key-s>', self.save)
         self.bind('<Control-Key-S>', self.save)
         self.bind('<Control-Key-a>', self.select_all)
@@ -276,6 +281,7 @@ class Window(Tk):
         self.bind('<F5>', self.dt)
         self.bind('<Control-Key-g>', self.goto)
         self.bind('<Control-Key-G>', self.goto)
+        # self.bind('<space>', self.emoji_detection)
         # special events
         self.font_size.bind('<<ComboboxSelected>>', self.change_font_size)
         font_ui.bind("<<ComboboxSelected>>", self.change_font)
@@ -441,32 +447,30 @@ class Window(Tk):
 
     # cut func
     def cut(self, x):
-        global selected
-        if not x:
-            selected = self.clipboard_get()
-        else:
+        # if not x:
+        #     self.selected = self.clipboard_get()
+        # else:
             if self.is_marked():
                 # grab
-                selected = self.EgonTE.selection_get()
+                self.selected = self.EgonTE.selection_get()
                 # del
                 self.EgonTE.delete('sel.first', 'sel.last')
                 self.clipboard_clear()
-                self.clipboard_append(selected)
+                self.clipboard_append(self.selected)
 
     # copy func
-    def copy(self, x):
-        global selected
+    def copy(self, event=None):
         if self.is_marked():
             # grab
             self.clipboard_clear()
             self.clipboard_append(self.EgonTE.selection_get())
 
     # paste func
-    def paste(self, x):
-        global selected
-        if selected:
+    def paste(self, event=None):
+        try:
             self.EgonTE.insert(self.get_pos(), self.clipboard_get())
-
+        except BaseException:
+            pass
     # bold text func
     def bold(self, event=None):
         # create
@@ -584,7 +588,7 @@ class Window(Tk):
 
     # hide file bar & status bar func
     def hide_statusbars(self):
-        if self.show_statusbar.get():
+        if not(self.show_statusbar.get()):
             self.status_bar.pack_forget()
             self.file_bar.pack_forget()
             self.geometry(f'{self.width}x{self.height - 30}')
@@ -1189,11 +1193,13 @@ class Window(Tk):
         enter = Button(name_root, text='Submit', command=button, relief=RIDGE)
         re_roll = Button(name_root, text='Re-roll', command=roll, relief=RIDGE)
         adv_options = Button(name_root, text='Advance options', command=adv_option, state=ACTIVE, relief=RIDGE)
+        copy_b = Button(name_root, text='Copy',command=lambda:copy(str(random_name)), width=10,  relief=RIDGE)
         text.grid(row=0, padx=10)
         rand_name.grid(row=1)
         enter.grid(row=2)
         re_roll.grid(row=3)
         adv_options.grid(row=4)
+        copy_b.grid(row=5)
 
     def translate(self):
         global translate_root, translate_box
@@ -1206,8 +1212,8 @@ class Window(Tk):
                 messagebox.showerror('Error', 'Please fill the box')
             else:
                 translator = Translator()
-                output = translator.translate(to_translate, dest=cl)
-                self.EgonTE.insert(self.get_pos(), output.text)
+                self.translate_output = translator.translate(to_translate, dest=cl)
+                self.EgonTE.insert(self.get_pos(), self.translate_output.text)
 
         def copy_from_file():
             if self.is_marked():
@@ -1256,12 +1262,15 @@ class Window(Tk):
         button_ = Button(translate_root, text="Translate", relief=FLAT, borderwidth=3, font=('arial', 10, 'bold'),
                          command=button)
         copy_from = Button(translate_root, text='Copy from file', relief=FLAT, command=copy_from_file)
+        copy_translation = Button(translate_root, text='Copy', command=lambda: copy(button()
+                                                                                    ), width=10, relief=FLAT)
         # placing the objects in the window
         auto_detect.grid(row=0)
         choose_langauge.grid(row=1)
         translate_box.grid(row=2)
         button_.grid(row=3)
         copy_from.grid(row=4)
+        copy_translation.grid(row=5)
 
     def url(self):
         # window
@@ -1329,6 +1338,28 @@ class Window(Tk):
             self.EgonTE.delete("end-2l", "end-1l")
         else:
             self.EgonTE.delete(1.0, 2.0)
+
+    def sort_by_characters(self, event=None):
+        # need some work still
+        content = (self.EgonTE.get(1.0, END))
+        sorted_content = ''.join(sorted(content))
+        # if the content is already sorted it will sort it reversed
+        if content == sorted_content:
+            sorted_content = sorted(sorted_content, reverse=True)
+        # if isinstance(sorted_content, list):
+        if ' ' in sorted_content:
+            sorted_content.replace(' ', '')
+            # sorted_content.pop(0)
+        self.EgonTE.delete(1.0, END)
+        self.EgonTE.insert(1.0, sorted_content)
+
+    def sort_by_words(self, event=None):
+        content = (self.EgonTE.get(1.0, END)).split()
+        sorted_words = sorted(content)
+        if content == sorted_words:
+            sorted_words = sorted(sorted_words, reverse=True)
+        self.EgonTE.delete(1.0, END)
+        self.EgonTE.insert(1.0, sorted_words)
 
     def generate(self):
         global sym
@@ -1458,30 +1489,24 @@ class Window(Tk):
         font_Size_c = 4
         self.font_size.current(font_Size_c)
 
-    def special_files_import(self, file_type):
+    def special_files_import(self, file_type=None):
         # to make the functions write the whole file even if its huge
         pandas.options.display.max_rows = 9999
         content = ''
-        if file_type == 'excel':
-            special_file = filedialog.askopenfilename(title='open excel file',
-                                                      filetypes=(('excel', '*.xlsx'), ('all', '*.*')))
-            if special_file:
-                content = pandas.read_excel(special_file).to_string()
-        elif file_type == 'csv':
-            special_file = filedialog.askopenfilename(title='open csv file',
-                                                      filetypes=(('csv', '*.csv'), ('all', '*.*')))
-            if special_file:
-                content = pandas.read_csv(special_file).to_string()
-        elif file_type == 'json':
-            special_file = filedialog.askopenfilename(title='open json file',
-                                                      filetypes=(('json', '*.json'), ('all', '*.*')))
-            if special_file:
-                content = pandas.read_json(special_file).to_string()
-        elif file_type == 'xml':
-            special_file = filedialog.askopenfilename(title='open xml file',
-                                                      filetypes=(('xml', '*.xml'), ('all', '*.*')))
-            if special_file:
-                content = pandas.read_xml(special_file).to_string()
+
+        special_file = filedialog.askopenfilename(title='open file',
+                                                      filetypes=(('excel', '*.xlsx'),('csv', '*.csv'),
+                                                                 ('json', '*.json'),('xml', '*.xml'), ('all', '*.*')))
+        if special_file.endswith('xml'):
+            content = pandas.read_xml(special_file).to_string()
+        elif special_file.endswith('csv'):
+            content = pandas.read_csv(special_file).to_string()
+        elif special_file.endswith('json'):
+            content = pandas.read_json(special_file).to_string()
+        elif special_file.endswith('xlsx'):
+            content = pandas.read_excel(special_file).to_string()
+        # elif special_file.endswith(''):
+        #     content = pandas.read_sas(special_file).to_string()
 
         self.EgonTE.insert(self.get_pos(), content)
 
@@ -1762,7 +1787,8 @@ class Window(Tk):
         relief_groove = Button(opt_root, text='groove', command=lambda: change_relief('groove'), width=button_width)
 
         transparency_title = Label(opt_root, text='Transparency configuration', font=font_)
-        transparency_config = Scale(opt_root, from_=0, to=100 , orient='horizontal')
+        transparency_config = Scale(opt_root, from_=10, to=100, orient='horizontal')
+        transparency_config.set(100)
         transparency_set = Button(opt_root, text='Change transparency', command=change_transparency)
 
         # placing
@@ -1891,30 +1917,47 @@ class Window(Tk):
         # mode_button.grid(row=3, column=0)
         # sort_insert.grid(row=4, column=0, pady=5)
 
-    def dictionary(self):
+    def dictionary(self, mode):
         def search():
             meaning_box.configure(state=NORMAL)
             meaning_box.delete('1.0', 'end')
-            dict_ = PyDictionary()
-            def_ = dict_.meaning(dict_entry.get())
+            if mode == 'dict':
+                dict_ = PyDictionary()
+                self.def_ = dict_.meaning(par_entry.get())
 
-            for key, value in def_.items():
-                meaning_box.insert(END, key + '\n\n')
-                for values in value:
-                    meaning_box.insert(END, f'-{values}\n\n')
-            meaning_box.configure(state=DISABLED)
+                for key, value in self.def_.items():
+                    meaning_box.insert(END, key + '\n\n')
+                    for values in value:
+                        meaning_box.insert(END, f'-{values}\n\n')
+                meaning_box.configure(state=DISABLED)
+            else:
+                wiki_ = wikipedia.summary(par_entry.get())
+                meaning_box.insert(self.get_pos(), wiki_)
+            paste_b.configure(state=ACTIVE)
+        def paste():
+            if mode == 'dict':
+                for key, value in self.def_.items():
+                    self.EgonTE.insert(self.get_pos(), key + '\n\n')
+                    for values in value:
+                        self.EgonTE.insert(self.get_pos(), f'-{values}\n\n')
+            else:
+                wiki_ = wikipedia.summary(par_entry.get())
+                self.EgonTE.insert(self.get_pos(), wiki_)
 
-        dict_root = Toplevel()
-        dict_root.resizable(False, False)
-        dict_root.attributes('-alpha', '0.95')
-        dict_entry = Entry(dict_root)
-        dict_search = Button(dict_root, text='Search meaning', command=search)
-        meaning_box = Text(dict_root,  height=15, width=50, wrap=WORD)
+        par_root = Toplevel()
+        par_root.resizable(False, False)
+        par_root.attributes('-alpha', '0.95')
+        par_entry = Entry(par_root)
+        par_search = Button(par_root, text='Search meaning', command=search)
+        meaning_box = Text(par_root,  height=15, width=50, wrap=WORD)
         meaning_box.configure(state=DISABLED)
+        paste_b = Button(par_root, text='Paste to ETE', command=paste)
+        paste_b.configure(state=DISABLED)
 
-        dict_entry.grid(row=1)
-        dict_search.grid(row=2)
+        par_entry.grid(row=1)
+        par_search.grid(row=2)
         meaning_box.grid(row=3)
+        paste_b.grid(row=4)
 
     def virtual_keyboard(self):
         key = Toplevel()  # key window name
@@ -1941,7 +1984,6 @@ class Window(Tk):
         # end window size
 
         key.configure(bg='black')  # add background color
-        # 40
         q = ttk.Button(key, text='Q', width=6, command=lambda: press('Q'))
         q.grid(row=1, column=0, ipady=10)
 
@@ -2067,8 +2109,33 @@ class Window(Tk):
 
         key.mainloop()  # using ending point
 
+    def emoji_detection(self, event=None, via_settings=False):
+        content = self.EgonTE.get(1.0, END).split(' ')
+        content[-1] = content[-1].strip('\n')
+        new_content = []
+        for word in content:
+            word = emoji.emojize(word)
+            new_content.append(emoji.emojize(word))
+            if emoji.is_emoji(word):
+                if via_settings:
+                    messagebox.showinfo('', 'emoji(s) found!')
+                    fail_msg = False
+            else:
+                fail_msg = True
+        if fail_msg:
+            messagebox.showinfo('', 'emoji(s) didn\'t found!')
+        self.EgonTE.delete('1.0', 'end')
+        self.EgonTE.insert('1.0', new_content)
+        if via_settings == False:
+            self.EgonTE.insert(self.get_pos(), " ")
+
+
     if RA:
         right_align_language_support()
+
+def new_window(app):
+    appX = app()
+    appX.mainloop()
 
 if __name__ == '__main__':
     app = Window()
