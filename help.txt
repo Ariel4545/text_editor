@@ -9,10 +9,10 @@ tool you're willing to use:
 Bold, Italics, underline, text color & text to speech - will choose the entire file
 Align right, Align center, Align left - will select the line you're on
 
-Import nontext file:
+Import nontext file (new):
 Egon-Text-Editor will let you import some nontext file types to your text file.
-It works by selecting to file type in the file menu and then selecting the file you want
-(with the same type),
+It works by pressing the 'import file' button in the file menu and selecting one
+of the files that EgonTE is supporting right now (excel, csv, json, xml)
 and then it will convert it to text and append it to where you are in the Text file.
 
 File bar & Status bar:
@@ -36,3 +36,12 @@ There are three options to change the Egon Text Editor predefined colors
 2. Menu colors - Menus Background & text colors
 3. App colors - text box color, status & file bar colors, toolbar colors,
  frame color, text color (until 1.0.9 version)
+
+Emoji detection:
+emoji detection feature is striving to be automatic in the future.
+but till then you can detect emoji with pressing the 'detect emojis'
+button on the setting menu.
+
+Sort by words/characters:
+the new 2 function sort values that isn't numbers but how?
+the answer is pretty simple, it uses their ASCII values!
