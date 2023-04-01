@@ -1,0 +1,383 @@
+EgonTE 1.11
+
+Added:
+added reader mode
+added emoji list
+made that if you change the font the font size won't be affected
+added a file information function
+added autosave functionality every minute
+added compression function between two files
+added a tool that can correct the misspelling
+added a message box for errors about unsupported characters
+added a way to import 'special' files by internet link
+added local file import supports now PDF as well
+added when opening HTML files they will be 'prettier' right away
+added web scrapping tool -  with class, tag & text options - Early Access
+added error handling for lost internet connection
+added natural language processor with many functions: Get nouns, Get verbs, Get adjectives, Get adverbs
+Get pronouns, get stop words, Entity recognition, Dependency tree, Lemmatization, Most common words
+added the ability to turn handwriting to text - via canvas, uploaded image
+added text decorators to turn regular text into decorated (huge) text - 4 options
+added organized patch notes in the program itself
+added usage time of the program in the advanced options window
+added the option to switch capital letters to regular in the virtual keyboard
+made the exit function more effective
+added night mode on help/patch notes
+added a connection to quotes API: quotes function  & chance for one when opening the program
+added file comparison function
+added an option to delete the file you are using
+added support for printing a file with OS that isn't Windows
+added a weather tool
+added a fullscreen option by pressing F-11
+added a "topmost" option - makes the main window always on top
+added the new Wikipedia settings; now instead of just getting a summary you can choose from - content, images links, related articles names
+added a function that can send emails (supports only Gmail, can't work with accounts that have 2fa)
+added a function that allows merging files in a more flexible way
+added youtube transcript API (W.I.P) and added also a local transcript function
+added a screenshot function - screenshot the app window directly
+a handwriting function: draw characters and let the program identify them! (convert to text mechanism is still experimental)
+
+Changed / Fixed / Improved:
+removed some unused code
+made a condition to the translation tool & also for many functions to make them optional in case their modules weren't installed
+improved the algorithm of the custom style & cursor functions
+taken care of some things that slowed the program: modules optimization, code optimization
+fixed some misspellings
+made the copy file path work only if you are using a file
+improved the advanced option exit function
+night mode fixes
+improved most of the tools' UI
+made many small changes to the UI to make it more consistent
+reformatted the code
+
+Not available yet - but in the code:
+* - have a high chance to make it to EgonTE
+** - have a medium chance to make it to EgonTE
+*** - have a low chance to make it to EgonTE
+
+*  loading screen
+*  settings files: your custom options will be automatically saved and used
+*  a function that can organize the text better
+
+** main menu
+
+*** hyperlinks
+*** auto lists
+
+
+
+1.10
+added a quick submission of content from the dictionary
+added copy button to random name generator, translator tools
+united 'special' files import to one interface
+added more file types for 'file import'
+added sort by characters & words functions (including reversed)
+made ETE finally resizable! (and more arranged)
+added emoji detection
+added Wikipedia tool
+added & changed some help tool content
+fixed status bar bug
+fixed & improved copy/paste/cut functions
+changed transparency menu starting value to 100% not transparent
+limited the transparency percentage to 90% transparent (instead of 100%)
+
+1.9.9
+fixed exit function bug
+fixed the help menu's name
+added virtual keyboard
+
+1.9.8
+connected the ☒ button to the exit function
+transparency options
+tools are a little transparent now
+made the exit function more efficient
+added a dictionary tool
+
+1.9.6
+bug fixes & usage of oop
+
+1.9.4
+an option to sort (numbers) in a descending way
+better usage of the sort tool's text widget parameters
+added a scrollbar to the sort tool's input
+added that the main text widget's (EgonTE) options will now update the sort & translate text widgets as well
+Fixed:
+the user can grab the height of the window below the default size
+
+1.9.3
+added:
+more emphasis on functions
+word warp modes options
+sort tool
+changed:
+made error message(s) Clear
+now you can make the y-axis of the window bigger by grabbing it (max 100 pixels more)
+fixed:
+a bug when chosen font size by UI is not linking to the chosen font size by keyboard shortcut
+fixed the help window by making it not affected by any data type
+a bug that when nothing is written the status bar won't show the line numbers
+fixed a bug when some blank line was added out of nowhere
+fixed bugs when some content manipulation goes nuts
+removed:
+wasteful menus' lines that didn't do anything
+
+1.9
+added:
+advanced settings
+tools - text/file shortcuts
+go to tool
+help - content & scrollbar additions
+added lines counter to the status bar
+made Find tool more useful - navigate by marking occurrences
+more error handling
+time & date key bind a shortcut
+selected cursor options work on the translate window
+added version number at the program title
+changed:
+make messages clear
+changed default cursor
+window size by default and window size when the status bar or file bar active
+simplify find tool conditions
+'app colors' will not change also the text color of the text box
+bug fixes:
+fixed condition so right align "support" can work
+double paste bug
+clipboard bug
+deleted:
+deleted irrelevant comments
+deleted that "change style" and also change the relief
+
+1.8
+fixed - copy, paste & cut bugs
+made some messages clear
+made that if you want to generate 25000 characters a warning will pop up
+made that when you enter a calculation the tool will not close down
+made changes for 'special' files to make them less confusing
+remake font UI - as a result all Tkinter-supported fonts are now available
+added help for the confusing features - more explanations will be added in the future
+added a few more comments
+added better support for right-aligned languages
+added a tool to search quickly on the web
+
+1.7
+special file support - insert excel, CVS, JSON, and XML files to your text file.
+improved align - if you don't mark something to align it will automatically choose the line you are at.
+improved color -if you don't mark something to change color it will automatically choose the entire file.
+
+1.6
+find tool remake
+
+1.5
+big improvements in the buttons' functionality
+fixed fonts and made them work
+error-handling bugs
+improved UI's color selection UI
+
+1.4
+improved night mode functionality
+added the option the choose the UI's colors
+improved error-handling calc tool
+improved UI for the random names tool
+improved error handling for font size shortcuts
+improved UI's text
+
+1.3
+added font size shortcuts
+
+1.2
+added 6 shortcuts
+
+1.1
+bug fixes
+UI/UX improvement for tools
+
+1.0
+added functionality that warns for unsaved changes (file)
+added fonts
+added fun functions that reverse words, reverse characters, join words, lower/upper
+added function that generates random characters
+!
+
+0.9.9
+added replace (text) function
+
+0.9.8
+added URL shorter tool
+
+0.9.7
+improved code writing
+added advanced name generator tool
+bug fixes
+
+0.9.4
+optimized imports
+improved code writing
+improved window placement
+improved exit function
+added more opening msgs
+
+0.9.3
+bug fixes
+added space when inserting certain things from tools
+
+0.9.2
+Advanced random numbers tool
+added space when inserting certain things from tools
+added reference to modulus in calc explanation
+made random name root not resizable
+
+0.9.1
+UI for the random names tool
+
+0.9
+added translate tool
+bug fixes
+changed Insert menu name to tool menu
+
+0.8.8
+added random name tool
+
+0.8.7
+added an option the change the cursor to the default one
+
+0.8.6
+added 3 new tooltip(s)
+added 4 new shortcuts
+
+0.8.4
+bug fixes
+added error handling for - saving a file, changing text colors, calc, random numbers
+copy file path function
+
+0.8.3
+added an operation list for the calculation tool
+
+0.8.2
+experimented more with the fonts/size
+
+0.8.1
+added an option to insert a random number
+improved calc UI
+
+0.8
+added option to insert datetime
+
+0.7.9
+optimized imports
+
+0.7.6
+option to insert a calculation
+
+0.7.4
+bug fixes
+speech-to-text variation of error & goodbye sentences
+
+0.7.3
+added option to open the respiratory page through the program
+added option the tear of the edit menu
+
+0.7.1
+added file bar - info about the file
+bug fixes
+
+0.7
+bug fixes
+optimized imports
+improved exit function
+improved shortcuts
+
+0.6.8
+added search function
+
+0.6
+added advanced speech to text
+added opening sentences
+better exit
+added option to hide the status bar & toolbar
+improved night mode UI & functionality
+changed the status bar position in the bottom middle
+!
+
+0.5.9
+fixed message box for printing files
+added a message box for quitting the app
+
+0.5.8
+fixed imports
+fixed text-to-speech icon problems
+
+0.5.7
+added tooltip(s)
+
+0.5.5
+added 6 new shortcuts
+bug fixes
+
+0.5.3
+added custom coordinates for the program when opening it
+
+0.5.2
+added text to speech
+added thread
+
+0.5
+added custom cursor
+
+0.4.8
+added use to the status bar
+
+0.4.6
+night mode improvement
+
+0.4.4
+added images to the buttons
+
+0.4.1
+added separator to the color menu
+
+0.4
+made buttons flat (more modern style)
+
+0.3.8
+changed font default size
+bug fix
+
+0.3.6
+added one new shortcut
+
+0.3.4
+Added message box when you attempt to print
+
+0.3.2
+bug fixes
+
+0.3 (initial commit)
+
+---------------- BEFORE GITHUB ---------------
+
+0.3 (p0.8)
+added underline
+added text alignments
+improved night mode with button colors
+improved UI
+
+0.2.5 (p0.7)
+added underline
+added font UI
+
+0.2 (median)
+added bold text
+added italics slant
+added custom text color
+added custom background colors
+added custom highlight color
+added the option to print a file
+added select all function
+added clear function
+added night mode
+added 3 new shortcuts
+
+0.1 (basic/first version)
+have the ability to open & save files
+have also 2 different save functions: save & save as
+have the 3 most basic edit tools: cut, copy & paste
