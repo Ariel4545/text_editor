@@ -1,4 +1,22 @@
-EgonTE 1.11
+1.11.1
+
+new content statistics:
+Have a bar-chart show the count/frequency of the top 8 most used words & all the alphabet characters
+count of: words, characters, alphabetic characters, symbols, lines, and paragraphs
+number of rations: words per line, characters per words, lines per paragraphs
+number of differences: different Words \ characters
+
+upgraded the file information function:
+added the accession time
+added the owner's name
+changed the font of the tool's UI
+changed the error message to a file opening menu
+
+small changes:
+made the opening file function smoother - the last content will be deleted (and eventually replaced) only after you're opening a file
+made the opening of new blank files a little smoother by doing the same thing
+
+1.11
 
 Added:
 added reader mode
