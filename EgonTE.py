@@ -17,6 +17,13 @@ import names
 import urllib.request, urllib.error
 import ssl
 
+# matplotlib (graphs library) in a way that suits tkinter
+import matplotlib
+matplotlib.use('TkAgg')
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+
+
 try:
     from googletrans import Translator  # req version 3.1.0a0
 
@@ -33,7 +40,7 @@ from pyshorteners import Shortener
 import smtplib
 from email.message import EmailMessage
 import os
-from string import ascii_letters, digits, ascii_lowercase, ascii_uppercase
+from string import ascii_letters, digits, ascii_lowercase, ascii_uppercase, printable
 import pandas
 from socket import gethostname
 from PyDictionary import PyDictionary
@@ -53,8 +60,8 @@ from platform import system
 import requests
 # import cv2
 # import handprint
-from re import findall
-# from re import search as reSearch
+from re import findall, sub
+from re import search as reSearch
 from json import dump, load, loads
 # import pdf2image
 # import keras
@@ -84,6 +91,8 @@ except (ImportError, AttributeError, ModuleNotFoundError) as e:
     from pyChatGPT import Chat, Options
 
 from pydub import AudioSegment
+from heapq import nlargest
+from pathlib import Path
 
 try:
     import polyglot
@@ -143,7 +152,7 @@ class Window(Tk):
         placement_x = round((screen_width / 2) - (self.width / 2))
         placement_y = round((screen_height / 2) - (self.height / 2))
         self.geometry(f'{self.width}x{self.height}+{placement_x}+{placement_y}')
-        ver = '1.11.0'
+        ver = '1.11.1'
         self.title(f'Egon Text editor - {ver}')
         self.load_images()
         self.protocol("WM_DELETE_WINDOW", self.exit_app)
@@ -156,6 +165,8 @@ class Window(Tk):
         self.key = ''
         self.fs_value = False
         self.tm_value = False
+        self.status_var = StringVar()
+        self.status_var.set('Lines:1 Characters:0 Words:0')
         Thread(target=self.stopwatch, daemon=True).start()
         Thread(target=self.load_links, daemon=True).start()
         # Thread(target=self.counter).start()
@@ -237,6 +248,7 @@ class Window(Tk):
         file_menu.add_command(label='Screenshot', command=lambda: self.save_images(self.EgonTE, self))
         file_menu.add_separator()
         file_menu.add_command(label='File\'s Info', command=self.file_info)
+        file_menu.add_command(label='Content\' stats', command=self.content_stats)
         file_menu.add_command(label='File\'s comparison', command=self.compare)
         file_menu.add_command(label='Merge files', command=self.merge_files)
         file_menu.add_separator()
@@ -397,7 +409,7 @@ class Window(Tk):
         # add status bar
         self.status_frame = Frame(frame, height=20)
         self.status_frame.pack(fill=BOTH, anchor=S, side=BOTTOM)
-        self.status_bar = Label(self.status_frame, text='Lines:1 Characters:0 Words:0', pady=5)
+        self.status_bar = Label(self.status_frame, text=self.status_var.get(), pady=5)
         self.status_bar.pack(fill=Y, side=LEFT)
         # add file bar
         self.file_bar = Label(self.status_frame, text='')
@@ -580,18 +592,18 @@ class Window(Tk):
     # create file func
     def new_file(self, event=None):
         self.file_name = ''
-        self.EgonTE.delete('1.0', END)
         self.file_bar.config(text='New file')
+        self.EgonTE.delete('1.0', END)
 
         global open_status_name
         open_status_name = False
 
     # open file func
     def open_file(self, event=None):
-        self.EgonTE.delete('1.0', END)
         text_name = filedialog.askopenfilename(initialdir=os.getcwd(), title='Open file',
                                                filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
                                                           ('Python Files', '*.py')))
+        self.EgonTE.delete('1.0', END)
         if text_name:
             try:
                 global open_status_name
@@ -978,13 +990,14 @@ class Window(Tk):
 
     # get & display character and word count with status bar
     def status(self, event=None):
-        global lines
+        global lines, words
         if self.EgonTE.edit_modified():
             self.text_changed = True
             words = len(self.EgonTE.get(1.0, 'end-1c').split())
             characters = len(self.EgonTE.get(1.0, 'end-1c'))
             lines = int((self.EgonTE.index(END)).split('.')[0]) - 1
-            self.status_bar.config(text=f'Lines:{lines} Characters:{characters} Words:{words}')
+            self.status_var.set(f'Lines:{lines} Characters:{characters} Words:{words}')
+            self.status_bar.config(text=self.status_var.get())
         self.EgonTE.edit_modified(False)
 
     # AI narrator will read the selected text from the text box
@@ -2489,32 +2502,69 @@ class Window(Tk):
         scroll.config(command=emoji_label.yview)
 
     def file_info(self):
+        res_font = 'consolas 14'
+
         if self.file_name:
-            try:
-                root = Toplevel()
-                root.title('File information')
-                # getting file info
-                file_size = os.path.getsize(self.file_name)
-                modified_time = datetime.fromtimestamp((os.path.getmtime(self.file_name)))
-                creation_time = datetime.fromtimestamp((os.path.getctime(self.file_name)))
-                file_type = os.path.splitext(self.file_name)[-1]
-                # attaching info to labels
-                size_label = Label(root, text=f'file size - {file_size} bytes', font='arial 14 bold')
-                modified_time_label = Label(root, text=f'file modified time - {modified_time}', font='arial 14 bold')
-                creation_time_label = Label(root, text=f'file creation time - {creation_time}', font='arial 14 bold')
-                file_type_label = Label(root, text=f'file type - {file_type}', font='arial 14 bold')
-                # packing
-                size_label.pack(expand=True)
-                modified_time_label.pack(expand=True)
-                creation_time_label.pack(expand=True)
-                file_type_label.pack(expand=True)
-                root.resizable(False, False)
-            except NameError:
-                messagebox.showerror('error', 'you aren\'nt using a file!')
-            except PermissionError:
-                messagebox.showerror('error', 'you are not using a file!')
+            #if not (system().lower() == 'windows'):
+            file_info_name = self.file_name
+
         else:
+            # messagebox.showerror('error', 'you are not using a file!')
+            file_info_name = filedialog.askopenfilename(title='Open file to get info about',
+                                                  filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
+                                                             ('Python Files', '*.py')))
+
+        try:
+            stat = os.stat(file_info_name)
+            # getting file info
+            file_size = os.path.getsize(file_info_name)
+
+            if system().lower() == 'windows':
+                creation_time = datetime.fromtimestamp((os.path.getctime(file_info_name)))
+                modified_time = datetime.fromtimestamp((os.path.getmtime(file_info_name)))
+            else:
+                try:
+                    creation_time = stat.st_birthtime
+                    modified_time = stat.st_mtime
+                except AttributeError:
+                    pass
+
+            # crationg the window
+            root = Toplevel()
+            root.title('File information')
+            root.resizable(False, False)
+            # creating the widgets
+            access_time = datetime.fromtimestamp(stat.st_atime)
+            file_type = os.path.splitext(file_info_name)[-1][1:]
+            lib_path = Path(file_info_name)
+            try:
+                owner = f'{lib_path.owner()} : {lib_path.group()}'
+            except:
+                owner = ''
+            # attaching info to labels
+            size_label = Label(root, text=f'file size - {file_size} bytes', font=res_font)
+            modified_time_label = Label(root, text=f'file modified time - {modified_time}', font=res_font)
+            creation_time_label = Label(root, text=f'file creation time - {creation_time}', font=res_font)
+            access_time_label = Label(root, text=f'file accessed time - {access_time}', font=res_font)
+            file_type_label = Label(root, text=f'file type - {file_type}', font=res_font)
+            if owner:
+                owner_label = Label(root, text=f'file owner - {owner}', font=res_font)
+            # packing
+            size_label.pack(expand=True)
+            modified_time_label.pack(expand=True)
+            creation_time_label.pack(expand=True)
+            access_time_label.pack(expand=True)
+            file_type_label.pack(expand=True)
+            if owner:
+                owner_label.pack(expand=True)
+
+        except NameError:
+            messagebox.showerror('error', 'you aren\'nt using a file!')
+        except PermissionError:
             messagebox.showerror('error', 'you are not using a file!')
+
+
+
 
     def auto_save(self):
         t = 300
@@ -4004,6 +4054,235 @@ class Window(Tk):
             file_button.grid(row=2, column=2)
         else:
             file_trans()
+
+    def content_stats(self):
+        res_font = 'arial 10'
+        title_font = 'arial 12 underline'
+        special_characters = list(printable[62:])
+
+        stats_root = Toplevel()
+        stats_root.title('Content statistics')
+
+        content = self.EgonTE.get('1.0', 'end')
+        lines_, characters, words_ = self.status_var.get().split(' ')
+
+        symbols = 0
+        m_special_characters = ''.join(special_characters)
+        m_special_characters = m_special_characters.replace(' ', '')
+        m_special_characters = m_special_characters.replace('\n', '')
+        for i in range(len(content)):
+            # checking if any special character is present in given string or not
+            if content[i] in m_special_characters:
+                symbols += 1
+
+        numbers = len(findall(r'\d+', content))
+        # set can contain duplicate values so by checking the length we can see the number of diffrent characters
+        different_characters = len(set(content.lower()))
+        # if we split the content to a list by whitespace we can do the same thing for words
+        different_words = len(set((content.lower()).split(' ')))
+        # calculate the alphabets character count using loop and a condition
+        alphabets_count = 0
+        for i in content:
+            if i.isalpha():
+                alphabets_count += 1
+
+        # paragraph count
+        # paragraphcount = 0
+        # empty = True
+        # for i in content:
+        #     if '\n' in i:
+        #         if len(i) < 2:
+        #             empty = True
+        #         elif len(i) > 2 and empty is True:
+        #             paragraphcount = paragraphcount + 1
+        #             empty = False
+        #         if empty is True:
+        #             paragraphnumber = 0
+        #         else:
+        #             paragraphnumber = paragraphcount
+
+        temp_file = open('temp_EgonTE.txt', 'w')
+        temp_file.write(content)
+        temp_file.close()
+        paragraph = 0
+        content_lines = open('temp_EgonTE.txt', 'r').readlines()
+
+        for idx, c_line in enumerate(content_lines):
+            if not c_line == '\n':
+                m = reSearch(r'\w', c_line)
+                if m is not None:
+                    string = m.group(0)
+                else:
+                    raise messagebox.showerror('Error', 'an error has occurred')
+
+            try:
+                # if the line is a newline, and the previous line has a str in it, then
+                # count it as a paragraph.
+                if c_line == '\n' and string in content_lines[idx - 1]:
+                    paragraph += 1
+            except:
+                pass
+
+        if content_lines[-1] != '\n':  # if the last line is not a new line, count a paragraph.
+            paragraph += 1
+
+        temp_file.close()
+        del temp_file
+
+
+        # ratios
+        try:
+            words_per_lines = round(len(content.split(' ')) / lines, 2)
+        except ZeroDivisionError:
+            words_per_lines = 0
+        try:
+            characters_per_words = round(alphabets_count / words, 2)
+        except ZeroDivisionError:
+            characters_per_words = 0
+        try:
+            lines_per_paragraphs = round(lines / paragraph, 2)
+        except ZeroDivisionError:
+            lines_per_paragraphs = 0
+
+        # count the specific word / character in the text
+
+        words_per_line = dict(Counter(content.split(' ')))
+
+        # cleared_content = []
+        # for word_ in content:
+        #     for special_character in special_characters:
+        #         cleared_word = word_.replace(special_character, '')
+        #         cleared_content.append(cleared_word)
+
+        # print(sorted(words_per_line, key=words_per_line.get))
+        words_value, words_number = words_per_line.keys(), words_per_line.values()
+
+        # making a clear content (only alphabetic characters) to make the words' graph more accurate and clean
+        cleared_content_list = []
+        del_count = []
+        for count, word_value in enumerate(words_value, 0):
+            for special_character in special_characters:
+                if special_character in word_value:
+                    word_value = word_value.replace(special_character, '')
+            cleared_content_list.append(word_value)
+            if word_value.isdigit():
+                del_count.append(word_value)
+                    # cleared_content = cleared_content[-1]
+
+        # making the dictionary without symbols to advance the cleaning process
+        cleared_words_per_line = {}
+        for i, cc in enumerate(cleared_content_list):
+            cleared_words_per_line[cc] = list(words_number)[i]
+        print(cleared_words_per_line)
+
+        # deletion loop - deleting from the dictionary the numbers
+        for d in del_count:
+            del cleared_words_per_line[d]
+            # for i in words_number[d + 1:]:
+            #     words_number
+        print(cleared_words_per_line)
+
+        # cleared_content = (' '.join([i for i in cleared_content_list if not i.isdigit()]))
+        # print(cleared_content)
+        # obs_cleared_content_list = cleared_content.split(' ')
+
+        cleared_content = ' '.join(cleared_content_list)
+        print(cleared_content)
+
+        # at last to not overload the graph with too much info we want only the top used words
+
+        # top_words_list = nlargest(5, cleared_words_per_line, key=cleared_words_per_line.get)
+        # print(top_words_list)
+        # top_dictionary = {}
+        # for i, top_w in enumerate(top_words_list):
+        #     if top_w == list(cleared_words_per_line.keys())[i]:
+        #         top_dictionary[top_w] = list(cleared_words_per_line.values())[i]
+        # works only if they share the same index
+
+        top_word_list = (nlargest(8, cleared_words_per_line.items(), key=lambda x:x[1]))
+        top_dictionary = {}
+        for key, value in top_word_list:
+            top_dictionary[key] = value
+
+        print('top dict', top_dictionary)
+
+        top_words_value, top_words_number = top_dictionary.keys(), top_dictionary.values()
+
+        w_frame = Frame(stats_root)
+        word_figure = Figure(figsize=(5, 3), dpi=100)
+        word_figure_canvas = FigureCanvasTkAgg(word_figure, w_frame)
+        NavigationToolbar2Tk(word_figure_canvas, w_frame)
+        word_axes = word_figure.add_subplot()
+        word_axes.bar(top_words_value, top_words_number)
+        word_axes.set_ylabel('Frequency')
+        word_axes.set_xlabel('Words')
+
+        word_c = Counter(findall(r"[a-z']+", sub(r" '+ ", " ", content.lower())))
+
+        character_count = {}
+        for letter in printable[10:36]:
+            character_count[letter] = (content.lower()).count(letter)
+        characters_value, characters_number = character_count.keys(), character_count.values()
+
+        c_frame = Frame(stats_root)
+        character_figure = Figure(figsize=(5, 3), dpi=100)
+        character_figure_canvas = FigureCanvasTkAgg(character_figure, c_frame)
+        NavigationToolbar2Tk(character_figure_canvas, c_frame)
+        character_axes = character_figure.add_subplot()
+        character_axes.bar(characters_value, characters_number)
+        character_axes.set_ylabel('Frequency')
+        character_axes.set_xlabel('Characters')
+
+
+        label_frame = Frame(stats_root)
+        char_label = Label(label_frame, text=f'{characters}', font=res_font)
+        alpha_label = Label(label_frame, text=f'Alphabet characters {alphabets_count}')
+        words_label = Label(label_frame, text=f'{words_}', font=res_font)
+        lines_label = Label(label_frame, text=f'{lines_}', font=res_font)
+        nums_label = Label(label_frame, text=f'Numbers: {numbers}', font=res_font)
+        sym_label = Label(label_frame, text=f'Symbols: {symbols}', font=res_font)
+        diff_c_label = Label(label_frame, text=f'Different characters: {different_characters}', font=res_font)
+        diff_w_label = Label(label_frame, text=f'Different words: {different_words}', font=res_font)
+        wpl_label = Label(label_frame, text=f'Words per lines: {words_per_lines}', font=res_font)
+        cpw_label = Label(label_frame, text=f'Characters per words: {characters_per_words}', font=res_font)
+        para_label = Label(label_frame, text=f'Paragraphs: {paragraph}', font=res_font)
+        lpp_label = Label(label_frame, text=f'Lines per paragraphs: {lines_per_paragraphs}', font=res_font)
+
+        word_tt = Label(w_frame, text='Top words', font=title_font)
+        word_tl = word_figure_canvas.get_tk_widget()
+
+        characters_tt = Label(c_frame, text='Top characters', font=title_font)
+        characters_tl = character_figure_canvas.get_tk_widget()
+
+        # char_label.pack(fill=X)
+        # words_label.pack(fill=X)
+        # lines_label.pack(fill=X)
+        # nums_label.pack(fill=X)
+        # sym_label.pack(fill=X)
+        # diff_c_label.pack(fill=X)
+        # diff_w_label.pack(fill=X)
+
+        label_frame.pack()
+        char_label.grid(row=1, column=0)
+        alpha_label.grid(row=1, column=2)
+        words_label.grid(row=2, column=0)
+        lines_label.grid(row=2, column=2)
+        para_label.grid(row=3, column=0)
+        nums_label.grid(row=3, column=2)
+        sym_label.grid(row=4, column=0)
+        diff_c_label.grid(row=4, column=2)
+        diff_w_label.grid(row=5, column=0)
+        wpl_label.grid(row=5, column=2)
+        cpw_label.grid(row=6, column=0)
+        lpp_label.grid(row=6, column=2)
+
+        w_frame.pack(expand=True, fill=BOTH)
+        word_tt.pack(fill=X)
+        word_tl.pack(expand=True, fill=BOTH)
+
+        c_frame.pack(expand=True, fill=BOTH)
+        characters_tt.pack(fill=X)
+        characters_tl.pack(expand=True, fill=BOTH)
 
     if RA:
         right_align_language_support()
