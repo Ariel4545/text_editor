@@ -1,4 +1,3 @@
-
 Marking:
 Egon Text Editor works quite differently from other text editing programs,
 something that can work differently between each character you will choose to change.
@@ -6,14 +5,17 @@ The simplest way to change something text related is by marking it.
 But if you will not mark something,
 Egon Text Editor will select automatically for you what it will affect depending on what
 tool you're willing to use:
-Bold, Italics, underline, text color & text to speech - will choose the entire file
+Bold, Italics, underline, text color & text to speech & text twisting function - will choose the entire file
 Align right, Align center, Align left - will select the line you're on
 
-Import nontext file (new):
+Import nontext file:
 Egon-Text-Editor will let you import some nontext file types to your text file.
 It works by pressing the 'import file' button in the file menu and selecting one
 of the files that EgonTE is supporting right now (excel, csv, json, xml)
 and then it will convert it to text and append it to where you are in the Text file.
+Local vs Global file:
+Local - a local file is a one that is on your computer and will be accessed via menu
+Global - a file that is available on the internet and will be accessed via link
 
 File bar & Status bar:
 The File bar & Status bar are two labels at the bottom of the program,
@@ -45,3 +47,53 @@ button on the setting menu.
 Sort by words/characters:
 the new 2 function sort values that isn't numbers but how?
 the answer is pretty simple, it uses their ASCII values!
+
+NLP menu:
+the NLP menu is attributed to Natural Language Processor.
+that means that the whole menu is about processing the main
+text box widget's text and find something based on the command
+you pressed on
+
+Top most:
+the top most setting is on the options' menu.
+when activated it's makes the main window z value to the most of any other window
+
+Connection with OpenAI products:
+in the program you can use OpenAI products, that includes ChatGPT & DallE
+you connect to them via a login window that requests you OpenAI key.
+(right now using environment variables to connect isn't possible,
+but I'm planning to add this as well)
+after this a special window will be opened for you for the specific AI
+you chose.
+the main downside to this tool however is that OpenAI will want you to pay
+for their API usage
+
+Text decorators:
+the text decorators are a few styles of huge text using regular text
+there are 3 styles of text: binary, bash and astrix.
+the tools allow you to convert text directly from the main text box widget
+or even use its own text box widget,
+and also allow to paste directly to the main text box widget
+
+Text twisting functions
+Text twisting functions are a new term a made up to describe the functions that
+changed the order of some parts the text in a very straight forward way, that not benefit the structure
+but are still fun to play with from time to time.
+they are located at the bottom of the edit menu.
+the text twisting function are - reverse characters / words, join words, upper / lower, sort by characters / words
+
+Dev mode:
+the dev mode can be activated via options and when activated it will let you access the record function
+
+Record:
+the record function is a function that keep track on the main events that have been occurred in the app and when you
+open the tool the events will be writing in an organized manner with time and ways to difference lines
+
+Special tools option:
+special tool option is a new option in the options menu that activated by default,
+so what happens when you turn it off?
+the things that will happen is that you will no longer have access to the tools and colors+ menus
+
+why some tools font is bold while others not?
+some tools font is bold while others not because it indicates the tools that are the finest and most original
+
