@@ -1,7 +1,6 @@
 from tkinter import filedialog, colorchooser, font, ttk, messagebox, simpledialog
 from tkinter import *
 from tkinter.tix import *
-
 import pytesseract.pytesseract
 from win32print import GetDefaultPrinter
 from win32api import ShellExecute, GetShortPathName
@@ -19,10 +18,10 @@ import ssl
 
 # matplotlib (graphs library) in a way that suits tkinter
 import matplotlib
+
 matplotlib.use('TkAgg')
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-
 
 try:
     from googletrans import Translator  # req version 3.1.0a0
@@ -62,6 +61,7 @@ import requests
 # import handprint
 from re import findall, sub
 from re import search as reSearch
+from re import split as reSplit
 from json import dump, load, loads
 # import pdf2image
 # import keras
@@ -93,6 +93,15 @@ except (ImportError, AttributeError, ModuleNotFoundError) as e:
 from pydub import AudioSegment
 from heapq import nlargest
 from pathlib import Path
+from ctypes import WinDLL
+from keyboard import is_pressed
+
+try:
+    from emoticons import emoticon, demoticon
+
+    emoticons_library = ACTIVE
+except (ImportError, AttributeError, ModuleNotFoundError) as e:
+    emoticons_library = DISABLED
 
 try:
     import polyglot
@@ -152,7 +161,7 @@ class Window(Tk):
         placement_x = round((screen_width / 2) - (self.width / 2))
         placement_y = round((screen_height / 2) - (self.height / 2))
         self.geometry(f'{self.width}x{self.height}+{placement_x}+{placement_y}')
-        ver = '1.11.1'
+        ver = '1.11.2'
         self.title(f'Egon Text editor - {ver}')
         self.load_images()
         self.protocol("WM_DELETE_WINDOW", self.exit_app)
@@ -170,6 +179,9 @@ class Window(Tk):
         Thread(target=self.stopwatch, daemon=True).start()
         Thread(target=self.load_links, daemon=True).start()
         # Thread(target=self.counter).start()
+        self.titles_font = '@Microsoft YaHei Light', 16, 'underline'
+        self.title_struct = 'EgonTE - '
+
         try:
             pytesseract.pytesseract.tesseract_cmd = (r'C:\Program Files\Tesseract-OCR\tesseract.exe')
             print(os.path.abspath(r'Program Files\Tesseract-OCR\tesseract.exe'))
@@ -196,6 +208,8 @@ class Window(Tk):
         self.toolbar_frame = Frame(frame)
         self.toolbar_frame.pack(fill=X, anchor=W, side=TOP)
         self.img_extensions = (('PNG', '*.png'), ('JPG', '*.jpg'))
+        self.ex_tool = 'arial 9 bold'
+        self.record_list = [f'> [{self.get_time()}] - Program opened']
 
         # font
         font_tuple = font.families()
@@ -233,118 +247,9 @@ class Window(Tk):
         self.EgonTE.config(xscrollcommand=self.horizontal_scroll.set)
         self.horizontal_scroll.config(command=self.EgonTE.xview)
         # create menu
-        menu = Menu(frame)
-        self.config(menu=menu)
+        self.app_menu = Menu(frame)
+        self.config(menu=self.app_menu)
 
-        # file menu
-        file_menu = Menu(menu, tearoff=False)
-        menu.add_cascade(label='File', menu=file_menu)
-        file_menu.add_command(label='New', accelerator='(ctrl+n)', command=self.new_file)
-        file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=self.open_file)
-        file_menu.add_command(label='Save', command=self.save, accelerator='(ctrl+s)')
-        file_menu.add_command(label='Save As', command=self.save_as)
-        file_menu.add_command(label='Delete', command=self.delete_file)
-        file_menu.add_command(label='New window', command=lambda: new_window(Window), state=DISABLED)
-        file_menu.add_command(label='Screenshot', command=lambda: self.save_images(self.EgonTE, self))
-        file_menu.add_separator()
-        file_menu.add_command(label='File\'s Info', command=self.file_info)
-        file_menu.add_command(label='Content\' stats', command=self.content_stats)
-        file_menu.add_command(label='File\'s comparison', command=self.compare)
-        file_menu.add_command(label='Merge files', command=self.merge_files)
-        file_menu.add_separator()
-        file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=self.print_file)
-        file_menu.add_separator()
-        file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=self.copy_file_path)
-        file_menu.add_separator()
-        file_menu.add_command(label='Import local file', command=self.special_files_import)
-        file_menu.add_command(label='Import global file', command=lambda: self.special_files_import('web'))
-        file_menu.add_separator()
-        file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=self.exit_app)
-        # edit menu
-        edit_menu = Menu(menu, tearoff=True)
-        menu.add_cascade(label='Edit', menu=edit_menu)
-        edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: self.cut(x=True))
-        edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: self.copy())
-        edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: self.paste())
-        edit_menu.add_separator()
-        edit_menu.add_command(label='Correct writing', command=self.corrector)
-        edit_menu.add_command(label='Organize writing', command=self.organize)
-        edit_menu.add_separator()
-        edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=self.EgonTE.edit_undo)
-        edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=self.EgonTE.edit_redo)
-        edit_menu.add_separator()
-        edit_menu.add_command(label='Select all', accelerator='(ctrl+a)', command=lambda: self.select_all('nothing'))
-        edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=self.clear)
-        edit_menu.add_separator()
-        edit_menu.add_command(label='Find Text', accelerator='(ctrl+f)', command=self.find_text)
-        edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=self.replace)
-        edit_menu.add_command(label='Go to', accelerator='(ctrl+g)', command=self.goto)
-        edit_menu.add_separator()
-        edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)', command=self.reverse_characters)
-        edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=self.reverse_words)
-        edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=self.join_words)
-        edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=self.lower_upper)
-        edit_menu.add_command(label='Sort by characters', command=self.sort_by_characters)
-        edit_menu.add_command(label='Sort by words', command=self.sort_by_words)
-        # tools menu
-        tool_menu = Menu(menu, tearoff=False)
-        menu.add_cascade(label='Tools', menu=tool_menu)
-        tool_menu.add_command(label='Calculation', command=self.ins_calc)
-        tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=self.dt)
-        tool_menu.add_command(label='Random number', command=self.ins_random)
-        tool_menu.add_command(label='Random name', command=self.ins_random_name)
-        if google_trans:
-            tool_menu.add_command(label='Translate', command=self.translate)
-        tool_menu.add_command(label='Url shorter', command=self.url)
-        tool_menu.add_command(label='Generate sequence', command=self.generate)
-        tool_menu.add_command(label='Search online', command=self.search_www)
-        tool_menu.add_command(label='Sort', command=self.sort)
-        tool_menu.add_command(label='Dictionary', command=lambda: Thread(target=self.knowledge_window('dict')).start())
-        tool_menu.add_command(label='Wikipedia', command=lambda: Thread(target=self.knowledge_window('wiki')).start())
-        tool_menu.add_command(label='Scrapping (beta)', command=self.web_scrapping)
-        tool_menu.add_command(label='Drawing ➡ writing (beta)', command=self.handwriting)
-        tool_menu.add_command(label='Text decorators', command=self.text_decorators)
-        tool_menu.add_command(label='Inspirational quote', command=self.insp_quote)
-        tool_menu.add_command(label='Get weather', command=self.get_weather)
-        tool_menu.add_command(label='Send Email', command=self.send_email)
-        tool_menu.add_command(label='Use ChatGPT', command=self.chatGPT, font='arial 10 bold')
-        tool_menu.add_command(label='Use DallE', command=self.dallE, font='arial 10 bold')
-        tool_menu.add_command(label='Transcript', command=self.transcript)
-        # nlp menu
-        nlp_menu = Menu(menu, tearoff=False)
-        menu.add_cascade(label='NLP', menu=nlp_menu)
-        nlp_menu.add_command(label='Get noun', command=lambda: self.natural_language_process(function='nouns'))
-        nlp_menu.add_command(label='Get verb', command=lambda: self.natural_language_process(function='verbs'))
-        nlp_menu.add_command(label='Get adjectives', command=lambda: self.natural_language_process(
-            function='adjective'))
-        nlp_menu.add_command(label='Get adverbs', command=lambda: self.natural_language_process(function='adverbs'))
-        nlp_menu.add_command(label='Get pronouns', command=lambda: self.natural_language_process(
-            function='pronouns'))
-        nlp_menu.add_command(label='get stop words', command=lambda: self.natural_language_process(
-            function='stop words'))
-        nlp_menu.add_separator()
-        nlp_menu.add_command(label='Entity recognition',
-                             command=lambda: self.natural_language_process(function='entity recognition'))
-        nlp_menu.add_command(label='Dependency tree', command=lambda: self.natural_language_process(
-            function='dependency'))
-        nlp_menu.add_command(label='Lemmatization', command=lambda: self.natural_language_process(
-            function='lemmatization'))
-        nlp_menu.add_command(label='Most common words',
-                             command=lambda: self.natural_language_process(function='most common words'))
-
-        # color menu
-        color_menu = Menu(menu, tearoff=False)
-        menu.add_cascade(label='Colors+', menu=color_menu)
-        color_menu.add_command(label='Whole text', command=self.all_txt_color)
-        color_menu.add_command(label='Background', command=self.bg_color)
-        color_menu.add_command(label='Highlight', command=self.hl_color)
-        color_menu.add_separator()
-        color_menu.add_command(label='Buttons color', command=lambda: self.custom_ui_colors(components='buttons'))
-        color_menu.add_command(label='Menus colors', command=lambda: self.custom_ui_colors(components='menus'))
-        color_menu.add_command(label='App colors', command=lambda: self.custom_ui_colors(components='app'))
-        # options menu
-        options_menu = Menu(menu, tearoff=False)
-        menu.add_cascade(label='Options', menu=options_menu)
         # boolean tk vars
         self.bars_active = BooleanVar()
         self.bars_active.set(True)
@@ -376,36 +281,17 @@ class Window(Tk):
         self.status_ = True
         self.file_ = True
 
-        # check marks
-        options_menu.add_checkbutton(label='Night mode', onvalue=True, offvalue=False,
-                                     compound=LEFT, command=self.night)
-        options_menu.add_checkbutton(label='Status Bars', onvalue=True, offvalue=False,
-                                     variable=self.show_statusbar, compound=LEFT, command=self.hide_statusbars)
-        options_menu.add_checkbutton(label='Tool Bar', onvalue=True, offvalue=False,
-                                     variable=self.show_toolbar, compound=LEFT, command=self.hide_toolbar)
-        options_menu.add_checkbutton(label='Custom cursor', onvalue=True, offvalue=False,
-                                     compound=LEFT, command=self.custom_cursor)
-        options_menu.add_checkbutton(label='Custom style', onvalue=True, offvalue=False,
-                                     compound=LEFT, command=self.custom_style)
-        options_menu.add_checkbutton(label='Word warp', onvalue=True, offvalue=False,
-                                     compound=LEFT, command=self.word_warp, variable=self.ww)
-        options_menu.add_checkbutton(label='Reader mode', onvalue=True, offvalue=False,
-                                     compound=LEFT, command=self.reader_mode)
-        options_menu.add_checkbutton(label='Auto save', onvalue=True, offvalue=False,
-                                     compound=LEFT, variable=self.aus)
-        options_menu.add_checkbutton(label='Top most', onvalue=True, offvalue=False,
-                                     compound=LEFT, command=self.topmost)
-        options_menu.add_separator()
-        options_menu.add_command(label='Detect emojis', command=lambda: self.emoji_detection(via_settings=True))
-        options_menu.add_command(label='Emojis list', command=self.emoji_list)
-        options_menu.add_separator()
-        options_menu.add_command(label='Advance options', command=lambda: Thread(target=self.advance_options).start())
-        # help page
-        menu.add_cascade(label='Help', command=lambda: self.info_page('help.txt'))
-        # patch notes page
-        menu.add_cascade(label='Patch notes', command=lambda: self.info_page('patch_notes.txt'))
-        # github page
-        menu.add_cascade(label='GitHub', command=self.github)
+        self.aed = BooleanVar()
+        self.aed.set(True)
+
+        self.dm = BooleanVar()
+        self.dm.set(False)
+
+        self.sta = BooleanVar()
+        self.sta.set(True)
+
+        self.create_menus(initial=True)
+
         # add status bar
         self.status_frame = Frame(frame, height=20)
         self.status_frame.pack(fill=BOTH, anchor=S, side=BOTTOM)
@@ -464,6 +350,7 @@ class Window(Tk):
         self.bind('<F5>', self.dt)
         self.bind('<Control-Key-g>', self.goto)
         self.bind('<Control-Key-G>', self.goto)
+        self.EgonTE.bind('<KeyRelease>', self.emoji_detection)
         self.bind('<F11>', self.full_screen)
         # self.bind('<space>', self.emoji_detection)
         # special events
@@ -544,7 +431,8 @@ class Window(Tk):
         self.toolbar_components = (bold_button, italics_button, color_button, underline_button, align_left_button,
                                    align_center_button, align_right_button, tts_button, talk_button, self.font_size,
                                    v_keyboard_button)
-        self.menus_components = file_menu, edit_menu, tool_menu, color_menu, options_menu, nlp_menu
+        self.menus_components = self.file_menu, self.edit_menu, self.tool_menu, self.color_menu, self.options_menu, \
+                                self.nlp_menu
         self.other_components = self, self.status_bar, self.file_bar, self.EgonTE, self.toolbar_frame
 
         self.saved_settings()
@@ -574,6 +462,164 @@ class Window(Tk):
             gpt_image_raw_data = u.read()
         gpt_image_ = Image.open(BytesIO(gpt_image_raw_data))
         gpt_image = ImageTk.PhotoImage(gpt_image_)
+
+    def create_menus(self, initial):
+        if initial:
+            # file menu
+            self.file_menu = Menu(self.app_menu, tearoff=False)
+            self.app_menu.add_cascade(label='File', menu=self.file_menu)
+            self.file_menu.add_command(label='New', accelerator='(ctrl+n)', command=self.new_file)
+            self.file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=self.open_file)
+            self.file_menu.add_command(label='Save', command=self.save, accelerator='(ctrl+s)')
+            self.file_menu.add_command(label='Save As', command=self.save_as)
+            self.file_menu.add_command(label='Delete', command=self.delete_file)
+            self.file_menu.add_command(label='New window', command=lambda: new_window(Window), state=DISABLED)
+            self.file_menu.add_command(label='Screenshot', command=lambda: self.save_images(self.EgonTE, self))
+            self.file_menu.add_separator()
+            self.file_menu.add_command(label='File\'s Info', command=self.file_info)
+            self.file_menu.add_command(label='Content\'s stats', command=self.content_stats, font=self.ex_tool)
+            self.file_menu.add_command(label='File\'s comparison', command=self.compare)
+            self.file_menu.add_command(label='Merge files', command=self.merge_files)
+            self.file_menu.add_separator()
+            self.file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=self.print_file)
+            self.file_menu.add_separator()
+            self.file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=self.copy_file_path)
+            self.file_menu.add_separator()
+            self.file_menu.add_command(label='Import local file', command=self.special_files_import, font=self.ex_tool)
+            self.file_menu.add_command(label='Import global file', command=lambda: self.special_files_import('link'))
+            self.file_menu.add_separator()
+            self.file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=self.exit_app)
+            # edit menu
+            self.edit_menu = Menu(self.app_menu, tearoff=True)
+            self.app_menu.add_cascade(label='Edit', menu=self.edit_menu)
+            self.edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: self.cut(x=True))
+            self.edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: self.copy())
+            self.edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: self.paste())
+            self.edit_menu.add_separator()
+            self.edit_menu.add_command(label='Correct writing', command=self.corrector)
+            self.edit_menu.add_command(label='Organize writing', command=self.organize)
+            self.edit_menu.add_separator()
+            self.edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=self.EgonTE.edit_undo)
+            self.edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=self.EgonTE.edit_redo)
+            self.edit_menu.add_separator()
+            self.edit_menu.add_command(label='Select all', accelerator='(ctrl+a)',
+                                       command=lambda: self.select_all('nothing'))
+            self.edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=self.clear)
+            self.edit_menu.add_separator()
+            self.edit_menu.add_command(label='Find Text', accelerator='(ctrl+f)', command=self.find_text)
+            self.edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=self.replace)
+            self.edit_menu.add_command(label='Go to', accelerator='(ctrl+g)', command=self.goto)
+            self.edit_menu.add_separator()
+            self.edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)',
+                                       command=self.reverse_characters)
+            self.edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=self.reverse_words)
+            self.edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=self.join_words)
+            self.edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=self.lower_upper)
+            self.edit_menu.add_command(label='Sort by characters', command=self.sort_by_characters)
+            self.edit_menu.add_command(label='Sort by words', command=self.sort_by_words)
+        # tools menu
+        self.tool_menu = Menu(self.app_menu, tearoff=False)
+        self.app_menu.add_cascade(label='Tools', menu=self.tool_menu)
+        self.tool_menu.add_command(label='Calculation', command=self.ins_calc)
+        self.tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=self.dt)
+        self.tool_menu.add_command(label='Random number', command=self.ins_random)
+        self.tool_menu.add_command(label='Random name', command=self.ins_random_name)
+        if google_trans:
+            self.tool_menu.add_command(label='Translate', command=self.translate)
+        self.tool_menu.add_command(label='Url shorter', command=self.url)
+        self.tool_menu.add_command(label='Generate sequence', command=self.generate)
+        self.tool_menu.add_command(label='Search online', command=self.search_www)
+        self.tool_menu.add_command(label='Sort', command=self.sort)
+        self.tool_menu.add_command(label='Dictionary',
+                                   command=lambda: Thread(target=self.knowledge_window('dict')).start())
+        self.tool_menu.add_command(label='Wikipedia',
+                                   command=lambda: Thread(target=self.knowledge_window('wiki')).start(),
+                                   font=self.ex_tool)
+        self.tool_menu.add_command(label='Scrapping (beta)', command=self.web_scrapping, font=self.ex_tool)
+        self.tool_menu.add_command(label='Drawing ➡ writing (beta)', command=self.handwriting, font=self.ex_tool)
+        self.tool_menu.add_command(label='Text decorators', command=self.text_decorators)
+        self.tool_menu.add_command(label='Inspirational quote', command=self.insp_quote)
+        self.tool_menu.add_command(label='Get weather', command=self.get_weather)
+        self.tool_menu.add_command(label='Send Email', command=self.send_email)
+        self.tool_menu.add_command(label='Use ChatGPT', command=self.chatGPT)
+        self.tool_menu.add_command(label='Use DallE', command=self.dallE)
+        self.tool_menu.add_command(label='Transcript', command=self.transcript)
+        # nlp menu
+        self.nlp_menu = Menu(self.app_menu, tearoff=False)
+        self.app_menu.add_cascade(label='NLP', menu=self.nlp_menu)
+        self.nlp_menu.add_command(label='Get noun', command=lambda: self.natural_language_process(function='nouns'))
+        self.nlp_menu.add_command(label='Get verb', command=lambda: self.natural_language_process(function='verbs'))
+        self.nlp_menu.add_command(label='Get adjectives', command=lambda: self.natural_language_process(
+            function='adjective'))
+        self.nlp_menu.add_command(label='Get adverbs',
+                                  command=lambda: self.natural_language_process(function='adverbs'))
+        self.nlp_menu.add_command(label='Get pronouns', command=lambda: self.natural_language_process(
+            function='pronouns'))
+        self.nlp_menu.add_command(label='get stop words', command=lambda: self.natural_language_process(
+            function='stop words'))
+        self.nlp_menu.add_separator()
+        self.nlp_menu.add_command(label='Entity recognition',
+                                  command=lambda: self.natural_language_process(function='entity recognition'))
+        self.nlp_menu.add_command(label='Dependency tree', command=lambda: self.natural_language_process(
+            function='dependency'))
+        self.nlp_menu.add_command(label='Lemmatization', command=lambda: self.natural_language_process(
+            function='lemmatization'))
+        self.nlp_menu.add_command(label='Most common words',
+                                  command=lambda: self.natural_language_process(function='most common words'))
+
+        # color menu
+        self.color_menu = Menu(self.app_menu, tearoff=False)
+        self.app_menu.add_cascade(label='Colors+', menu=self.color_menu)
+        self.color_menu.add_command(label='Whole text', command=self.all_txt_color)
+        self.color_menu.add_command(label='Background', command=self.bg_color)
+        self.color_menu.add_command(label='Highlight', command=self.hl_color)
+        self.color_menu.add_separator()
+        self.color_menu.add_command(label='Buttons color',
+                                    command=lambda: self.custom_ui_colors(components='buttons'))
+        self.color_menu.add_command(label='Menus colors', command=lambda: self.custom_ui_colors(components='menus'))
+        self.color_menu.add_command(label='App colors', command=lambda: self.custom_ui_colors(components='app'))
+        # options menu
+        self.options_menu = Menu(self.app_menu, tearoff=False)
+        self.app_menu.add_cascade(label='Options', menu=self.options_menu)
+        # check marks
+        self.options_menu.add_checkbutton(label='Night mode', onvalue=True, offvalue=False,
+                                          compound=LEFT, command=self.night)
+        self.options_menu.add_checkbutton(label='Status Bars', onvalue=True, offvalue=False,
+                                          variable=self.show_statusbar, compound=LEFT, command=self.hide_statusbars)
+        self.options_menu.add_checkbutton(label='Tool Bar', onvalue=True, offvalue=False,
+                                          variable=self.show_toolbar, compound=LEFT, command=self.hide_toolbar)
+        self.options_menu.add_checkbutton(label='Custom cursor', onvalue=True, offvalue=False,
+                                          compound=LEFT, command=self.custom_cursor)
+        self.options_menu.add_checkbutton(label='Custom style', onvalue=True, offvalue=False,
+                                          compound=LEFT, command=self.custom_style)
+        self.options_menu.add_checkbutton(label='Word warp', onvalue=True, offvalue=False,
+                                          compound=LEFT, command=self.word_warp, variable=self.ww)
+        self.options_menu.add_checkbutton(label='Reader mode', onvalue=True, offvalue=False,
+                                          compound=LEFT, command=self.reader_mode)
+        self.options_menu.add_checkbutton(label='Auto save', onvalue=True, offvalue=False,
+                                          compound=LEFT, variable=self.aus)
+        self.options_menu.add_checkbutton(label='Top most', onvalue=True, offvalue=False,
+                                          compound=LEFT, command=self.topmost)
+        self.options_menu.add_checkbutton(label='Automatic Emoji detection', compound=LEFT, variable=self.aed)
+        self.options_menu.add_checkbutton(label='Dev Mode', command=lambda: self.manage_menus(mode='dev'))
+        self.options_menu.add_checkbutton(label='Special tools', command=lambda: self.manage_menus(mode='tools'),
+                                          variable=self.sta)
+        self.options_menu.add_separator()
+        self.options_menu.add_command(label='Emojicons hub', command=self.emojicons_hub)
+        # self.options_menu.add_command(label='Detect emojis', command=lambda: self.emoji_detection(via_settings=True))
+        # self.options_menu.add_command(label='emojis to unicode', command=lambda:
+        # self.emoji_detection(via_settings=True, reverse=True))
+        #
+        # self.options_menu.add_command(label='Emojis list', command=self.e_list)
+        self.options_menu.add_separator()
+        self.options_menu.add_command(label='Advance options',
+                                      command=lambda: Thread(target=self.advance_options).start())
+        # help page
+        self.app_menu.add_cascade(label='Help', command=lambda: self.info_page('help.txt'))
+        # patch notes page
+        self.app_menu.add_cascade(label='Patch notes', command=lambda: self.info_page('patch_notes.txt'))
+        # github page
+        self.app_menu.add_cascade(label='GitHub', command=self.github)
 
     # current time for the file bar
     def get_time(self):
@@ -865,6 +911,8 @@ class Window(Tk):
 
             self.night_mode = False
             self.data['night_mode'] = True
+
+            self.record_list.append(f'> [{self.get_time()}] - Night mode activated')
         else:
             main_color = 'SystemButtonFace'
             second_color = 'SystemButtonFace'
@@ -889,6 +937,8 @@ class Window(Tk):
             self.night_mode = True
             self.data['night_mode'] = False
 
+            self.record_list.append(f'> [{self.get_time()}] - Night mode disabled')
+
     def change_font(self, event):
         global chosen_font
         chosen_font = self.font_family.get()
@@ -897,6 +947,7 @@ class Window(Tk):
         self.EgonTE.configure(font=(chosen_font, 16))
 
         self.change_font_size()
+        self.record_list.append(f'> [{self.get_time()}] - font changed to {chosen_font}')
 
     def change_font_size(self, event=None):
 
@@ -917,6 +968,8 @@ class Window(Tk):
                 self.EgonTE.tag_remove('size', '1.0', END)
             else:
                 self.EgonTE.tag_add('size', '1.0', END)
+
+        self.record_list.append(f'> [{self.get_time()}] - font size changed to {self.chosen_size}')
 
     def replace(self, event=None):
         # window
@@ -1260,6 +1313,8 @@ class Window(Tk):
             if str(self.EgonTE.get('sel.first', 'sel.last')).isnumeric():
                 clac_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
 
+        self.record_list.append(f'> [{self.get_time()}] - calculation tool window opened')
+
     # insert the current date & time to the text box
     def dt(self, event=None):
         self.EgonTE.insert(self.get_pos(), self.get_time() + ' ')
@@ -1326,6 +1381,8 @@ class Window(Tk):
             number_entry1.insert('end', str(randint(1, 10)))
             number_entry2.insert('end', str(randint(10, 1000)))
 
+        self.record_list.append(f'> [{self.get_time()}] - random number tool window opened')
+
     def copy_file_path(self, event=None):
         # global selected
         if self.file_name:
@@ -1351,6 +1408,8 @@ class Window(Tk):
         except BaseException:
             pass
 
+        self.record_list.append(f'> [{self.get_time()}] - cursor changed to {self.cc}')
+
     # change between the default and custom style
     def custom_style(self):
         if self.cs.get() == 'vista':
@@ -1362,6 +1421,8 @@ class Window(Tk):
         self.data['style'] = self.predefined_style
         self.style.theme_use(self.predefined_style)
 
+        self.record_list.append(f'> [{self.get_time()}] - style changed to {self.cs}')
+
     def word_warp(self):
         if not self.ww:
             self.EgonTE.config(wrap=WORD)
@@ -1369,22 +1430,26 @@ class Window(Tk):
             self.horizontal_scroll.pack_forget()
             self.ww = True
             self.data['word_warp'] = False
+            self.record_list.append(f'> [{self.get_time()}] - Word warp is activated')
         else:
             self.geometry(f'{self.width}x{self.height + 10}')
             self.horizontal_scroll.pack(side=BOTTOM, fill=X)
             self.EgonTE.config(wrap=NONE)
             self.ww = False
             self.data['word_warp'] = True
+            self.record_list.append(f'> [{self.get_time()}] - Word warp is disabled')
 
     def reader_mode(self):
         if not self.rm:
             self.EgonTE.configure(state=NORMAL)
             self.rm = True
             self.data['reader_mode'] = False
+            self.record_list.append(f'> [{self.get_time()}] - Reader mode is disabled')
         else:
             self.EgonTE.configure(state=DISABLED)
             self.rm = False
             self.data['reader_mode'] = True
+            self.record_list.append(f'> [{self.get_time()}] - Reader mode is activated')
 
     def ins_random_name(self):
         global random_name
@@ -1459,6 +1524,8 @@ class Window(Tk):
         adv_options.grid(row=4)
         copy_b.grid(row=5)
 
+        self.record_list.append(f'> [{self.get_time()}] - Random name tool window opened')
+
     def translate(self):
         global translate_root, translate_box
 
@@ -1530,9 +1597,12 @@ class Window(Tk):
         copy_from.grid(row=4)
         copy_translation.grid(row=5)
 
+        self.record_list.append(f'> [{self.get_time()}] - Translate tool window opened')
+
     def url(self):
         # window
         url_root = Toplevel()
+        url_root.title(self.title_struct + 'Url shorter')
         url_root.resizable(False, False)
         url_root.attributes('-alpha', '0.95')
         # ui components creation & placement
@@ -1559,38 +1629,67 @@ class Window(Tk):
         if self.is_marked():
             url_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
 
+        self.record_list.append(f'> [{self.get_time()}] - Url shorter tool window opened')
+
+    def get_indexes(self):
+        if not (self.is_marked()):
+            self.text_index = 1.0, END
+            self.first_index, self.last_index = self.text_index[0], self.text_index[1]
+        else:
+            self.text_index = 'sel.first', 'sel.last'
+            self.first_index, self.last_index = self.EgonTE.index(self.text_index[0]), self.EgonTE.index(
+                self.text_index[1])
+
     def reverse_characters(self, event=None):
-        content = self.EgonTE.get(1.0, END)
-        reversed_content = content[::-1]
-        self.EgonTE.delete(1.0, END)
-        self.EgonTE.insert(1.0, reversed_content)
-        self.unacceptable_line_removal(type='characters')
+        self.get_indexes()
+
+        content = self.EgonTE.get(*self.text_index)
+        n = ''
+        if '\n' in content:
+            # newline_index = content.find('\n')
+            content, newline = content.split('\n', maxsplit=1)
+            content = content.replace('\n', '')
+            n = '\n'
+            print(content)
+        content = ''.join(content)
+        reversed_content = content[::-1] + n
+
+        self.EgonTE.delete(*self.text_index)
+        self.EgonTE.insert(self.first_index, reversed_content)
+        # self.unacceptable_line_removal(type='characters')
 
     def reverse_words(self, event=None):
-        content = self.EgonTE.get(1.0, END)
+        self.get_indexes()
+
+        content = self.EgonTE.get(*self.text_index)
         words = content.split()
         reversed_words = words[::-1]
-        self.EgonTE.delete(1.0, END)
-        self.unacceptable_line_removal()
-        self.EgonTE.insert(1.0, reversed_words)
+        self.EgonTE.delete(*self.text_index)
+        # self.unacceptable_line_removal()
+        self.EgonTE.insert(self.first_index, reversed_words)
 
     def join_words(self, event=None):
-        content = self.EgonTE.get(1.0, END)
+        self.get_indexes()
+
+        content = self.EgonTE.get(*self.text_index)
         words = content.split()
         joined_words = ''.join(words)
-        self.EgonTE.delete(1.0, END)
-        self.unacceptable_line_removal()
-        self.EgonTE.insert(1.0, joined_words)
+        self.EgonTE.delete(*self.text_index)
+        # self.unacceptable_line_removal()
+        self.EgonTE.insert(self.first_index, joined_words)
 
     def lower_upper(self, event=None):
-        content = self.EgonTE.get(1.0, END)
+        self.get_indexes()
+        content = self.EgonTE.get(*self.text_index)
+
         if content == content.upper():
             content = content.lower()
         else:
             content = content.upper()
-        self.EgonTE.delete(1.0, END)
-        self.unacceptable_line_removal(content, content='upper_lower')
-        self.EgonTE.insert(1.0, content)
+
+        self.EgonTE.delete(*self.text_index)
+        # self.unacceptable_line_removal()
+        self.EgonTE.insert(self.first_index, content)
 
     # a function to fix random appeared bug
     def unacceptable_line_removal(self, content=None):
@@ -1602,24 +1701,25 @@ class Window(Tk):
     def sort_by_characters(self, event=None):
         # need some work still
         content = (self.EgonTE.get(1.0, END))
-        sorted_content = ''.join(sorted(content))
+        sorted_content = ''.join(sorted(content)).replace(' ', '').replace('\n', '')
         # if the content is already sorted it will sort it reversed
         if content == sorted_content:
-            sorted_content = sorted(sorted_content, reverse=True)
+            sorted_content = ''.join(sorted(sorted_content, reverse=True)).replace(' ', '').replace('\n', '')
         # if isinstance(sorted_content, list):
-        if ' ' in sorted_content:
-            sorted_content.replace(' ', '')
-            # sorted_content.pop(0)
+        # if ' ' in sorted_content:
+        #     sorted_content.replace(' ', '')
+        # sorted_content.pop(0)
         self.EgonTE.delete(1.0, END)
         self.EgonTE.insert(1.0, sorted_content)
 
     def sort_by_words(self, event=None):
-        content = (self.EgonTE.get(1.0, END)).split()
+        self.get_indexes()
+        content = (self.EgonTE.get(*self.text_index)).split()
         sorted_words = sorted(content)
         if content == sorted_words:
             sorted_words = sorted(sorted_words, reverse=True)
-        self.EgonTE.delete(1.0, END)
-        self.EgonTE.insert(1.0, sorted_words)
+        self.EgonTE.delete(*self.text_index)
+        self.EgonTE.insert(self.first_index, sorted_words)
 
     def generate(self):
         global sym
@@ -1692,6 +1792,8 @@ class Window(Tk):
 
         enter_button.config(command=generate_sequence)
 
+        self.record_list.append(f'> [{self.get_time()}] - sequence generator tool window opened')
+
     # font size up by 1 iterations
     def size_up_shortcut(self, event=None):
         self.font_Size_c += 1
@@ -1714,12 +1816,17 @@ class Window(Tk):
         if components == 'buttons':
             selected_color = colorchooser.askcolor(title='Buttons background color')[1]
             if selected_color:
+                self.record_list.append(f'> [{self.get_time()}] - Buttons color changed to {selected_color}')
                 for toolbar_button in self.toolbar_components:
                     toolbar_button.config(background=selected_color)
+
         elif components == 'menus':
             selected_main_color = colorchooser.askcolor(title='Menu color')[1]
             selected_text_color = colorchooser.askcolor(title='Menu text color')[1]
             if selected_main_color and selected_text_color:
+                self.record_list.append(
+                    f'> [{self.get_time()}] - Menu color changed to {selected_main_color}\n Menu text color'
+                    f'changed to {selected_text_color}')
                 for menu_ in self.menus_components:
                     menu_.config(background=selected_main_color, foreground=selected_text_color)
         elif components == 'app':
@@ -1728,10 +1835,15 @@ class Window(Tk):
             selected_text_color = colorchooser.askcolor(title='Text color')[1]
             if selected_main_color and selected_second_color and selected_text_color:
                 self.config(bg=selected_main_color)
+                self.status_frame.configure(bg=selected_main_color)
                 self.status_bar.config(bg=selected_main_color, fg=selected_text_color)
                 self.file_bar.config(bg=selected_main_color, fg=selected_text_color)
                 self.EgonTE.config(bg=selected_second_color)
                 self.toolbar_frame.config(bg=selected_main_color)
+                self.record_list.append(
+                    f'> [{self.get_time()}] - App\'s color changed to {selected_main_color}\n  '
+                    f'App\'s secondary color changed'
+                    f' to {selected_second_color}\n  App\'s text color changed to {selected_text_color}')
 
     # checks if text in the main text box is being marked
     def is_marked(self):
@@ -1760,6 +1872,7 @@ class Window(Tk):
             special_file = simpledialog.askstring('EgonTE', 'enter the link to the file')
 
         try:
+            # identify file types
             if special_file.endswith('xml'):
                 content = pandas.read_xml(special_file).to_string()
             elif special_file.endswith('csv'):
@@ -1778,7 +1891,13 @@ class Window(Tk):
                 content = ''.join(content)
             else:
                 messagebox.showerror('error', 'nothing found / unsupported file type')
+
+            # if special_file.endswith('xml') or special_file.endswith('csv') or special_file.endswith('json') or  special_file.endswith('xlsx') or special_file.endswith('pdf'):
             self.EgonTE.insert(self.get_pos(), content)
+            starts = os.path.splitext(special_file)[0]
+            ends = os.path.splitext(special_file)[-1][1:]
+            self.record_list.append(f'> [{self.get_time()}] - Special file ({ends}) imported;\n  the files name is'
+                                    f' {starts}\n   and the file was imported via {via}')
         except AttributeError:
             messagebox.showerror('error', 'please enter a valid domain')
 
@@ -1872,6 +1991,8 @@ class Window(Tk):
         entry_box.grid(row=1, column=1, padx=10)
         enter_button.grid(row=2, column=1)
         from_text_button.grid(row=3, column=1, pady=5)
+
+        self.record_list.append(f'> [{self.get_time()}] - Search tool window opened')
 
         # advance options
         def adv():
@@ -1967,6 +2088,7 @@ class Window(Tk):
                 pass
             change_button_color('cursors', cursor)
             self.predefined_cursor = cursor
+            self.record_list.append(f'> [{self.get_time()}] - Cursor changed to {cursor}')
 
         def hide_(bar):
             if bar == 'statusbar':
@@ -2007,6 +2129,7 @@ class Window(Tk):
             change_button_color('styles', style_)
             self.predefined_style = style_
             self.data['style'] = style_
+            self.record_list.append(f'> [{self.get_time()}] - Style changed to {style_}')
 
         def change_relief(relief_):
             self.EgonTE.config(relief=relief_)
@@ -2018,11 +2141,13 @@ class Window(Tk):
             change_button_color('relief', relief_)
             self.predefined_relief = relief_
             self.data['relief'] = relief_
+            self.record_list.append(f'> [{self.get_time()}] - Relief changed to {relief_}')
 
         def change_transparency():
             tranc = int(transparency_config.get()) / 100
             self.attributes('-alpha', tranc)
             self.data['transparency'] = tranc
+            self.record_list.append(f'> [{self.get_time()}] - Transparency changed to {tranc}')
 
         # window
         global opt_root
@@ -2118,6 +2243,8 @@ class Window(Tk):
             change_button_color('cursors', self.predefined_cursor)
             change_button_color('styles', self.predefined_style)
             change_button_color('relief', self.predefined_relief)
+
+        self.record_list.append(f'> [{self.get_time()}] - advanced option window opened')
 
     def goto(self, event=None):
         def enter():
@@ -2301,6 +2428,11 @@ class Window(Tk):
             return_content.grid(row=1, column=0)
             return_images.grid(row=1, column=2)
 
+        if mode == 'wiki':
+            self.record_list.append(f'> [{self.get_time()}] - Wikipedia tool window opened')
+        else:
+            self.record_list.append(f'> [{self.get_time()}] - Dictionary tool window opened')
+
     def virtual_keyboard(self):
         key = Toplevel()  # key window name
         key.attributes('-alpha', '0.90')
@@ -2466,53 +2598,149 @@ class Window(Tk):
         caps = ttk.Button(key, text='Caps', width=6, command=lambda: modes('lower'))
         caps.grid(row=4, column=10, ipady=10)
 
+        self.record_list.append(f'> [{self.get_time()}] - Virtual Keyboard tool window opened')
+
         key.mainloop()  # using ending point
 
-    def emoji_detection(self, event=None, via_settings=False):
-        content = self.EgonTE.get(1.0, END).split(' ')
-        content[-1] = content[-1].strip('\n')
-        new_content = []
-        for word in content:
-            word = emoji.emojize(word)
-            new_content.append(emoji.emojize(word))
-            if emoji.is_emoji(word):
-                if via_settings:
-                    messagebox.showinfo('', 'emoji(s) found!')
-                    fail_msg = False
-            else:
-                fail_msg = True
-        if fail_msg:
-            messagebox.showinfo('', 'emoji(s) didn\'t found!')
-        self.EgonTE.delete('1.0', 'end')
-        self.EgonTE.insert('1.0', new_content)
-        if via_settings == False:
-            self.EgonTE.insert(self.get_pos(), ' ')
+    def emoji_detection(self, event=None, via_settings=False, reverse=False):
 
-    def emoji_list(self):
-        emoji_root = Toplevel()
-        e_list = emoji.get_emoji_unicode_dict('en')
-        scroll = ttk.Scrollbar(emoji_root)
-        emoji_label = Text(emoji_root, yscrollcommand=scroll.set, cursor=self.predefined_cursor,
-                           relief=self.predefined_relief)
-        for emj, emj_code in e_list.items():
-            emoji_label.insert('end', f'{emj} - {emj_code}\n')
-        emoji_label.configure(state=DISABLED)
+        # initial condition to not activate the function every interaction with the text box
+        # peruse: not cause lag and prevent bugs
+        active = False
+        if via_settings:
+            active = True
+        elif active == False:
+            keys = list(map(str, printable[:-22]))
+            # keys.remove('`')
+            # print(self.EgonTE.get(1.0, self.EgonTE.index(CURRENT))[-1])
+            # print('-----')
+            for key in keys:
+
+                if is_pressed(key):
+                    active = True
+                    break
+            if active == False:
+                for key in keys:
+                    try:
+                        if key == self.EgonTE.get(1.0, self.EgonTE.index(CURRENT))[-1]:
+                            active = True
+                            break
+                    except IndexError:
+                        pass
+
+        if active:
+            if self.aed.get() or via_settings:
+                fail_msg = ''
+                lang = self.get_k_lang()[1]
+                if not lang:
+                    lang = 'en'
+                print(lang)
+
+                content = self.EgonTE.get(1.0, END).split(' ')
+                print(content)
+                # content[-1] = content[-1].strip('\n')
+                new_content = []
+                indexes = []
+                rep_nl = False
+                for index, word in enumerate(content):
+                    if word != ' ' and word != '' and word != '\n':
+                        # to make the detection more precise
+                        if '\n' in word:
+                            nl_index = word.find('\n')
+                            word = word.replace('\n', '')
+                            rep_nl = True
+                        else:
+                            rep_nl = False
+                        if '\t' in word:
+                            t_index = word.find('\t')
+                            word = word.replace('\t', '')
+                            rep_t = True
+                        else:
+                            rep_t = False
+
+                        if reverse:
+                            word = emoji.demojize(word, language=lang)
+                        else:
+                            word = emoji.emojize(word, language=lang)
+                            indexes.append(index)
+
+                    print(word)
+                    # detecting if word is emoji - only if it is the text will be replaced
+                    if emoji.is_emoji(word):
+                        print('hi mom')
+                        # if word in emoji.
+                        # ins_index = self.EgonTE.index(CURRENT)
+                        #
+                        # self.EgonTE.delete(ins_index)
+                        # self.EgonTE.insert(ins_index, word)
+                        replace_text = True
+                        fail_msg = False
+                        # a message for the manual use of the function about the result - positive
+                        if via_settings:
+                            messagebox.showinfo('', 'emoji(s) found!')
+
+                    else:
+                        fail_msg = True
+                        replace_text = False
+
+                    # returning the character after it doesn't bother
+                    if rep_nl:
+                        word = f'{word[:nl_index]}\n{word[nl_index:]}'
+                    if rep_t:
+                        word = f'{word[:t_index]}\t{word[t_index:]}'
+
+                    new_content.append(word)
+
+                # a message for the manual use of the function about the result - negative
+                if fail_msg and via_settings:
+                    messagebox.showinfo('', 'emoji(s) didn\'t found!')
+
+                # for i in indexes:
+                #     content[i] = new_content[i]
+
+                # replacing text via condition - to not spam it
+                if replace_text:
+                    new_content = ' '.join(new_content)
+                    self.EgonTE.delete('1.0', 'end')
+                    self.EgonTE.insert('end', new_content)
+
+                # if the usage of the function is manual - it automatically will insert a space character after the emoji
+                if via_settings:
+                    self.EgonTE.insert(self.get_pos(), ' ')
+
+    def e_list(self, mode):
+        if mode == 'emojis':
+            ejc_list = emoji.get_emoji_unicode_dict('en')
+        elif mode == 'morse':
+            ejc_list = morse_code_dict
+
+        e_root = Toplevel()
+        e_root.title(f'{self.title_struct}{mode} list')
+
+        scroll = ttk.Scrollbar(e_root)
+        sym_label = Text(e_root, yscrollcommand=scroll.set, cursor=self.predefined_cursor,
+                         relief=self.predefined_relief)  # Ctk?
+
+        for sym_, sym_code_ in ejc_list.items():
+            sym_label.insert('end', f'{sym_} - {sym_code_}\n')
+
+        sym_label.configure(state=DISABLED)
         scroll.pack(side=RIGHT, fill=Y)
-        emoji_label.pack(fill=BOTH, expand=True)
-        scroll.config(command=emoji_label.yview)
+        sym_label.pack(fill=BOTH, expand=True)
+        scroll.config(command=sym_label.yview)
 
     def file_info(self):
         res_font = 'consolas 14'
 
         if self.file_name:
-            #if not (system().lower() == 'windows'):
+            # if not (system().lower() == 'windows'):
             file_info_name = self.file_name
 
         else:
             # messagebox.showerror('error', 'you are not using a file!')
             file_info_name = filedialog.askopenfilename(title='Open file to get info about',
-                                                  filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-                                                             ('Python Files', '*.py')))
+                                                        filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
+                                                                   ('Python Files', '*.py')))
 
         try:
             stat = os.stat(file_info_name)
@@ -2531,7 +2759,7 @@ class Window(Tk):
 
             # crationg the window
             root = Toplevel()
-            root.title('File information')
+            root.title(self.title_struct + 'File information')
             root.resizable(False, False)
             # creating the widgets
             access_time = datetime.fromtimestamp(stat.st_atime)
@@ -2563,8 +2791,7 @@ class Window(Tk):
         except PermissionError:
             messagebox.showerror('error', 'you are not using a file!')
 
-
-
+        self.record_list.append(f'> [{self.get_time()}] - File\'s Info tool window opened')
 
     def auto_save(self):
         t = 300
@@ -2615,7 +2842,7 @@ class Window(Tk):
         if another_file:
             try:
                 compare_root = Toplevel()
-                compare_root.title('compression between 2 files')
+                compare_root.title(self.title_struct + 'compression between 2 files')
                 another_file = open(another_file, 'r')
                 another_fc = another_file.read()
                 # the precise diffrence in content
@@ -2671,6 +2898,8 @@ class Window(Tk):
             except UnicodeDecodeError:
                 messagebox.showerror('Error', 'unsupported characters')
 
+        self.record_list.append(f'> [{self.get_time()}] - File\'s comparison tool window opened')
+
     def corrector(self):
         content = self.EgonTE.get('1.0', 'end')
         corrected_content = TextBlob(content).correct()
@@ -2715,7 +2944,6 @@ class Window(Tk):
 
     def web_scrapping(self):
         # fix requests returning mostly only text - (content)?
-        main_titles_font = 'arial 14 underline'
         sub_titles_font = 'arial 12 underline'
         return_type = StringVar()
         return_type.set('text')
@@ -2818,21 +3046,21 @@ class Window(Tk):
             global ws_root, tag_input, file_name_output, file_via_internet, chosen_init, class_input
             if connection:
                 ws_root = Toplevel()
-                ws_root.title('Scrapping')
+                ws_root.title(self.title_struct + 'Scrapping')
                 ws_root.resizable(False, False)
-                info_title = Label(ws_root, text='Quick information', font=main_titles_font)
+                info_title = Label(ws_root, text='Quick information', font=self.titles_font)
                 file_title = Label(ws_root, text='file name:', font=sub_titles_font)
                 file_name_output = Label(ws_root, text=path)
 
-                upload_title = Label(ws_root, text='Upload a new content', font=main_titles_font)
+                upload_title = Label(ws_root, text='Upload a new content', font=self.titles_font)
                 upload_file = Button(ws_root, text='Upload via file', command=lambda: upload('file'))
                 upload_link = Button(ws_root, text='Upload via link', command=lambda: upload('link'))
-                identifiers_title = Label(ws_root, text='Identifiers', font=main_titles_font)
+                identifiers_title = Label(ws_root, text='Identifiers', font=self.titles_font)
                 tag_title = Label(ws_root, text='tags:', font=sub_titles_font)
                 tag_input = Entry(ws_root)
                 class_title = Label(ws_root, text='classes:', font=sub_titles_font)
                 class_input = Entry(ws_root)
-                return_title = Label(ws_root, text='Return', font=main_titles_font)
+                return_title = Label(ws_root, text='Return', font=self.titles_font)
                 only_text_rb = Radiobutton(ws_root, text='Only text', variable=return_type, value='text')
                 only_attrs_rb = Radiobutton(ws_root, text='Only attributes', variable=return_type, value='attrs')
                 only_cntn_rb = Radiobutton(ws_root, text='All content', variable=return_type, value='ctnt')
@@ -2925,7 +3153,7 @@ class Window(Tk):
         # init window to not delay / limit users
         chosen_init = 'web'
         init_root = Toplevel()
-        init_root.title('EgonTE - web scrapping')
+        init_root.title(self.title_struct + 'web scrapping')
         title_label = Label(init_root, text='What you would like to scrape?', font='arial 10 underline')
         web_button = Button(init_root, text='A website', command=lambda: change_initial_mode('w'))
         loc_button = Button(init_root, text='A Local file', command=lambda: change_initial_mode('l'))
@@ -2941,6 +3169,8 @@ class Window(Tk):
             this_button = Button(init_root, text='This file', command=lambda: change_initial_mode('t'))
             init_b_list = init_b_list + [this_button]
             this_button.grid(row=2, column=1)
+
+        self.record_list.append(f'> [{self.get_time()}] - Web scrapping tool window opened')
 
     def handwriting(self):
         global previous_point, current_point
@@ -3042,7 +3272,7 @@ class Window(Tk):
 
         # drawing board
         hw_root = Toplevel()
-        hw_root.title('Draw and convert')
+        hw_root.title(self.title_struct + 'Draw and convert')
         draw_frame = Frame(hw_root)
         buttons_frame = Frame(hw_root)
         canvas = Canvas(draw_frame, width=canvas_x, height=canvas_y, bg='white', cursor='pencil')
@@ -3077,9 +3307,11 @@ class Window(Tk):
         hw_root.bind('<Motion>', cords)
         # existing file to writing
 
+        self.record_list.append(f'> [{self.get_time()}] - Hand writing tool window opened')
+
     def natural_language_process(self, function):
         nlp_root = Toplevel()
-        nlp_root.title('EgonTE - natural language processor')
+        nlp_root.title(self.title_struct + 'natural language processor')
         text = self.EgonTE.get('1.0', 'end')
         nlp = spacy.load('en_core_web_sm')
         # nlp = spacy.load('en')
@@ -3468,7 +3700,7 @@ class Window(Tk):
         # UI
         td_root = Toplevel()
         td_root.resizable(False, False)
-        td_root.title('text decorators')
+        td_root.title(self.title_struct + 'text decorators')
         b_frame = Frame(td_root)
         t_frame = Frame(td_root)
         text_box = Text(t_frame, height=10, width=40, borderwidth=3)
@@ -3497,6 +3729,8 @@ class Window(Tk):
         styles = [bash_style, binary_style, asterisk_style]
         change_style(1)
 
+        self.record_list.append(f'> [{self.get_time()}] - Text decorators tool window opened')
+
     def stopwatch(self):
         start_time = time.time()
         while True:
@@ -3513,8 +3747,8 @@ class Window(Tk):
             if where == 'new':
                 save_file_name = filedialog.asksaveasfilename(title='Save merged file',
                                                               filetypes=(
-                                                              ('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-                                                              ('Python Files', '*.py')))
+                                                                  ('Text Files', '*.txt'), ('HTML FILES', '*.html'),
+                                                                  ('Python Files', '*.py')))
                 if save_file_name:
                     with open(save_file_name, 'w') as fp:
                         fp.write(data)
@@ -3538,7 +3772,7 @@ class Window(Tk):
             data = data_1 + '\n' + data2
 
             ask_op_root = Toplevel()
-            ask_op_root.title('EgonTE - merge files')
+            ask_op_root.title(self.title_struct + 'merge files')
             q_label = Label(ask_op_root, text='where you would like to put the merged data?')
             this_file = Button(ask_op_root, text='In this file', command=lambda: outport_data('this'))
             new_file = Button(ask_op_root, text='In new file', command=lambda: outport_data('new'))
@@ -3647,7 +3881,7 @@ class Window(Tk):
 
         if working:
             weather_root = Toplevel()
-            weather_root.title('EgonTE - Weather')
+            weather_root.title(self.title_struct + 'Weather')
             weather_root.geometry('265x130')
 
             loc_text = ('Location: ' + location)
@@ -3740,7 +3974,7 @@ class Window(Tk):
 
         messagebox.showinfo('EgonTE', 'you might cannot use this function\n if you have 2 step verification')
         email_root = Toplevel()
-        email_root.title('EgonTE - send emails')
+        email_root.title(self.title_struct + 'send emails')
         req = Label(email_root, text='Requirements', font='arial 12 underline')
         sender_title = Label(email_root, text='Your Email:')
         password_title = Label(email_root, text='Your Password:')
@@ -3774,6 +4008,8 @@ class Window(Tk):
         th_button.grid(row=7, column=2, pady=4)
         send_button.grid(row=10, column=1, pady=2)
 
+        self.record_list.append(f'> [{self.get_time()}] - Email tool window opened')
+
     def chatGPT(self):
         working = True
 
@@ -3797,7 +4033,7 @@ class Window(Tk):
                     # singing function
                     def enter():
                         options = Options()
-                        options.log = True
+                        options.record = True
                         options.track = True
                         options.proxies = 'http://localhost:8080'
                         self.alt_chat = Chat(email=email_entry.get(), password=password_entry.get(), options=options)
@@ -3807,7 +4043,7 @@ class Window(Tk):
                     # custom login interface exclusively for this library
                     login_root = Toplevel()
                     login_root.resizable(False, False)
-                    login_root.title('EgonTE - sign to ChatGPT')
+                    login_root.title(self.title_struct + 'sign to ChatGPT')
                     email_title = Label(login_root, text='username:')
                     email_entry = Entry(login_root, width=25)
                     password_title = Label(login_root, text='password:')
@@ -3832,7 +4068,7 @@ class Window(Tk):
         def active_ui():
             global txt, gpt_image
             gpt_root = Toplevel()
-            gpt_root.title('EgonTE - ChatGPT')
+            gpt_root.title(self.title_struct + 'ChatGPT')
             # gpt_root.iconbitmap(gpt_image)
             BG_GRAY = '#ABB2B9'
             BG_COLOR = '#444454'
@@ -3870,6 +4106,8 @@ class Window(Tk):
             # trying to make the image not crash
             # self.update()
             # gpt_root.mainloop()
+
+            self.record_list.append(f'> [{self.get_time()}] - ChatGPT tool window opened')
 
         def ask_gpt(event=None):
             txt.configure(state=NORMAL)
@@ -3923,7 +4161,7 @@ class Window(Tk):
         def ui():
             global prompt_entry, dallE_root
             dallE_root = Toplevel()
-            dallE_root.title('EgonTE - DallE')
+            dallE_root.title(self.title_struct + 'DallE')
             prompt_title = Label(dallE_root, text='Enter the prompt here', font='arial 10 underline')
             prompt_entry = Entry(dallE_root, width=30)
             size_title = Label(dallE_root, text='Size of output', font='arial 10 underline')
@@ -3944,6 +4182,8 @@ class Window(Tk):
             size_1536.grid(row=5, column=0)
             size_2048.grid(row=5, column=2)
             imagine_button.grid(row=6, column=1, pady=4)
+
+            self.record_list.append(f'> [{self.get_time()}] - Dall-E tool window opened')
 
         if not self.key:
             self.key_page(ui)
@@ -3971,7 +4211,7 @@ class Window(Tk):
         login_root = Toplevel()
         login_root.resizable(False, False)
         login_root.geometry('350x120')
-        login_root.title('EgonTE - connect to OpenAI')
+        login_root.title(self.title_struct + 'connect to OpenAI')
 
         login_title = Label(login_root, text='Enter your OpenAI key to connect', font='arial 12')
         key_title = Label(login_root, text='Key entry', font='arial 12 underline')
@@ -3987,6 +4227,8 @@ class Window(Tk):
 
         get_key.bind('<Button-1>', lambda e: key_link('https://platform.openai.com/account/api-keys'))
 
+        self.record_list.append(f'> [{self.get_time()}] - OpenAI API login page opened')
+
         login_root.mainloop()
 
     def full_screen(self, event=None):
@@ -4000,7 +4242,7 @@ class Window(Tk):
     def transcript(self):
         def youtube():
             tr_root = Toplevel()
-            tr_root.title('EgonTE - youtube transcript')
+            tr_root.title(self.title_struct + 'youtube transcript')
             video_id = simpledialog.askstring('EgonTE', 'please enter the video ID')
             if video_id:
                 tr = YouTubeTranscriptApi.get_transcript(video_id)
@@ -4039,7 +4281,7 @@ class Window(Tk):
                     content = r.recognize_google(audio)
 
                 file_trans_root = Toplevel()
-                file_trans_root.title('EgonTE - file transcript')
+                file_trans_root.title(self.title_struct + 'file transcript')
                 transcript = Text(file_trans_root)
                 transcript.insert('1.0', content)
                 transcript.configure(state=DISABLED)
@@ -4057,11 +4299,10 @@ class Window(Tk):
 
     def content_stats(self):
         res_font = 'arial 10'
-        title_font = 'arial 12 underline'
         special_characters = list(printable[62:])
 
         stats_root = Toplevel()
-        stats_root.title('Content statistics')
+        stats_root.title(self.title_struct + 'Content statistics')
 
         content = self.EgonTE.get('1.0', 'end')
         lines_, characters, words_ = self.status_var.get().split(' ')
@@ -4129,7 +4370,6 @@ class Window(Tk):
         temp_file.close()
         del temp_file
 
-
         # ratios
         try:
             words_per_lines = round(len(content.split(' ')) / lines, 2)
@@ -4146,7 +4386,8 @@ class Window(Tk):
 
         # count the specific word / character in the text
 
-        words_per_line = dict(Counter(content.split(' ')))
+        words_per_line = dict((Counter(reSplit('; |, |\*|\n', content))))
+        print(words_per_line)
 
         # cleared_content = []
         # for word_ in content:
@@ -4162,12 +4403,19 @@ class Window(Tk):
         del_count = []
         for count, word_value in enumerate(words_value, 0):
             for special_character in special_characters:
+
                 if special_character in word_value:
                     word_value = word_value.replace(special_character, '')
+
+                # if '\n' in word_value:
+                #     word_value_s, word_value = word_value.split('\n', maxsplit=1)
+                #     cleared_content_list.append(word_value_s)
+
             cleared_content_list.append(word_value)
             if word_value.isdigit():
                 del_count.append(word_value)
-                    # cleared_content = cleared_content[-1]
+        cleared_content_list.remove('')
+        # cleared_content = cleared_content[-1]
 
         # making the dictionary without symbols to advance the cleaning process
         cleared_words_per_line = {}
@@ -4199,7 +4447,7 @@ class Window(Tk):
         #         top_dictionary[top_w] = list(cleared_words_per_line.values())[i]
         # works only if they share the same index
 
-        top_word_list = (nlargest(8, cleared_words_per_line.items(), key=lambda x:x[1]))
+        top_word_list = (nlargest(8, cleared_words_per_line.items(), key=lambda x: x[1]))
         top_dictionary = {}
         for key, value in top_word_list:
             top_dictionary[key] = value
@@ -4233,7 +4481,6 @@ class Window(Tk):
         character_axes.set_ylabel('Frequency')
         character_axes.set_xlabel('Characters')
 
-
         label_frame = Frame(stats_root)
         char_label = Label(label_frame, text=f'{characters}', font=res_font)
         alpha_label = Label(label_frame, text=f'Alphabet characters {alphabets_count}')
@@ -4248,10 +4495,10 @@ class Window(Tk):
         para_label = Label(label_frame, text=f'Paragraphs: {paragraph}', font=res_font)
         lpp_label = Label(label_frame, text=f'Lines per paragraphs: {lines_per_paragraphs}', font=res_font)
 
-        word_tt = Label(w_frame, text='Top words', font=title_font)
+        word_tt = Label(w_frame, text='Top words', font=self.titles_font)
         word_tl = word_figure_canvas.get_tk_widget()
 
-        characters_tt = Label(c_frame, text='Top characters', font=title_font)
+        characters_tt = Label(c_frame, text='Top characters', font=self.titles_font)
         characters_tl = character_figure_canvas.get_tk_widget()
 
         # char_label.pack(fill=X)
@@ -4283,6 +4530,281 @@ class Window(Tk):
         c_frame.pack(expand=True, fill=BOTH)
         characters_tt.pack(fill=X)
         characters_tl.pack(expand=True, fill=BOTH)
+
+        self.record_list.append(f'> [{self.get_time()}] - Content\'s statistics tool window opened')
+
+    def record_(self):
+
+        def close():
+            global active
+            active = False
+            # t.join()
+            log_root.destroy()
+
+        log_root = Toplevel()
+        log_root.title(self.title_struct + 'events\' record')
+        active = True
+        log_root.protocol("WM_DELETE_WINDOW", close)
+
+        scrollbar = ttk.Scrollbar(log_root)
+        record_tb = Text(log_root, cursor=self.predefined_cursor, relief=self.predefined_relief,
+                         yscrollcommand=scrollbar.set)
+        for record in self.record_list:
+            record_tb.insert('end', record + '\n')
+
+        scrollbar.pack(side=RIGHT, fill=Y)
+        record_tb.pack(fill=BOTH, expand=True)
+        scrollbar.config(command=record_tb.yview)
+        record_tb.configure(state=DISABLED)
+
+        # t = Thread(target=update, daemon=True)
+        # t.start()
+
+        while active:
+            time.sleep(1)
+            if active:
+                # condition is important if we want the tool to be a lot smoother, but it's also fine without it
+                record_string = ''.join(self.record_list).replace('\n', '')
+                record_textbox = record_tb.get(1.0, END).replace('\n', '')
+                if record_string != record_textbox:
+                    record_tb.configure(state=NORMAL)
+                    record_tb.delete(1.0, END)
+                    for record in self.record_list:
+                        record_tb.insert('end', record + '\n')
+                    record_tb.configure(state=DISABLED)
+        # update()
+
+        # while active:
+        #     time.sleep(1)
+        #     record_tb.delete(1.0, END)
+        #     for log in self.record_list:
+        #         record_tb.insert('end', log + '\n')
+
+    def manage_menus(self, mode):
+        if mode == 'dev':
+            if self.dm.get():
+                self.app_menu.delete('Record')
+            else:
+                self.app_menu.add_cascade(label='Record', command=lambda: Thread(target=self.record_).start())
+            self.dm.set(not (self.dm.get()))
+        elif mode == 'tools':
+            if not (self.sta.get()):
+                self.app_menu.delete('Colors+')
+                self.app_menu.delete('Tools')
+            else:
+
+                self.app_menu.delete('NLP')
+                self.app_menu.delete('Options')
+                self.app_menu.delete('Help')
+                self.app_menu.delete('Patch notes')
+                self.app_menu.delete('GitHub')
+
+                self.create_menus(initial=False)
+
+                if self.dm.get():
+                    self.app_menu.add_cascade(label='Record', command=lambda: Thread(target=self.record_).start())
+
+            # self.sta.set(not(self.sta.get()))
+
+    def get_k_lang(self):
+        # Gets the keyboard language in use by the current active window process.
+
+        languages = {
+            '0x409': ['English - United States', 'en'], '0x809': ['English - United Kingdom', 'en'],
+            '0x0c09': ['English - Australia', 'en'], '0x2809': ['English - Belize', 'en'],
+            '0x1009': ['English - Canada', 'en'], '0x2409': ['English - Caribbean', 'en'],
+            '0x3c09': ['English - Hong Kong SAR', 'en'],
+            '0x4009': ['English - India', 'en'], '0x3809': ['English - Indonesia', 'en'],
+            '0x1809': ['English - Ireland', 'en'], '0x2009': ['English - Jamaica', 'en'],
+            '0x4409': ['English - Malaysia', 'en'],
+            '0x040c': ['French - France', 'fr'], '0x080c': ['French - Belgium', 'fr'],
+            '0x407': ['German - Germany', 'de'], '0x0c07': ['German - Austria', 'de'],
+            '0x1407': ['German - Liechtenstein', 'de'],
+            '0x1007': ['German - Luxembourg', 'de'], '0x807': ['German - Switzerland', 'de'],
+            '0x410': ['Italian - Italy', 'it'], '0x810': ['Italian - Switzerland', 'it'],
+            '0x816': ['Portuguese - Portugal', 'pt'], '0x429': ['Farsi', 'fa'],
+            '0x0c0a': ['Spanish - Spain (Modern Sort)', 'es'], '0x040a': ['Spanish - Spain (Traditional Sort)', 'es'],
+        }
+
+        user32 = WinDLL('user32', use_last_error=True)
+
+        # Get the current active window handle
+        handle = user32.GetForegroundWindow()
+
+        # Get the thread id from that window handle
+        threadid = user32.GetWindowThreadProcessId(handle, 0)
+
+        # Get the keyboard layout id from the threadid
+        layout_id = user32.GetKeyboardLayout(threadid)
+
+        # Extract the keyboard language id from the keyboard layout id
+        language_id = layout_id & (2 ** 16 - 1)
+
+        # Convert the keyboard language id from decimal to hexadecimal
+        language_id_hex = hex(language_id)
+
+        # Check if the hex value is in the dictionary.
+        if language_id_hex in languages.keys():
+            return languages[language_id_hex]
+        else:
+            return ['not found', False]
+
+    def emoticons(self, reverse):
+        content = self.EgonTE.get('1.0', 'end').split(' ')
+        new_content = []
+        for word in content:
+            if reverse:
+                word = demoticon(word)
+            else:
+                word = emoticon(word)
+            new_content.append(word)
+        ' '.join(new_content)
+        self.EgonTE.delete('1.0', 'end')
+        self.EgonTE.insert('1.0', new_content)
+
+    def emojicons_hub(self):
+        global morse_code_dict
+        self.spc_mode = 'emojis'
+
+        morse_code_dict = {'A': '.-', 'B': '-...',
+                           'C': '-.-.', 'D': '-..', 'E': '.',
+                           'F': '..-.', 'G': '--.', 'H': '....',
+                           'I': '..', 'J': '.---', 'K': '-.-',
+                           'L': '.-..', 'M': '--', 'N': '-.',
+                           'O': '---', 'P': '.--.', 'Q': '--.-',
+                           'R': '.-.', 'S': '...', 'T': '-',
+                           'U': '..-', 'V': '...-', 'W': '.--',
+                           'X': '-..-', 'Y': '-.--', 'Z': '--..',
+                           '1': '.----', '2': '..---', '3': '...--',
+                           '4': '....-', '5': '.....', '6': '-....',
+                           '7': '--...', '8': '---..', '9': '----.',
+                           '0': '-----', ', ': '--..--', '.': '.-.-.-',
+                           '?': '..--..', '/': '-..-.', '-': '-....-',
+                           '(': '-.--.', ')': '-.--.-', ' ': '/'
+                           # ,'Á': '.--.-', 'Ä': '.-.-', 'É': '..-..', 'Ñ': '- - . - -',
+                           # 'Ö': '- - - .', 'Ü': '. . - -'
+                           }
+
+        def change_mode(b='j'):
+            for button in b_mode_list:
+                button.configure(background='SystemButtonFace')
+
+            if b == 'j':
+                self.spc_mode = 'emojis'
+                emojis.configure(background='light gray')
+            elif b == 'm':
+                self.spc_mode = 'morse'
+                morse_c.configure(background='light gray')
+            else:
+                self.spc_mode = 'emoticons'
+                emoticons.configure(background='light gray')
+
+            list_of.configure(text=f'List of {self.spc_mode}')
+            transform.configure(text=f'Transform to {self.spc_mode}')
+            random_e.configure(text=f'Random {self.spc_mode}')
+
+            print(self.spc_mode)
+
+        def transf(reverse=False):
+            if self.spc_mode == 'emojis':
+                self.emoji_detection(via_settings=True, reverse=reverse)
+            elif self.spc_mode == 'morse':
+                self.morse_c_translator(reverse=reverse)
+            else:
+                self.emoticons(reverse=reverse)
+
+        def random_ejc():
+            if self.spc_mode == 'emojis':
+                ejc_list = emoji.get_emoji_unicode_dict('en')
+                rdm_e = ejc_list.values()
+            elif self.spc_mode == 'morse':
+                rdm_e = morse_code_dict.values()
+
+            if rdm_e:
+                rdm_e = choice(list(rdm_e)) + ' '
+                self.EgonTE.insert('end', rdm_e)
+
+        ejc_root = Toplevel()
+        ejc_root.title(self.title_struct + 'emojicons hub')
+        m_title = Label(ejc_root, text='Choose a mode', font=self.titles_font)
+        emojis = Button(ejc_root, text='Emojis', command=lambda: change_mode('j'), borderwidth=1)
+        emoticons = Button(ejc_root, text='Emoticons', command=lambda: change_mode('c'), borderwidth=1,
+                           state=emoticons_library)
+        morse_c = Button(ejc_root, text='Morse Code', command=lambda: change_mode('m'), borderwidth=1)
+        f_title = Label(ejc_root, text='Functions', font=self.titles_font)
+        transform = Button(ejc_root, text=f'Transform to {self.spc_mode}', borderwidth=1, command=transf)
+        return_to_text = Button(ejc_root, text='Return to text', borderwidth=1, command=lambda: transf(True))
+        list_of = Button(ejc_root, text=f'List of {self.spc_mode}', borderwidth=1,
+                         command=lambda: self.e_list(mode=self.spc_mode))
+        random_e = Button(ejc_root, text=f'Random {self.spc_mode}', borderwidth=1, command=random_ejc)
+
+        m_title.grid(row=0, column=1, pady=10)
+        emojis.grid(row=1, column=0)
+        morse_c.grid(row=1, column=1)
+        emoticons.grid(row=1, column=2)
+        f_title.grid(row=2, column=1, pady=10)
+        transform.grid(row=3, column=0, padx=5)
+        list_of.grid(row=3, column=1)
+        return_to_text.grid(row=3, column=2)
+        random_e.grid(row=4, column=1, pady=5, padx=5)
+
+        b_mode_list = emojis, emoticons, morse_c
+        b_func_list = transform, list_of, random_e
+        change_mode()
+
+    # according to the morse code chart
+    def morse_c_translator(self, reverse=False):
+        '''
+        spaces from morse
+        '''
+        if not (reverse):
+            content = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', 'end'))
+            print(content)
+        else:
+            content = reSplit('[^.-]|\s', self.EgonTE.get('1.0', 'end'))
+            print(content)
+        new_content = []
+        new_word = ''
+        # space_count = 0
+        if reverse:
+            reverse_morse_dict = {}
+            for key, value in morse_code_dict.items():
+                reverse_morse_dict[value] = key
+            reverse_morse_dict[''] = ' '
+
+        for word in content:
+
+            if new_word:
+                new_content.append(new_word)
+                new_word = ''
+
+            if not reverse:
+                for character in word:
+                    # if character != ' ':
+                    if character.upper() in morse_code_dict.keys():
+                        if morse_code_dict[character.upper()] == '/' or word == content[-1]:
+                            spc = ''
+                        else:
+                            spc = ' '
+                        new_word += morse_code_dict[character.upper()] + spc
+                # else:
+                #     new_word += ' '
+
+            else:
+
+                print(new_content)
+                if word in morse_code_dict.values() or word == '':
+                    # accessing the keys using their values (reverse of encryption)
+                    new_word += reverse_morse_dict[word]
+
+        # output
+        if reverse:
+            new_content = ''.join(new_content).lower().capitalize()
+            # new_content.replace('', ' ')
+        else:
+            new_content = ' '.join(new_content)
+        self.EgonTE.delete('1.0', 'end')
+        self.EgonTE.insert('1.0', new_content)
 
     if RA:
         right_align_language_support()
