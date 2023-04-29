@@ -1,3 +1,38 @@
+1.11.2
+
+Emojis & Emojis-like:
+automatic emoji detector - with the option to disable it
+changed the many options menu commands of emojis to one window interface
+added emoticons & Morse code detection - from/to
+new emoji detection languages support for Spanish, Portuguese, Italian, French, German, Farsi/Persian
+added random emojis/Morse code
+added list of Morse - an interface that outputs a dictionary; Unicode letters and their meaning in Morse code
+emoji bug fix - the bug that after the emoji is inputted, the program will generate a lot of symbols.
+emoji bug fix - the precise of the function got better to detect emojis
+emoji bug fix - fixed most (up to all) of the things that caused the cursor to move to unwanted positions after emoji detection
+
+Text twisters:
+text twisters update: work with highlight as well.
+
+Record & (menu) Modes:
+record - the big events of the app since the opening will be added to a list that can be accessed in a text box in a new menu
+modes - a simple solution to not make the program overloaded with too much stuff:
+dev mode - the dev mode controls the Record cascade
+special tools - controls the tools cascade and colors+ cascade
+
+Others:
+extended help content.
+made that the bold font on the tool menu will be instead of the AI tools on the most original & good ones! - also
+made the font size smaller, to match the other sizes of the menus.
+fixed some names
+fixed: colors+ -> app colors -> frame colors bug -  the right of the bottom of the program wasn't changing color
+fixed & improved: fixed content's stats bug that a newline word was connected to the last word before her,
+and with that knowledge I also make that word split is based on some symbols and not just whitespace
+fixed: "sort by characters" whitespaces and newline bug
+fixed: "reverse characters" newline being at the first index
+made some of the repetitive things consistent - tools' titles & fonts etc.
+
+
 1.11.1
 
 new content statistics:
