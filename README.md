@@ -1,3 +1,5 @@
+![1st-anniversary_poster](https://github.com/Ariel4545/Etext_editor/assets/95249974/e9b4db2d-40e9-4ad0-9612-d27bc3b76900)
+
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
 
 ## Features 🔥
