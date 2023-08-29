@@ -1,4 +1,100 @@
-1.11.2
+Version - name - release date
+
+[ 1.12 - rebirth ]
+
+added:
+added titles to all big versions
+added tooltips to the "virtual keyboard" and "draw to text" buttons
+made that if night mode is on and trying to use custom colors the program will ask you if you want to change the UI's colors anyway
+added that you can apply custom colors on the information window and on the virtual keyboard's window
+added night mode support for the virtual keyboard window as well
+added IDE functionality when you are using a Python file - compile & view the console some settings and more...
+added a feature that if you haven't had all required libraries installed a window will pop up and give you the option
+to install automatically all the required libraries
+added dates of versions in the patch notes
+added a second night mode that focuses on blue - you can choose the one you want with the advanced options window
+added to draw to text tool line & eraser thickness options
+made saved settings work
+added a new mode for the virtual keyboard: symbols & numbers, also made the keyboard more dynamic to switching the different modes
+added a new window function
+added open last file setting - the ability to instantly open the last file you used in your previous session when you open the program again
+Night mode on the supported pop-up windows can now work initially
+added a calc menu button drawn button (and removed the menu button)
+added also a caps mode for the virtual keyboard - change between capital and small letters
+added the translator and list of Roman numbers to the symbols translator (emoticons hub)
+added some short examples and explanations for some subjects of web scrapping in the web scrapping tool
+added an option to make the program use your GPU for some tasks - for now is for the NLP function alone
+remade the entire weather pre-window and added a random (known) city option
+Web scrapping now supports using the content that is in the main window of the text editor itself and also updating it as you write more
+added insert & copy buttons for the calculator tool, instead of automatic insert and added a new result label instead
+of just equation entry
+added 2 new NLP features - phone numbers & names
+added restore default settings feature As part of the saved settings feature
+web scrapping tool now should support XML as well via the internet option
+In the handwriting tool, you can now change the size of the pencil/eraser
+added extras window for handwriting tool that has some additional information and settings about more cords mode and
+different shortcut
+
+changed / improved:
+improved the email tool by adding more default options, fixing bugs, etc...
+improved the record window by adding more messages
+made the upload of an image to the handwriting tool always be in the middle no matter how you changed the window cords -
+(Previously it was only the middle of the initial window size)
+Combined some custom color functions
+improved the condition of certain optional libraries
+changed the (black) night mode's button background color to one that suits the buttons better than the previous one
+Change all the (tools) icons to original ones and added one for draw-to-text tools
+optimized night mode function - made that only some variables are inside the conditions instead of everything
+The OpenAI image (from the link) now works and is functioning as the ChatGPT tool icon
+made the exit function a little bit more optimized
+improved the generate tool UI by setting Its title's font to the program standard
+changed the search tool's title - to make it more general and precise
+improved advanced options UI by making the distant radio & check buttons more centered
+remade the placements on the virtual keyboard - everything is in place and there are no random spaces
+emoticons hub has a new name - symbols translator
+improved design for symbols translator (emoticons hub)
+Symbols translator (emoticons hub) moved from the settings menu to the tools menu
+symbols translator (emoticons hub) list of ... improved by adding a mode for a second display of characters - used now
+only for popular combinations of Roman numbers
+made the web scrapping tool UI clearer by making the method that the user used to import the content noticeable in -
+the button
+improved web scrapping warning about using it on websites
+changed initial virtual keyboard mode to lowercase characters instead of uppercase
+optimized opening message - if the opening message is not from an API the program will open much faster, and a bit faster
+If it is indeed from an API
+The uploads function within the web scrapping tool is now combined - making the tool more consistent and supports the
+features of both worlds in every situation
+The NLP results UI is better with a font, a text box/tree view, a scrollbar, a unique copy function, and more
+The NLP function instead of throwing an error at you when you don't have the package, will first try to install to package -
+with a very effective way
+changed to some variables names to make them more clear
+calculator improved UI - better placing, better title, new label
+improved the conditions that decide if you can use the Chatgpt tool
+Many tools now have a default message where no content is generated
+Web scrapping will write long website links in 2 lines in the "quick information" section
+improved the screenshot function by making the desired window topmost when taking the screenshot
+extended help's text file content
+
+
+fixed:
+Fixed a bug that when you fail to pick a file to open, the content you had before was gone
+Fixed a bug that made the program produce an error because the night mode didn't know when the info pages were closed -
+after you opened them at least one time
+fixed a bug that the program didn't know then the record window was closed after being opened initially
+Fixed a bug that after displaying again the toolbar after hiding it, it will appear at the bottom of the text box
+Fixed a bug that made the Record menu duplicate when turning special tools on again after activating dev mode
+Fixed the content's stats connected words bug
+partly fixed the usage time bug when it updated the value before the widget created
+Fixed calculator bug when items outside the frame continue to be generated every time you press the 'show operators' button
+Fixed the virtual keyboard button not changing colors when needed
+Fixed a bug that broke the web scrapping tool - you could open it without selecting anything in the pre\inital window
+fixed that in the weather tool, the city name was connected through + instead of whitespace
+Fixed a bug that was changing the index of the font size shortcuts beyond the maximum/minimum
+Fixed the web scrapping bug that didn't allow to actually switch the received content mode (all, text attributes)
+Fixed content's stats error with a condition
+
+
+[ 1.11.2 - Emoji evolution and more - 29/4/23 ]
 
 Emojis & Emojis-like:
 automatic emoji detector - with the option to disable it
@@ -32,8 +128,7 @@ fixed: "sort by characters" whitespaces and newline bug
 fixed: "reverse characters" newline being at the first index
 made some of the repetitive things consistent - tools' titles & fonts etc.
 
-
-1.11.1
+[ 1.11.1 - Content & file stats - 8/4/23 ]
 
 new content statistics:
 Have a bar-chart show the count/frequency of the top 8 most used words & all the alphabet characters
@@ -51,7 +146,7 @@ small changes:
 made the opening file function smoother - the last content will be deleted (and eventually replaced) only after you're opening a file
 made the opening of new blank files a little smoother by doing the same thing
 
-1.11
+[ 1.11 - EgonTE redemption - 1/4/23 ]
 
 Added:
 added reader mode
@@ -119,7 +214,7 @@ Not available yet - but in the code:
 
 
 
-1.10
+[ 1.10 - cutting corners - 1/1/23 ]
 added a quick submission of content from the dictionary
 added copy button to random name generator, translator tools
 united 'special' files import to one interface
@@ -134,22 +229,22 @@ fixed & improved copy/paste/cut functions
 changed transparency menu starting value to 100% not transparent
 limited the transparency percentage to 90% transparent (instead of 100%)
 
-1.9.9
+[ 1.9.9 - virtual keyboard! - 2/12/22 ]
 fixed exit function bug
 fixed the help menu's name
 added virtual keyboard
 
-1.9.8
+[ 1.9.8 - dictionary & transparency - 23/11/22 ]
 connected the ☒ button to the exit function
 transparency options
 tools are a little transparent now
 made the exit function more efficient
 added a dictionary tool
 
-1.9.6
+[ 1.9.6 - oop revival - 1/11/22 ]
 bug fixes & usage of oop
 
-1.9.4
+[ 1.9.4 - option2tools - 24/10/22 ]
 an option to sort (numbers) in a descending way
 better usage of the sort tool's text widget parameters
 added a scrollbar to the sort tool's input
@@ -157,7 +252,7 @@ added that the main text widget's (EgonTE) options will now update the sort & tr
 Fixed:
 the user can grab the height of the window below the default size
 
-1.9.3
+[ 1.9.3 - sort & word warp tools & many fixes - 21/10/22 ]
 added:
 more emphasis on functions
 word warp modes options
@@ -174,7 +269,7 @@ fixed bugs when some content manipulation goes nuts
 removed:
 wasteful menus' lines that didn't do anything
 
-1.9
+[ 1.9 - better + advanced settings & find text tools stonks - 14/10/22]
 added:
 advanced settings
 tools - text/file shortcuts
@@ -200,7 +295,7 @@ deleted:
 deleted irrelevant comments
 deleted that "change style" and also change the relief
 
-1.8
+[ 1.8 - all tk fonts & tools polish - 7/10/22 ]
 fixed - copy, paste & cut bugs
 made some messages clear
 made that if you want to generate 25000 characters a warning will pop up
@@ -212,21 +307,21 @@ added a few more comments
 added better support for right-aligned languages
 added a tool to search quickly on the web
 
-1.7
+[ 1.7 - special file support & text's align and color not requiring highlight - 3/10/22 ]
 special file support - insert excel, CVS, JSON, and XML files to your text file.
 improved align - if you don't mark something to align it will automatically choose the line you are at.
 improved color -if you don't mark something to change color it will automatically choose the entire file.
 
-1.6
+[ 1.6 - find tool remake - 30/9/22 ]
 find tool remake
 
-1.5
+[ 1.5 - better buttons' functionality & fonts finally available - 28/9/22 ]
 big improvements in the buttons' functionality
 fixed fonts and made them work
 error-handling bugs
 improved UI's color selection UI
 
-1.4
+[ 1.4 - colorful UI - 27/9/22 ]
 improved night mode functionality
 added the option the choose the UI's colors
 improved error-handling calc tool
@@ -234,115 +329,115 @@ improved UI for the random names tool
 improved error handling for font size shortcuts
 improved UI's text
 
-1.3
+[ 1.3 - 26/9/22 ]
 added font size shortcuts
 
-1.2
+[ 1.2 - 23/9/22 ]
 added 6 shortcuts
 
-1.1
+[ 1.1 - better tools UI - 17/9/22 ]
 bug fixes
 UI/UX improvement for tools
 
-1.0
+[ 1.0 -  text twisting function & more functionalities - 16/9/22 ]
 added functionality that warns for unsaved changes (file)
 added fonts
 added fun functions that reverse words, reverse characters, join words, lower/upper
 added function that generates random characters
 !
 
-0.9.9
+[ 0.9.9 - 15/9/22]
 added replace (text) function
 
-0.9.8
+[ 0.9.8 - 14/9/22 ]
 added URL shorter tool
 
-0.9.7
+[ 0.9.7 - 13/9/22]
 improved code writing
 added advanced name generator tool
 bug fixes
 
-0.9.4
+[ 0.9.4 - better code + better open & quit - 12/9/22 ]
 optimized imports
 improved code writing
 improved window placement
 improved exit function
 added more opening msgs
 
-0.9.3
+[ 0.9.3 - 11/9/22]
 bug fixes
 added space when inserting certain things from tools
 
-0.9.2
+[ 0.9.2 - adv random tool & more - 10/9/22 ]
 Advanced random numbers tool
 added space when inserting certain things from tools
 added reference to modulus in calc explanation
 made random name root not resizable
 
-0.9.1
+[ 0.9.1 - 9/9/22]
 UI for the random names tool
 
-0.9
+[ 0.9 - 8/9/22 ]
 added translate tool
 bug fixes
 changed Insert menu name to tool menu
 
-0.8.8
+[ 0.8.8 - 7/9/22 ]
 added random name tool
 
-0.8.7
+[ 0.8.7 - 6/9/22 ]
 added an option the change the cursor to the default one
 
-0.8.6
+[ 0.8.6 - 6/9/22]
 added 3 new tooltip(s)
 added 4 new shortcuts
 
-0.8.4
+[ 0.8.4 - 4/9/22 ]
 bug fixes
 added error handling for - saving a file, changing text colors, calc, random numbers
 copy file path function
 
-0.8.3
+[ 0.8.3 - 3/9/22 ]
 added an operation list for the calculation tool
 
-0.8.2
+[ 0.8.2 - 3/9/22 ]
 experimented more with the fonts/size
 
-0.8.1
+[ 0.8.1 - 2/9/22 ]
 added an option to insert a random number
 improved calc UI
 
-0.8
+[ 0.8 - 1/9/22 ]
 added option to insert datetime
 
-0.7.9
+[ 0.7.9 - 1/9/22 ]
 optimized imports
 
-0.7.6
+[ 0.7.6 - 1/9/22 ]
 option to insert a calculation
 
-0.7.4
+[ 0.7.4 - 28/8/22 ]
 bug fixes
 speech-to-text variation of error & goodbye sentences
 
-0.7.3
+[ 0.7.3 - 28/8/22 ]
 added option to open the respiratory page through the program
 added option the tear of the edit menu
 
-0.7.1
+[ 0.7.1 - 22/8/22 ]
 added file bar - info about the file
 bug fixes
 
-0.7
+[ 0.7 - 21/8/22 ]
 bug fixes
 optimized imports
 improved exit function
 improved shortcuts
 
-0.6.8
+[ 0.6.8 - 20/8/22 ]
 added search function
 
-0.6
+[ 0.6 - 7/8/22 ]
 added advanced speech to text
 added opening sentences
 better exit
@@ -351,74 +446,74 @@ improved night mode UI & functionality
 changed the status bar position in the bottom middle
 !
 
-0.5.9
+[ 0.5.9 - 5/8/22 ]
 fixed message box for printing files
 added a message box for quitting the app
 
-0.5.8
+[ 0.5.8 - 5/8/22 ]
 fixed imports
 fixed text-to-speech icon problems
 
-0.5.7
+[ 0.5.7 - 30/7/22 ]
 added tooltip(s)
 
-0.5.5
+[ 0.5.5 - 30/7/22 ]
 added 6 new shortcuts
 bug fixes
 
-0.5.3
+[ 0.5.3 - 30/7/22 ]
 added custom coordinates for the program when opening it
 
-0.5.2
+[ 0.5.2 - 30/7/22 ]
 added text to speech
 added thread
 
-0.5
+[ 0.5 - 30/7/22 ]
 added custom cursor
 
-0.4.8
+[ 0.4.8 - 30/7/22 ]
 added use to the status bar
 
-0.4.6
+[ 0.4.6 - 29/7/22 ]
 night mode improvement
 
-0.4.4
+[ 0.4.4 - 29/7/22  ]
 added images to the buttons
 
-0.4.1
+[ 0.4.1 - 29/7/22  ]
 added separator to the color menu
 
-0.4
+[ 0.4 - 29/7/22  ]
 made buttons flat (more modern style)
 
-0.3.8
+[ 0.3.8 - 29/7/22  ]
 changed font default size
 bug fix
 
-0.3.6
+[ 0.3.6 - 28/7/22 ]
 added one new shortcut
 
-0.3.4
+[ 0.3.4 - 28/7/22 ]
 Added message box when you attempt to print
 
-0.3.2
+[ 0.3.2 - 28/7/22 ]
 bug fixes
 
-0.3 (initial commit)
+[ 0.3 (initial commit) - 18/7/22 ]
 
 ---------------- BEFORE GITHUB ---------------
 
-0.3 (p0.8)
+[ 0.3 (p0.8) - 18/7/22 ]
 added underline
 added text alignments
 improved night mode with button colors
 improved UI
 
-0.2.5 (p0.7)
+[ 0.2.5 (p0.7) - 18/7/22 ]
 added underline
 added font UI
 
-0.2 (median)
+[ 0.2 (median) - text design & more functions - 17/7/22 ]
 added bold text
 added italics slant
 added custom text color
@@ -430,7 +525,74 @@ added clear function
 added night mode
 added 3 new shortcuts
 
-0.1 (basic/first version)
+[ 0.1 (basic/first version) 15-16/7/22]
 have the ability to open & save files
 have also 2 different save functions: save & save as
 have the 3 most basic edit tools: cut, copy & paste
+
+-------------------------------- DATES --------------------------------
+1.11.2 - 29/4/23
+1.11.1 - 8/4/23
+1.11 - 1/4/23
+1.10 - 1/1/23
+1.9.9 - 2/12/22
+1.9.8 - 23/11/22
+1.9.7 - 7/11/22
+1.9.6 - 1/11/22
+1.9.4 - 24/10/22
+1.9.3 - 21/10/22
+1.9 - 14/10/22
+1.8 - 7/10/22
+1.7 - 3/10/22
+1.6 - 30/9/22
+1.5 - 28/9/22
+1.4 - 27/9/22
+1.3 - 26/9/22
+1.2 - 23/9/22
+1.1 - 17/9/22
+1.0 - 16/9/22
+0.9.9 - 15/9/22
+0.9.8 - 14/9/22
+0.9.7 - 13/9/22
+0.9.4 - 12/9/22
+0.9.3 - 11/9/22
+0.9.2 - 10/9/22
+0.9.1 - 9/9/22
+0.9 - 8/9/22
+0.8.8 - 7/9/22
+0.8.7 - 6/9/22
+0.8.6 - 6/9/22
+0.8.5 - 5/9/22
+0.8.4 - 4/9/22
+0.8.3 - 3/9/22
+0.8.2 - 3/9/22
+0.8.1 - 2/9/22
+0.8 - 1/9/22
+0.7.9 - 1/9/22
+0.7.6 - 1/9/22
+0.7.4 - 28/8/22
+0.7.3 - 28/8/22
+0.7.1 - 22/8/22
+0.7 - 21/8/22
+0.6.8 - 20/8/22
+0.6 - 7/8/22
+0.5.9 - 5/8/22
+0.5.8 - 5/8/22
+0.5.7 - 30/7/22
+0.5.5 - 30/7/22
+0.5.3 - 30/7/22
+0.5.2 - 30/7/22
+0.5 - 30/7/22
+0.4.8 -29/7/22
+0.4.6 - 29/7/22
+0.4.4 - 29/7/22
+0.4.1 - 29/7/22
+0.4 - 29/7/22
+0.3.8 - 29/7/22
+0.3.6 - 28/7/22
+0.3.4 - 28/7/22
+0.3.2 - 28/7/22
+0.3 (p0.8) - 18/7/22
+0.2.5 (p0.7) - 18/7/22
+0.2 (median) - 17/7/22
+0.1 (basic/first version) 15-16/7/22
