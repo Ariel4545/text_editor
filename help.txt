@@ -97,3 +97,14 @@ the things that will happen is that you will no longer have access to the tools 
 why some tools font is bold while others not?
 some tools font is bold while others not because it indicates the tools that are the finest and most original
 
+IDE:
+If the program will detect what you are using a python file it will add a few new options.
+1. run the code directly from the program
+2. the main text-box will share it place now with a console
+3. there wil be a few new options to ease your usage
+
+Saved settings:
+now there is a saved settings - saving most the program options.
+it works by using a saved file that in your ETE directory.
+you can reset all the options via the advanced option window -> resetore defaults
+
