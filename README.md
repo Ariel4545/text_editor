@@ -13,8 +13,8 @@ Enjoy night mode 🌙.
 Many settings and customization options to the software itself ⚙️.  
 
 ## Quick preview 💎
-![ETE_footage_V11](https://user-images.githubusercontent.com/95249974/229516687-41cb58d9-7e80-4179-8676-9c9816ed483d.gif)
-__(footage taken from the development of 11.1 version)__
+![ete_1 12_preview](https://github.com/Ariel4545/text_editor/assets/95249974/4d2afa04-acdb-43ed-bd3c-cfafcd9bb3c4)
+__(footage taken from the early development of 1.12.1 version)__
 
 ## Personal goal 🌟
 my personal goal with this project is to learn Tkinter and while  
