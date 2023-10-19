@@ -1,6 +1,46 @@
 Version - name - release date
 
-[ 1.12 - rebirth ]
+[ 1.12.1 - absolute 1.12 part 1 - 19/10/23 ]
+added:
+added many functions using git - need to activate dev mode and have the "gitpython" library
+added the option to use text decorators to output the result vertically
+added text twisters new (saved) option - remove space & newline from some text twisters functions
+added that if the saved settings file isn't working, the program will ask you the permission to close and reset the file
+
+improved:
+windows placement:
+information window will always appear in the middle of the app
+the virtual keyboard will appear in the middle bottom of the app
+
+libraries installer & imports:
+improved library installer with messages and thread for the download
+improved the dispersion of the imports
+improved the condition of starting the program - if the required libraries aren't installed instead of error you can
+decide if you want to open it again
+
+other functions:
+optimized a little the close function
+improved go-to function by setting the focus on the text to the main text box, instead of what it will remain where
+it was before - making the function useful
+improved the text decorators' tool UI - and made support for adjustable window size
+improved highly the sync of the (basic) options menu with the advanced settings, and a bit with the saved ones
+improve file compression a little bit - UI & error handling
+
+writing:
+expended the help file content and fixed some misspellings
+improved most of the comment writing
+
+fixed\changed:
+fixed that the library installer's widgets weren't placed
+fixed a bug that the text decorators result was placed on one another instead of replacing the last one
+fixed misspelling in the calc tool
+fixed that the shortcuts of the DTT tool about the size weren't synched
+fixed that some settings that were meant to save didn't save in many instances
+changed the default DTT size shortcuts from many keys to the mouse wheel
+changed the default folder that the file explorer will give you when selecting a file in the main folder instead of
+ETE's folder for this functions: open file(s), merge files
+
+[ 1.12 - rebirth - 29/8/23]
 
 added:
 added titles to all big versions
@@ -529,70 +569,3 @@ added 3 new shortcuts
 have the ability to open & save files
 have also 2 different save functions: save & save as
 have the 3 most basic edit tools: cut, copy & paste
-
--------------------------------- DATES --------------------------------
-1.11.2 - 29/4/23
-1.11.1 - 8/4/23
-1.11 - 1/4/23
-1.10 - 1/1/23
-1.9.9 - 2/12/22
-1.9.8 - 23/11/22
-1.9.7 - 7/11/22
-1.9.6 - 1/11/22
-1.9.4 - 24/10/22
-1.9.3 - 21/10/22
-1.9 - 14/10/22
-1.8 - 7/10/22
-1.7 - 3/10/22
-1.6 - 30/9/22
-1.5 - 28/9/22
-1.4 - 27/9/22
-1.3 - 26/9/22
-1.2 - 23/9/22
-1.1 - 17/9/22
-1.0 - 16/9/22
-0.9.9 - 15/9/22
-0.9.8 - 14/9/22
-0.9.7 - 13/9/22
-0.9.4 - 12/9/22
-0.9.3 - 11/9/22
-0.9.2 - 10/9/22
-0.9.1 - 9/9/22
-0.9 - 8/9/22
-0.8.8 - 7/9/22
-0.8.7 - 6/9/22
-0.8.6 - 6/9/22
-0.8.5 - 5/9/22
-0.8.4 - 4/9/22
-0.8.3 - 3/9/22
-0.8.2 - 3/9/22
-0.8.1 - 2/9/22
-0.8 - 1/9/22
-0.7.9 - 1/9/22
-0.7.6 - 1/9/22
-0.7.4 - 28/8/22
-0.7.3 - 28/8/22
-0.7.1 - 22/8/22
-0.7 - 21/8/22
-0.6.8 - 20/8/22
-0.6 - 7/8/22
-0.5.9 - 5/8/22
-0.5.8 - 5/8/22
-0.5.7 - 30/7/22
-0.5.5 - 30/7/22
-0.5.3 - 30/7/22
-0.5.2 - 30/7/22
-0.5 - 30/7/22
-0.4.8 -29/7/22
-0.4.6 - 29/7/22
-0.4.4 - 29/7/22
-0.4.1 - 29/7/22
-0.4 - 29/7/22
-0.3.8 - 29/7/22
-0.3.6 - 28/7/22
-0.3.4 - 28/7/22
-0.3.2 - 28/7/22
-0.3 (p0.8) - 18/7/22
-0.2.5 (p0.7) - 18/7/22
-0.2 (median) - 17/7/22
-0.1 (basic/first version) 15-16/7/22
