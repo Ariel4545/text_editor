@@ -1,5 +1,37 @@
 Version - name - release date
 
+[ 1.12.2 - absolute 1.12 part 2 - 18/11/23]
+improved:
+improved accuracy of file type detection in many cases
+improved hide advanced settings' conditions
+changed emoji detection's activation method from keys' release to keys' press
+made the usage time function more precise
+made the opening messages a bit more efficient
+made all (windows') titles / and many message boxes titles follow the general titles' structure
+improved a library (py-tesseract) setup condition
+improved writing of some small things
+made that the handwriting function conversion function work and improved some variables and the output box
+changed handwriting size shortcut binding from the whole window to the canvas
+improved screenshot function to allow it to capture only the text box/canvas
+improved the management of UI events in the dictionary and Wikipedia tools
+improved the organization of the output in Wikipedia's related articles option
+Improved Wikipedia and dictionary tools paste function by using the displayed content (instead of searching)
+added a print statement that writes all the libraries that the library installer has gone through
+
+fixed:
+made git menu work with night mode
+fixed a bug in the status bars variable
+fixed the scope of some functions that were off (not many)
+fixed some saved settings variables bugs
+fixed some inaccuracies in the buttons' tool-tips
+fixed some handwriting's convert function type errors
+fixed the problem that the command to install libraries wasn't there
+
+removed:
+removed my old discords usernames
+removed unused loading screen function
+
+
 [ 1.12.1 - absolute 1.12 part 1 - 19/10/23 ]
 added:
 added many functions using git - need to activate dev mode and have the "gitpython" library
