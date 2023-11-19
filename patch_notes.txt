@@ -1,6 +1,15 @@
 Version - name - release date
 
-[ 1.12.2 - absolute 1.12 part 2 - 18/11/23]
+[ 1.12.2+ - quick response to the initial advertising - 20/11/23 ]
+made documentation of the code much better with hundreds of lines of doc strings
+removed unused main menu function
+removed unused logo function
+removed many comments that had no use
+removed unused unacceptable line removal function
+reformatted the file with an IDE
+made some parts of the code more in place
+
+[ 1.12.2 - absolute 1.12 part 2 - 18/11/23 ]
 improved:
 improved accuracy of file type detection in many cases
 improved hide advanced settings' conditions
