@@ -18,10 +18,9 @@ Enjoy two unique night modes 🌙.
 __(footage taken from the early development of 1.12.1 version)__
 
 ## Personal goal 🌟
-my personal goal with this project is to learn Tkinter and while  
-In doing so try to implement everything related that is related enough  
-to the project, so in short when learning Tkinter also attempt to push it  
-to its limits (as far as I can)
+My goal with this project is to learn the Python eco-system and tkinter while having fun,  
+and to take tkinter to its limits by implementing many unique things within the process of building this long project.  
+In addition, after I shared this project I also wanted to create a good GitHub repository by making it organized and presenting the project well.  
 
 ## Tested on
 <img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" />
