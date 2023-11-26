@@ -1,0 +1,7 @@
+polyglot
+googletrans==3.1.0a0
+GitPython==0.3.2
+emoticon
+pytesseract
+openai
+youtube-transcript-api
