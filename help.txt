@@ -215,3 +215,9 @@ reader mode = false
 transparency = 100% (completely off)
 open last file = false
 text twisters - remove newline and space (for some of the functions) = false
+
+Pydictionary import error:
+if the library installer fails to download Pydictionary,
+it is probably because it using Python 2 code in Python 3,
+to fix this write this in the terminal instead:
+pip install -e git+https://github.com/yeahwhat-mc/goslate#egg=goslate
