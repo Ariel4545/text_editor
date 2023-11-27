@@ -1,13 +1,53 @@
 Version - name - release date
 
-[ 1.12.2+ - quick response to the initial advertising - 20/11/23 ]
-made documentation of the code much better with hundreds of lines of doc strings
-removed unused main menu function
-removed unused logo function
-removed many comments that had no use
-removed unused unacceptable line removal function
-reformatted the file with an IDE
-made some parts of the code more in place
+[ 1.12.3 - big patch of support - 27/11/23 ]
+
+Added/remade:
+Made the option to auto-save via writing, you can choose this method of auto-saving via advanced options.
+Added support for more languages in the speech-to-text function:
+English (US), English (UK), Spanish (Spain), French, Russian, Arabic (Egypt),
+Japanese, Italian, Korean, Indonesian, and Hebrew.
+Added unique scroll bars to the text decorators depending on whether it is vertical or horizontal.
+Added that the advanced options are from now on divided into two tabs: styles, and functional.
+Added a decent find tool to the information window with many functions:
+scroll down by matching terms, resetting, highlighting/lowlighting all, number of occurrences, and reactive text box.
+Semi-remake the translate tool:
+have an output box (not automatically paste to ETE anymore),
+a new UI - 2 sides one input and one output - combobox and buttons organized for that purpose as well,
+and replaced the copy (to clipboard) tool with paste to ETE tool,
+and also a random output language when you start the tool.
+
+Changed/improved:
+Improved the installation of "fast_autocomplete" via the library installer.
+Made that the transparency scale changes as you move it and without a specified "set" button.
+Improved exit app conditions about unsaved changes, and about quitting the program.
+Improved the copy function a little bit by updating the program values.
+Improved the find_text (main find tool) variable usage.
+Improved the placing of widgets on the information window.
+Improved the documentation of the advanced options a bit.
+Made some text decorators' symbols more unique.
+Added that if a required library isn't installed it will print which one.
+Added a little bit more messages to the record function.
+Improved by a little in the detection of the main text box's tags.
+Improved advanced option by adding that if you try to open it while it is already open,
+it will show/place the window in front of you.
+Extended help.txt file.
+
+Fixed:
+Fixed that when the program was asking the user to try to install again, it called the import function instead.
+Fixed the global libraries issues by eliminating the import_req function.
+Fixed the misspelling "warp" to "wrap".
+Fixed the bug in the horizontal mode in the text decorator was getting mixed up after it filled the text box.
+Fixed the vertical text box input on the text decorators was accidentally case-sensitive.
+Fixed the many input lags that the text decorator had, with threads.
+Fixed the asterisk (text decorator) space bugs.
+Fixed that the requests library got treated like a built-in Python library.
+Caught the error that can be made when you use the library installer without sys installed (will not work for everyone).
+Fixed the type error with sys at the library installer.
+Fixed that if there was I failed installation of a library the program didn't skip to the next one.
+Removed ctypes from the libraries' installation list.
+Fixed the command that is used to install the libraries.
+Fixed a bug that made the "save by time" function work while the auto-save option was disabled.
 
 [ 1.12.2 - absolute 1.12 part 2 - 18/11/23 ]
 improved:
