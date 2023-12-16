@@ -1,4 +1,5 @@
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
+__(Version "1.12.4" is delayed by a bit, but It will probably be worth the wait)__
 
 ## Features 🔥
 Work with files - save, open, make a new & many more 💾.  
