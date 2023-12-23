@@ -13,7 +13,7 @@ Egon-Text-Editor will let you import some nontext file types to your text file.
 It works by pressing the 'import file' button in the file menu and selecting one
 of the files that EgonTE is supporting right now (Excel, CSV, JSON, XML)
 and then it will convert it to text and append it to where you are in the Text file.
-Local vs Global file:
+Local vs. Global file:
 Local - a local file is one that is on your computer and will be accessed via a menu
 Global - a file that is available on the internet and will be accessed via a link
 
@@ -27,50 +27,49 @@ You can turn off these labels by using Settings.
 Search online:
 Search Online is a tool that will open a new tab in your default browser,
  and then search by domain.
-There is a button 'copy from file' It has two possible operations :
-1. When text is marked it will add up to the text box only what is marked
-2. When text isn't marked it will add up to the text box the whole text file
+There is a button called 'copy from file.' It has two possible operations :
+1. When text is marked, it will add up to the text box only what is marked
+2. When text isn't marked, it will add up to the text box the whole text file
 
-Custom UI colors:
+Custom U.I. colors:
 There are three options to change the Egon Text Editor's predefined colors
- to your custom ones (aside from text color):
-1.  Button colors - buttons' background color
+ To your custom ones (aside from text color):
+1. Button colors - buttons' background color
 2. Menu colors - Menus Background & text colors
 3. App colors - text box color, status & file bar colors, toolbar colors,
  frame color, text color (until 1.0.9 version)
 
 Emoji detection:
-emoji detection feature is striving to be automatic in the future.
-but till then you can detect emojis by pressing the 'detect emojis'
-button on the settings menu.
+The emoji detection feature is automatic by default.
+But you can still detect emojis by pressing the 'detect emojis' button on the settings menu.
 
 Sort by words/characters:
-the new 2 function sort values that aren't numbers but how?
-the answer is pretty simple, it uses their ASCII values!
+The new two functions sort values that aren't numbers, but how?
+The answer is pretty simple: it uses their ASCII values!
 
-NLP menu:
-the NLP menu is attributed to the Natural Language Processor.
+N.L.P. menu:
+The N.L.P. menu is attributed to the Natural Language Processor.
 that means that the whole menu is about processing the main
 text box widget's text and find something based on the command
 you pressed on
 
 Top most:
-the topmost setting is on the options menu.
-when activated it makes the main window z value the most of any other window
+The topmost setting is on the options menu.
+When activated, it makes the main window's "z" value the most of any other window.
 
 Connection with OpenAI products:
 in the program, you can use OpenAI products, which include ChatGPT & DallE
-you connect to them via a login window that requests your OpenAI key.
-(right now using environment variables to connect isn't possible,
+you connect to them via a login window that requests your OpenAI / Azure-OpenAI keys.
+(right now, using environment variables to connect isn't possible,
 but I'm planning to add this as well)
-after this, a special window will be opened for you for the specific AI
-you chose.
-the main downside to this tool however is that OpenAI will want you to pay
+after this, a special window will be opened for you for the specific A.I.
+You chose.
+the main downside to this tool, however, is that OpenAI will want you to pay
 for their API usage
 
 Text decorators:
 the text decorators are a few styles of huge text using regular text
-there are 3 styles of text: binary, bash, and astrix.
+there are three styles of text: binary, bash, and astrix.
 the tool is compatible with outputting a result both in vertical and horizontal formats,
 the tools allow you to convert text directly from the main text box widget
 or even use its own text box widget,
@@ -78,52 +77,55 @@ and also allows you to paste directly to the main text box widget.
 
 Text twisting functions
 Text twisting functions are a new term I made up to describe the functions that
-change the order of some parts of the text in a very straightforward way, that do not benefit the structure
+change the order of some parts of the text in a very straightforward way that does not benefit the structure
 but are still fun to play with from time to time.
-they are located at the bottom of the edit menu.
-the text twisting functions are - reverse characters/words, join words, upper / lower, sort by characters/words
+They are located at the bottom of the edit menu.
+The text twisting functions are - reverse characters/words, join words, upper / lower, and sort by characters/words.
 
 Dev mode:
-the dev mode can be activated via options and when activated it will let you access the record function
+The dev mode can be activated via options, and when activated, it will let you access the record function
 
 Record:
 the record function is a function that keeps track of the main events that have occurred in the app and when you
-open the tool the events will be written in an organized manner with time and ways to different lines
+open the tool, and the events will be written in an organized manner with time and ways to different lines
 
 Special tools option:
-special tool option is a new option in the options menu that is activated by default,
-so what happens when you turn it off?
-the things that will happen is that you will no longer have access to the tools and colors+ menus
+The "special tool" option is a new option in the options menu that is activated by default,
+So what happens when you turn it off?
+The thing that will happen is that you will no longer have access to the tools and colors+ menus.
 
 Tools' font:
-why are some tools' fonts are bold while others not?
-some tools' font is bold while others are not because it indicates the tools that are the finest and most original
+Why are some tools' fonts bold while others are not?
+Some tools' font is bold, while others are not because it indicates the tools that are the finest and most original.
 
 IDE:
-If the program detects that you are using a Python file it will add a few new options.
+If the program detects that you are using a Python file, it will add a few new options.
 1. run the code directly from the program
 2. the main text box will share its place now with a console
 3. there will be a few new options to ease your usage
 
 Saved settings:
-now there is a saved settings - saving most of the program options.
-it works by using a saved file in your ETE directory.
-you can reset all the options via the advanced options window -> restore defaults.
-if the worst happens, the saved settings file will cause some
-problems to the program to open/work there will be a special
-window that will ask for your permission to delete and create
+Now there is a saved settings - saving most of the program options.
+It works by using a saved file in your E.T.E. directory.
+You can reset all the options via the advanced options window -> restore defaults.
+if the worst happens, the saved settings file will cause some 
+problems to the program to open/work, there will be a special
+window that will ask for your permission to delete and create 
 a new default file instead.
 
 Night modeS:
-now in the program, there are 2 night modes;
+in the program, there are two-night modes;
 one that is using mainly blue colors and one
 that uses mainly black colors (the original one)
 you can change what kind of night mode you want via
-the advanced settings and the program will save this setting.
-the default one is the black "Dracula" night mode
+the advanced settings, and the program will save this setting.
+The default one is the black "Dracula" night mode
+In addition, the windows that are affected by night mode are:
+main "EgonTE" window, advance option window, and help & patch
+notes "information" window
 
 Opening sentence:
-if the program doesn't automatically open your last saved file in
+If the program doesn't automatically open your last saved file in
 At the beginning, it will write a sentence for you when it first opens,
 there are two possible outcomes for this;
 sentences I wrote for you, or sentences from special individuals there
@@ -132,43 +134,71 @@ in addition, you can access the API and get a sentence directly in the
 main text box with the "inspirational quote" function in the tools menu
 
 Random name:
-if for some reason you need to generate a random name
+if, for some reason, you need to generate a random name
 the program got you,
 the program contains a random name function that works
 with a great library that was made for this specific reason as well.
-when first opening the tool you can generate names randomly
+when first opening the tool, you can generate names randomly
 as soon as you open it, but there is more;
-besides copying the name and re-rolling it there is
-an advanced re-rolling option:
+besides copying the name and re-rolling it, there is
+An advanced re-rolling option:
 you can choose the gender and the part of the name that you want
 to get
 
 Dictionary/Wikipedia:
-expanding your knowledge is always a great thing.
+Expanding your knowledge is always a great thing.
 That is why the program also contains the Dictionary/Wikipedia tools.
-access through the tools menu you can find this tools.
-you can search with a term and get the result into the
+You can find these tools in the tools menu.
+you can search with a term and get the result in the
 tools' text box, you have a button to directly paste it to
-the main (ETE) text box.
-if you using the Wikipedia tool only you have a filtering option with many
+the main (E.T.E.) text box.
+if you are using the Wikipedia tool only, you have a filtering option with many
 options based on what part of the Wiki page you want.
 
 Generate sequence:
-the generate sequence function can be accessed through the tool menu.
+The generate sequence function can be accessed through the tool menu.
 the usage of the function is controlled with a small window,
 in this window, you can determine the number of characters and the ability to include or exclude symbols,
 the final button is the one that is used to generate the characters
 
 Correct writing:
-the correct writing is a function that is accessed through the edit menu.
-the function takes the text that you wrote and replaces it with a correct
+The correct writing is a function that is accessed through the edit menu.
+the function takes the text that you wrote and replaces it with a correct 
 version made by a corrector from a library.
 important note: it isn't recommended to try this when you wrote everything
-just fine, because it can confuse and think that you meant to write
+just fine because it can confuse and think that you meant to write
 other word
 
+Calculator tool bonus U.I.:
+The calculator tool has a bonus U.I.:
+you can use numbers buttons and clear buttons that will open on the left of the window with the bottom button "Calculator U.I.",
+and now, when you are opening "show expression" frame - you can press them to add the expression to the entry
+
+Youtube transcript:
+The program has transcript functions;
+YouTube transcript, and W.A.V. file transcript.
+while the filed transcript is still W.I.P., the YouTube transcript
+is finished,
+The YouTube transcript function works by giving the program
+the video's I.D. (what comes at the end of the link) -
+and from then, the program will open a pretty fancy text box
+that will give you info about the things that are spoken, the start time, and the iteration
+of things
+
+Library installer:
+the library installer is a tool that will open up when not all of
+the required libraries are installed.
+from there, you can install them and additionally install the optional libraries
+and upgrade pip.
+When the process is done, it will tell you how many libraries have failed to installed, and the install button will be replaced with the restart button.
+
+Search tools:
+The search tools are the "find text" tool and the U.I. at the bottom of the "knowledge window",
+The tools have an "automatic" text box to search the term that will search to matching terms count and will let you use the following navigation tools: down, reset, tag/untag all occurrences
+In addition, the "find text" tool has a bonus feature in the interface of an interactive list that has all the most written terms in it.
+
 Shortcuts:
-main window:
+Main window:
 control + o = open file
 control + s = save file
 control + n = new file
@@ -195,11 +225,14 @@ control + minus= font size down
 F5 = output current datetime
 F11 = fullscreen mode
 
-tools:
+Tools:
 (drawing tool)
 arrow keys: move the drawing around the screen
 control + . = pen size up (alt via settings = mouse wheel up)
 control + , = pen size down (alt via settings = mouse wheel down)
+(Wikipedia tool - image mode)
+control + . = move image forwards
+control + , = move image backwards
 
 Default settings:
 cursor = xterm
@@ -217,7 +250,4 @@ open last file = false
 text twisters - remove newline and space (for some of the functions) = false
 
 Pydictionary import error:
-if the library installer fails to download Pydictionary,
-it is probably because it using Python 2 code in Python 3,
-to fix this write this in the terminal instead:
-pip install -e git+https://github.com/yeahwhat-mc/goslate#egg=goslate
+If the library installer fails to download Pydictionary, it is probably because it is using Python 2 code in Python 3. To fix this, write this in the terminal instead: pip install -e git+https://github.com/yeahwhat-mc/goslate#egg=goslate
