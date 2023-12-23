@@ -1,51 +1,98 @@
 Version - name - release date
 
-[ 1.12.3 - big patch of support - 27/11/23 ]
+[ 1.12.4 - improvements along the way - 23/12/23]
+Added:
+added a restart button to the library installer after you finish installing the libraries
+added bonus installations of upgrade pip and the optional libraries
+added an encryption/decryption tool with symmetric and asymmetric methods
+added night mode support to the "advance settings" window
+added night mode support to the handwriting tool
+added function that can change the text file's type, with the option to delete the version with the previous extension
+added an insert image function with a specific deletion option
+added to the find text tool, this navigation functions: tag/untag all matches
+added a setting to find text tool about giving the focus to the result every search
+added an interactive list that shows all the most popular words in the find text tool
+added an extra calculator U.I. to the calculator tool, number, expression, and clear buttons
+added another characters mode in the virtual keyboard that focuses on symbols
+made an external commands menu that contains the GitHub and Discord links, and soon, the M.S. stores one
+added support for Azure's OpenAI keys
+added a preview changes window (saved) option to the text corrector tool
 
+Improved:
+made Wikipedia tool -> images method to show images with image viewer instead of links' text (that supports links function when pressing an image)
+changed "open_status_name" to a class variable
+made the find text tool have an interactive text entry
+combined the find text tool search and result windows
+improved the text split for words search in the fFindtext tool
+made the occurrences count display a label that updates in real time instead of a message box
+made the A.I. tools support the new OpenAI library
+Improved the ChatGPT tool U.I. and made it function more like a chat
+Improved the writing of patch_notes.txt and help.txt a lot
+extended help.txt writing
+made the email and links shortener tools' libraries from a requirement to an optional installation
+added night mode support for the info root search functions and improved the existing night mode for the window
+improved delete file function and added support for functions' files' custom deletion
+changed the GitHub link function to the external links function
+improved the transcript function output / U.I. and chain of events
+improved many functions/variables names
+improved knowledge window - a searched term not found error handle by inserting the closest match to the text's entry
+
+Fixed:
+fixed the import of "youtube_transcript_api"
+fixed possible night mode activation / variable bugs by making the variable consistent with Tkinter's "BooleanVar"
+fixed "clac" misspelling (to "calc")
+made the code more consistent by replacing double-quotes with single-quotes
+fixed a variable bug in the "emoji detection" function
+fixed a variable bug in the file's name when you exit the program
+fixed that night mode wasn't initially activated if the user set in the options
+removed unexisting dallE output size
+fixed auto-save option wasn't saving in the options file
+
+[ 1.12.3 - the big patch of support - 27/11/23 ]
 Added/remade:
 Made the option to auto-save via writing, you can choose this method of auto-saving via advanced options.
 Added support for more languages in the speech-to-text function:
-English (US), English (UK), Spanish (Spain), French, Russian, Arabic (Egypt),
+English (U.S.), English (U.K.), Spanish (Spain), French, Russian, Arabic (Egypt),
 Japanese, Italian, Korean, Indonesian, and Hebrew.
-Added unique scroll bars to the text decorators depending on whether it is vertical or horizontal.
+Unique scroll bars were added to the text decorators depending on whether it was set to vertical or horizontal.
 Added that the advanced options are from now on divided into two tabs: styles, and functional.
 Added a decent find tool to the information window with many functions:
 scroll down by matching terms, resetting, highlighting/lowlighting all, number of occurrences, and reactive text box.
 Semi-remake the translate tool:
-have an output box (not automatically paste to ETE anymore),
-a new UI - 2 sides one input and one output - combobox and buttons organized for that purpose as well,
-and replaced the copy (to clipboard) tool with paste to ETE tool,
+have an output box (not automatically paste to E.T.E. anymore),
+a new U.I. - 2 sides, one input and one output - combobox and buttons organized for that purpose as well,
+and replaced the copy (to clipboard) tool with paste to E.T.E. tool,
 and also a random output language when you start the tool.
 
 Changed/improved:
 Improved the installation of "fast_autocomplete" via the library installer.
 Made that the transparency scale changes as you move it and without a specified "set" button.
-Improved exit app conditions about unsaved changes, and about quitting the program.
-Improved the copy function a little bit by updating the program values.
-Improved the find_text (main find tool) variable usage.
-Improved the placing of widgets on the information window.
-Improved the documentation of the advanced options a bit.
+Improved exit app conditions about unsaved changes and about quitting the program.
+The copy function was improved by updating the program values.
+Improved the find_text (primary find tool) variable usage.
+The placement of widgets on the information window was improved.
+Improved the documentation of the advanced options.
 Made some text decorators' symbols more unique.
 Added that if a required library isn't installed it will print which one.
-Added a little bit more messages to the record function.
-Improved by a little in the detection of the main text box's tags.
+Added more messages to the record function.
+Improved by detecting the main text box's tags.
 Improved advanced option by adding that if you try to open it while it is already open,
 it will show/place the window in front of you.
 Extended help.txt file.
 
 Fixed:
-Fixed that when the program was asking the user to try to install again, it called the import function instead.
+Fixed that when the program asked the user to try installing again, it called the import function instead.
 Fixed the global libraries issues by eliminating the import_req function.
 Fixed the misspelling "warp" to "wrap".
-Fixed the bug in the horizontal mode in the text decorator was getting mixed up after it filled the text box.
-Fixed the vertical text box input on the text decorators was accidentally case-sensitive.
+Fixed the bug in the horizontal mode in the text decorator, which was getting mixed up after it filled the text box.
+Fixed the vertical text box input on the text decorators, which was accidentally case-sensitive.
 Fixed the many input lags that the text decorator had, with threads.
 Fixed the asterisk (text decorator) space bugs.
 Fixed that the requests library got treated like a built-in Python library.
-Caught the error that can be made when you use the library installer without sys installed (will not work for everyone).
+Caught the error that can be made when you use the library installer without sys installed (it will not work for everyone).
 Fixed the type error with sys at the library installer.
-Fixed that if there was I failed installation of a library the program didn't skip to the next one.
-Removed ctypes from the libraries' installation list.
+Fixed that if there was a failed installation of a library, the program didn't skip to the next one.
+Removed Ctypes from the libraries' installation list.
 Fixed the command that is used to install the libraries.
 Fixed a bug that made the "save by time" function work while the auto-save option was disabled.
 
@@ -62,33 +109,33 @@ improved writing of some small things
 made that the handwriting function conversion function work and improved some variables and the output box
 changed handwriting size shortcut binding from the whole window to the canvas
 improved screenshot function to allow it to capture only the text box/canvas
-improved the management of UI events in the dictionary and Wikipedia tools
+improved the management of U.I. events in the dictionary and Wikipedia tools
 improved the organization of the output in Wikipedia's related articles option
 Improved Wikipedia and dictionary tools paste function by using the displayed content (instead of searching)
 added a print statement that writes all the libraries that the library installer has gone through
 
-fixed:
+Fixed:
 made git menu work with night mode
 fixed a bug in the status bars variable
 fixed the scope of some functions that were off (not many)
 fixed some saved settings variables bugs
-fixed some inaccuracies in the buttons' tool-tips
+fixed some inaccuracies in the buttons' tooltips
 fixed some handwriting's convert function type errors
 fixed the problem that the command to install libraries wasn't there
 
-removed:
+Removed:
 removed my old discords usernames
 removed unused loading screen function
 
 
 [ 1.12.1 - absolute 1.12 part 1 - 19/10/23 ]
 added:
-added many functions using git - need to activate dev mode and have the "gitpython" library
+added many functions using git - need to activate dev mode and have the "GitPython" library
 added the option to use text decorators to output the result vertically
 added text twisters new (saved) option - remove space & newline from some text twisters functions
-added that if the saved settings file isn't working, the program will ask you the permission to close and reset the file
+added that if the saved settings file isn't working, the program will ask you for permission to close and reset the file
 
-improved:
+Improved:
 windows placement:
 information window will always appear in the middle of the app
 the virtual keyboard will appear in the middle bottom of the app
@@ -96,18 +143,18 @@ the virtual keyboard will appear in the middle bottom of the app
 libraries installer & imports:
 improved library installer with messages and thread for the download
 improved the dispersion of the imports
-improved the condition of starting the program - if the required libraries aren't installed instead of error you can
+improved the condition of starting the program - if the required libraries aren't installed instead of error, you can
 decide if you want to open it again
 
-other functions:
+Other functions:
 optimized a little the close function
-improved go-to function by setting the focus on the text to the main text box, instead of what it will remain where
+improved go-to function by setting the focus on the text to the main text box instead of what it will remain where
 it was before - making the function useful
-improved the text decorators' tool UI - and made support for adjustable window size
-improved highly the sync of the (basic) options menu with the advanced settings, and a bit with the saved ones
-improve file compression a little bit - UI & error handling
+improved the text decorators' tool U.I. - and made support for adjustable window size
+improved the sync of the (primary) options menu with the advanced settings and a bit with the saved ones highly
+improve file compression a little bit - U.I. & error handling
 
-writing:
+Writing:
 expended the help file content and fixed some misspellings
 improved most of the comment writing
 
@@ -119,48 +166,48 @@ fixed that the shortcuts of the DTT tool about the size weren't synched
 fixed that some settings that were meant to save didn't save in many instances
 changed the default DTT size shortcuts from many keys to the mouse wheel
 changed the default folder that the file explorer will give you when selecting a file in the main folder instead of
-ETE's folder for this functions: open file(s), merge files
+E.T.E.'s folder for this functions: open file(s), merge files
 
 [ 1.12 - rebirth - 29/8/23]
 
-added:
+Added:
 added titles to all big versions
 added tooltips to the "virtual keyboard" and "draw to text" buttons
-made that if night mode is on and trying to use custom colors the program will ask you if you want to change the UI's colors anyway
+made that if night mode is on and you are trying to use custom colors, the program will ask you if you want to change the U.I.'s colors anyway
 added that you can apply custom colors on the information window and on the virtual keyboard's window
 added night mode support for the virtual keyboard window as well
-added IDE functionality when you are using a Python file - compile & view the console some settings and more...
-added a feature that if you haven't had all required libraries installed a window will pop up and give you the option
-to install automatically all the required libraries
+added IDE functionality when you are using a Python file - compile & view the console, some settings, and more...
+added a feature that if you haven't had all required libraries installed, a window will pop up and give you the option
+to install all the required libraries automatically
 added dates of versions in the patch notes
 added a second night mode that focuses on blue - you can choose the one you want with the advanced options window
 added to draw to text tool line & eraser thickness options
 made saved settings work
-added a new mode for the virtual keyboard: symbols & numbers, also made the keyboard more dynamic to switching the different modes
+added a new mode for the virtual keyboard: symbols & numbers; also made the keyboard more dynamic to switching the different modes
 added a new window function
 added open last file setting - the ability to instantly open the last file you used in your previous session when you open the program again
 Night mode on the supported pop-up windows can now work initially
 added a calc menu button drawn button (and removed the menu button)
-added also a caps mode for the virtual keyboard - change between capital and small letters
+also added a caps mode for the virtual keyboard - change between capital and small letters
 added the translator and list of Roman numbers to the symbols translator (emoticons hub)
 added some short examples and explanations for some subjects of web scrapping in the web scrapping tool
-added an option to make the program use your GPU for some tasks - for now is for the NLP function alone
+added an option to make the program use your GPU for some tasks - for now, it is for the N.L.P. function alone
 remade the entire weather pre-window and added a random (known) city option
 Web scrapping now supports using the content that is in the main window of the text editor itself and also updating it as you write more
-added insert & copy buttons for the calculator tool, instead of automatic insert and added a new result label instead
+added insert & copy buttons for the calculator tool instead of automatic insert and added a new result label instead
 of just equation entry
-added 2 new NLP features - phone numbers & names
+added 2 new N.L.P. features - phone numbers & names
 added restore default settings feature As part of the saved settings feature
 web scrapping tool now should support XML as well via the internet option
 In the handwriting tool, you can now change the size of the pencil/eraser
 added extras window for handwriting tool that has some additional information and settings about more cords mode and
 different shortcut
 
-changed / improved:
-improved the email tool by adding more default options, fixing bugs, etc...
+Changed/improved:
+improved the email tool by adding more default options, fixing bugs, etc.
 improved the record window by adding more messages
 made the upload of an image to the handwriting tool always be in the middle no matter how you changed the window cords -
-(Previously it was only the middle of the initial window size)
+(Previously, it was only the middle of the initial window size)
 Combined some custom color functions
 improved the condition of certain optional libraries
 changed the (black) night mode's button background color to one that suits the buttons better than the previous one
@@ -168,28 +215,28 @@ Change all the (tools) icons to original ones and added one for draw-to-text too
 optimized night mode function - made that only some variables are inside the conditions instead of everything
 The OpenAI image (from the link) now works and is functioning as the ChatGPT tool icon
 made the exit function a little bit more optimized
-improved the generate tool UI by setting Its title's font to the program standard
+improved the generate tool U.I. by setting Its title's font to the program standard
 changed the search tool's title - to make it more general and precise
-improved advanced options UI by making the distant radio & check buttons more centered
-remade the placements on the virtual keyboard - everything is in place and there are no random spaces
+improved advanced options U.I. by making the distant radio & check buttons more centered
+remade the placements on the virtual keyboard - everything is in place, and there are no random spaces
 emoticons hub has a new name - symbols translator
 improved design for symbols translator (emoticons hub)
 Symbols translator (emoticons hub) moved from the settings menu to the tools menu
 symbols translator (emoticons hub) list of ... improved by adding a mode for a second display of characters - used now
 only for popular combinations of Roman numbers
-made the web scrapping tool UI clearer by making the method that the user used to import the content noticeable in -
+made the web scrapping tool U.I. more straightforward by making the method that the user used to import the content noticeable in -
 the button
 improved web scrapping warning about using it on websites
 changed initial virtual keyboard mode to lowercase characters instead of uppercase
-optimized opening message - if the opening message is not from an API the program will open much faster, and a bit faster
+optimized opening message - if the opening message is not from an API, the program will open much faster and a bit faster
 If it is indeed from an API
-The uploads function within the web scrapping tool is now combined - making the tool more consistent and supports the
+The uploads function within the web scrapping tool is now combined - making the tool more consistent and supporting the
 features of both worlds in every situation
-The NLP results UI is better with a font, a text box/tree view, a scrollbar, a unique copy function, and more
-The NLP function instead of throwing an error at you when you don't have the package, will first try to install to package -
+The N.L.P. results U.I. is better with a font, a text box/tree view, a scrollbar, a unique copy function, and more
+The N.L.P. function, instead of throwing an error at you when you don't have the package, will first try to install the package -
 with a very effective way
 changed to some variables names to make them more clear
-calculator improved UI - better placing, better title, new label
+calculator improved U.I. - better placing, better title, new label
 improved the conditions that decide if you can use the Chatgpt tool
 Many tools now have a default message where no content is generated
 Web scrapping will write long website links in 2 lines in the "quick information" section
@@ -197,28 +244,28 @@ improved the screenshot function by making the desired window topmost when takin
 extended help's text file content
 
 
-fixed:
+Fixed:
 Fixed a bug that when you fail to pick a file to open, the content you had before was gone
 Fixed a bug that made the program produce an error because the night mode didn't know when the info pages were closed -
 after you opened them at least one time
-fixed a bug that the program didn't know then the record window was closed after being opened initially
-Fixed a bug that after displaying again the toolbar after hiding it, it will appear at the bottom of the text box
+fixed a bug that the program didn't know, then the record window was closed after being opened initially
+Fixed a bug that after displaying the toolbar again after hiding it, it will appear at the bottom of the text box
 Fixed a bug that made the Record menu duplicate when turning special tools on again after activating dev mode
 Fixed the content's stats connected words bug
-partly fixed the usage time bug when it updated the value before the widget created
+partly fixed the usage time bug when it updated the value before the widget was created
 Fixed calculator bug when items outside the frame continue to be generated every time you press the 'show operators' button
 Fixed the virtual keyboard button not changing colors when needed
 Fixed a bug that broke the web scrapping tool - you could open it without selecting anything in the pre\inital window
 fixed that in the weather tool, the city name was connected through + instead of whitespace
 Fixed a bug that was changing the index of the font size shortcuts beyond the maximum/minimum
-Fixed the web scrapping bug that didn't allow to actually switch the received content mode (all, text attributes)
+Fixed the web scrapping bug that didn't allow to actually switch the received content mode (all \ text \ attributes)
 Fixed content's stats error with a condition
 
 
 [ 1.11.2 - Emoji evolution and more - 29/4/23 ]
 
 Emojis & Emojis-like:
-automatic emoji detector - with the option to disable it
+automatic emoji detector - with the option to deactivate it
 changed the many options menu commands of emojis to one window interface
 added emoticons & Morse code detection - from/to
 new emoji detection languages support for Spanish, Portuguese, Italian, French, German, Farsi/Persian
@@ -239,31 +286,31 @@ special tools - controls the tools cascade and colors+ cascade
 
 Others:
 extended help content.
-made that the bold font on the tool menu will be instead of the AI tools on the most original & good ones! - also
-made the font size smaller, to match the other sizes of the menus.
+made that the bold font on the tool menu will be instead of the A.I. tools on the most original & good ones! - also
+made the font size smaller to match the other sizes of the menus.
 fixed some names
 fixed: colors+ -> app colors -> frame colors bug -  the right of the bottom of the program wasn't changing color
 fixed & improved: fixed content's stats bug that a newline word was connected to the last word before her,
-and with that knowledge I also make that word split is based on some symbols and not just whitespace
+and with that knowledge, I also made that word split is based on some symbols and not just whitespace
 fixed: "sort by characters" whitespaces and newline bug
 fixed: "reverse characters" newline being at the first index
-made some of the repetitive things consistent - tools' titles & fonts etc.
+made some of the repetitive things consistent - tools' titles & fonts, etc.
 
 [ 1.11.1 - Content & file stats - 8/4/23 ]
 
-new content statistics:
-Have a bar-chart show the count/frequency of the top 8 most used words & all the alphabet characters
-count of: words, characters, alphabetic characters, symbols, lines, and paragraphs
+New content statistics:
+Have a bar chart showing the count/frequency of the top 8 most used words & all the alphabet characters
+count of words, characters, alphabetic characters, symbols, lines, and paragraphs
 number of rations: words per line, characters per words, lines per paragraphs
 number of differences: different Words \ characters
 
-upgraded the file information function:
+Upgraded the file information function:
 added the accession time
 added the owner's name
-changed the font of the tool's UI
+changed the font of the tool's U.I.
 changed the error message to a file opening menu
 
-small changes:
+Small changes:
 made the opening file function smoother - the last content will be deleted (and eventually replaced) only after you're opening a file
 made the opening of new blank files a little smoother by doing the same thing
 
@@ -272,7 +319,7 @@ made the opening of new blank files a little smoother by doing the same thing
 Added:
 added reader mode
 added emoji list
-made that if you change the font the font size won't be affected
+made that if you change the font, the font size won't be affected
 added a file information function
 added autosave functionality every minute
 added compression function between two files
@@ -280,10 +327,10 @@ added a tool that can correct the misspelling
 added a message box for errors about unsupported characters
 added a way to import 'special' files by internet link
 added local file import supports now PDF as well
-added when opening HTML files they will be 'prettier' right away
+added when opening HTML files, they will be 'prettier' right away
 added web scrapping tool -  with class, tag & text options - Early Access
 added error handling for lost internet connection
-added natural language processor with many functions: Get nouns, Get verbs, Get adjectives, Get adverbs
+added natural language processor with many functions: Get nouns, Get verbs, Get adjectives, Get adverbs,
 Get pronouns, get stop words, Entity recognition, Dependency tree, Lemmatization, Most common words
 added the ability to turn handwriting to text - via canvas, uploaded image
 added text decorators to turn regular text into decorated (huge) text - 4 options
@@ -295,14 +342,14 @@ added night mode on help/patch notes
 added a connection to quotes API: quotes function  & chance for one when opening the program
 added file comparison function
 added an option to delete the file you are using
-added support for printing a file with OS that isn't Windows
+added support for printing a file with O.S. that isn't Windows
 added a weather tool
 added a fullscreen option by pressing F-11
 added a "topmost" option - makes the main window always on top
-added the new Wikipedia settings; now instead of just getting a summary you can choose from - content, images links, related articles names
+added the new Wikipedia settings; now, instead of just getting a summary, you can choose from - content, images links, related articles names
 added a function that can send emails (supports only Gmail, can't work with accounts that have 2fa)
 added a function that allows merging files in a more flexible way
-added youtube transcript API (W.I.P) and added also a local transcript function
+added YouTube transcript API (W.I.P.) and also added a local transcript function
 added a screenshot function - screenshot the app window directly
 a handwriting function: draw characters and let the program identify them! (convert to text mechanism is still experimental)
 
@@ -315,14 +362,14 @@ fixed some misspellings
 made the copy file path work only if you are using a file
 improved the advanced option exit function
 night mode fixes
-improved most of the tools' UI
-made many small changes to the UI to make it more consistent
+improved most of the tools' U.I.
+made many small changes to the U.I. to make it more consistent
 reformatted the code
 
 Not available yet - but in the code:
-* - have a high chance to make it to EgonTE
+* - have a high chance of making it to EgonTE
 ** - have a medium chance to make it to EgonTE
-*** - have a low chance to make it to EgonTE
+*** - have a low chance of making it to EgonTE
 
 *  loading screen
 *  settings files: your custom options will be automatically saved and used
@@ -338,10 +385,10 @@ Not available yet - but in the code:
 [ 1.10 - cutting corners - 1/1/23 ]
 added a quick submission of content from the dictionary
 added copy button to random name generator, translator tools
-united 'special' files import to one interface
+united 'special files import' to one interface
 added more file types for 'file import'
-added sort by characters & words functions (including reversed)
-made ETE finally resizable! (and more arranged)
+added sort by characters \ words functions (including reversed)
+made E.T.E. finally resizable! (and more arranged)
 added emoji detection
 added Wikipedia tool
 added & changed some help tool content
@@ -363,7 +410,7 @@ made the exit function more efficient
 added a dictionary tool
 
 [ 1.9.6 - oop revival - 1/11/22 ]
-bug fixes & usage of oop
+bug fixes & usage of O.O.P
 
 [ 1.9.4 - option2tools - 24/10/22 ]
 an option to sort (numbers) in a descending way
@@ -378,13 +425,14 @@ added:
 more emphasis on functions
 word warp modes options
 sort tool
-changed:
+Changed:
 made error message(s) Clear
 now you can make the y-axis of the window bigger by grabbing it (max 100 pixels more)
-fixed:
-a bug when chosen font size by UI is not linking to the chosen font size by keyboard shortcut
+
+Fixed:
+a bug when the chosen font size by U.I. is not linking to the chosen font size by keyboard shortcut
 fixed the help window by making it not affected by any data type
-a bug that when nothing is written the status bar won't show the line numbers
+a bug that when nothing is written, the status bar won't show the line numbers
 fixed a bug when some blank line was added out of nowhere
 fixed bugs when some content manipulation goes nuts
 removed:
@@ -402,36 +450,38 @@ more error handling
 time & date key bind a shortcut
 selected cursor options work on the translate window
 added version number at the program title
-changed:
+
+Changed:
 make messages clear
 changed default cursor
-window size by default and window size when the status bar or file bar active
+changed window size by default and window size when the status bar or file bar is active
 simplify find tool conditions
 'app colors' will not change also the text color of the text box
 bug fixes:
 fixed condition so right align "support" can work
 double paste bug
 clipboard bug
-deleted:
+
+Deleted:
 deleted irrelevant comments
-deleted that "change style" and also change the relief
+deleted that "change style" and also changed the relief
 
 [ 1.8 - all tk fonts & tools polish - 7/10/22 ]
 fixed - copy, paste & cut bugs
 made some messages clear
-made that if you want to generate 25000 characters a warning will pop up
-made that when you enter a calculation the tool will not close down
+made that if you want to generate 25000 characters, a warning will pop up
+made that when you enter a calculation, the tool will not close down
 made changes for 'special' files to make them less confusing
-remake font UI - as a result all Tkinter-supported fonts are now available
+remake font U.I. - as a result all Tkinter-supported fonts are now available
 added help for the confusing features - more explanations will be added in the future
 added a few more comments
 added better support for right-aligned languages
 added a tool to search quickly on the web
 
-[ 1.7 - special file support & text's align and color not requiring highlight - 3/10/22 ]
-special file support - insert excel, CVS, JSON, and XML files to your text file.
-improved align - if you don't mark something to align it will automatically choose the line you are at.
-improved color -if you don't mark something to change color it will automatically choose the entire file.
+[ 1.7 - special file support & text's alignment and color not requiring highlight - 3/10/22 ]
+special file support - insert Excel, CVS, JSON, and XML files into your text file.
+improved align - if you don't mark something to align, it will automatically choose the line you are at.
+improved color -if you don't mark something to change color, it will automatically choose the entire file.
 
 [ 1.6 - find tool remake - 30/9/22 ]
 find tool remake
@@ -440,23 +490,23 @@ find tool remake
 big improvements in the buttons' functionality
 fixed fonts and made them work
 error-handling bugs
-improved UI's color selection UI
+improved U.I.'s color selection U.I.
 
-[ 1.4 - colorful UI - 27/9/22 ]
+[ 1.4 - colorful U.I. - 27/9/22 ]
 improved night mode functionality
-added the option the choose the UI's colors
+added the option to choose the U.I.'s colors
 improved error-handling calc tool
-improved UI for the random names tool
+improved U.I. for the random names tool
 improved error handling for font size shortcuts
-improved UI's text
+improved U.I.'s text
 
 [ 1.3 - 26/9/22 ]
 added font size shortcuts
 
 [ 1.2 - 23/9/22 ]
-added 6 shortcuts
+added six shortcuts
 
-[ 1.1 - better tools UI - 17/9/22 ]
+[ 1.1 - better tools U.I. - 17/9/22 ]
 bug fixes
 UI/UX improvement for tools
 
@@ -496,7 +546,7 @@ added reference to modulus in calc explanation
 made random name root not resizable
 
 [ 0.9.1 - 9/9/22]
-UI for the random names tool
+U.I. for the random names tool
 
 [ 0.9 - 8/9/22 ]
 added translate tool
@@ -507,11 +557,11 @@ changed Insert menu name to tool menu
 added random name tool
 
 [ 0.8.7 - 6/9/22 ]
-added an option the change the cursor to the default one
+added an option to change the cursor to the default one
 
 [ 0.8.6 - 6/9/22]
 added 3 new tooltip(s)
-added 4 new shortcuts
+added four new shortcuts
 
 [ 0.8.4 - 4/9/22 ]
 bug fixes
@@ -526,7 +576,7 @@ experimented more with the fonts/size
 
 [ 0.8.1 - 2/9/22 ]
 added an option to insert a random number
-improved calc UI
+improved calc U.I.
 
 [ 0.8 - 1/9/22 ]
 added option to insert datetime
@@ -559,11 +609,11 @@ improved shortcuts
 added search function
 
 [ 0.6 - 7/8/22 ]
-added advanced speech to text
+added advanced speech-to-text
 added opening sentences
 better exit
 added option to hide the status bar & toolbar
-improved night mode UI & functionality
+improved night mode U.I. & Functionality
 changed the status bar position in the bottom middle
 !
 
@@ -579,7 +629,7 @@ fixed text-to-speech icon problems
 added tooltip(s)
 
 [ 0.5.5 - 30/7/22 ]
-added 6 new shortcuts
+added six new shortcuts
 bug fixes
 
 [ 0.5.3 - 30/7/22 ]
@@ -628,11 +678,11 @@ bug fixes
 added underline
 added text alignments
 improved night mode with button colors
-improved UI
+improved U.I.
 
 [ 0.2.5 (p0.7) - 18/7/22 ]
 added underline
-added font UI
+added font U.I.
 
 [ 0.2 (median) - text design & more functions - 17/7/22 ]
 added bold text
@@ -644,9 +694,9 @@ added the option to print a file
 added select all function
 added clear function
 added night mode
-added 3 new shortcuts
+added three new shortcuts
 
 [ 0.1 (basic/first version) 15-16/7/22]
 have the ability to open & save files
-have also 2 different save functions: save & save as
-have the 3 most basic edit tools: cut, copy & paste
+also have two different save functions: save & save as
+have the three most basic edit tools: cut, copy & paste
