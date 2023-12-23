@@ -1,6 +1,5 @@
 bs4
 ctypes
-email
 emoji
 keyboard
 matplotlib
@@ -14,7 +13,6 @@ nltk
 pathlib
 PyDictionary
 pyperclip
-pyshorteners
 pytesseract
 pyttsx3
 pywin32
