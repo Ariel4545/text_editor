@@ -4,7 +4,7 @@ from tkinter import *
 from tkinter.tix import *
 import subprocess
 from sys import exit as exit_
-from sys import executable
+from sys import executable, argv
 import ssl
 from socket import gethostname
 from collections import Counter
@@ -33,6 +33,12 @@ def library_installer():
     lib_index = 0
     dw_fails = 0
 
+    def restart_program():
+        try:
+            os.execv(argv[0], argv)
+        except:
+            os.execv(executable, [executable] + argv)
+
     def install_req():
         try:
             spec = importlib.util.find_spec('sys')
@@ -41,11 +47,16 @@ def library_installer():
         if spec is not None:
             global lib_index, dw_fails
             end_msg.configure(text=f'Download in progress', fg='orange')
-            library_list = ['bs4', 'email', 'emoji', 'keyboard', 'matplotlib', 'names', 'pandas', 'PIL',
+            library_list = ['bs4', 'emoji', 'keyboard', 'matplotlib', 'names', 'pandas', 'PIL',
                             'pyaudio', 'pydub', 'PyPDF2', 'nltk', 'pathlib', 'PyDictionary',
-                            'pyperclip', 'pyshorteners', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
+                            'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
                             'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
                             'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests']
+
+            if opt_var.get():
+                library_list = library_list.extend(['pytesseract', 'openai', 'polyglot', 'googletrans', 'cryptography', 'rsa'
+                                                    'GitPython', 'emoticon', 'pytesseract', 'youtube-transcript-api',
+                                                    'email', 'pyshorteners'])
 
             if pip_var.get():
                 try:
@@ -70,6 +81,8 @@ def library_installer():
                 install_req()
 
             end_msg.configure(text=f'Download complete with {dw_fails} fails', fg='green')
+            install_button.configure(text='Restart program', command=restart_program)
+
         else:
             print('sys library is not defiend')
 
@@ -77,13 +90,21 @@ def library_installer():
     install_root.title('ETE - install required')
     end_msg = Label(install_root, font='arial 8')
     pip_var = BooleanVar()
+    opt_var = BooleanVar()
     install_root.resizable(False, False)
-    title = Label(install_root, text='It\'s seems that some of the required libraries aren\'t installed')
+    title = Label(install_root, text='It\'s seems that some of the required libraries aren\'t installed', font='arial 10 underline')
+    install_options = Label(install_root, text='Additional Installations', font='arial 8 underline')
+    check_frame = Frame(install_options)
+    additional_libs = Checkbutton(check_frame, text='Optional libraries', variable=opt_var)
     up_pip = Checkbutton(install_root, text='Upgrade pip', variable=pip_var)
     install_button = Button(install_root, text='Install', command=lambda: Thread(target=install_req).start())
     quit_button = Button(install_root, text='Quit', command=lambda: install_root.quit())
     title.pack()
     end_msg.pack()
+    install_options.pack()
+    check_frame.pack()
+    up_pip.grid(row=0, column=0)
+    additional_libs.grid(row=0, column=2)
     install_button.pack()
     quit_button.pack()
     install_root.mainloop()
@@ -109,8 +130,6 @@ try:
     matplotlib.use('TkAgg')
     from matplotlib.figure import Figure
     from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-    from pyshorteners import Shortener
-    from email.message import EmailMessage
     import pandas
     from pyperclip import copy
     import emoji
@@ -148,13 +167,13 @@ try:
 except:
     tes = DISABLED
 try:
-    import YouTubeTranscriptApi
-
+    from youtube_transcript_api import YouTubeTranscriptApi
     yt_api = True
 except (ImportError, AttributeError, ModuleNotFoundError) as e:
     yt_api = False
 try:
     import openai
+    from openai import OpenAI, AzureOpenAI
 
     openai_library = True
     chatgpt_2library = False
@@ -195,6 +214,31 @@ try:
 except (ImportError, AttributeError, ModuleNotFoundError) as e:
     gstate = DISABLED
 
+symmetric_dec = True
+try:
+    from cryptography.fernet import Fernet
+except (ImportError, AttributeError, ModuleNotFoundError) as e:
+    symmetric_dec = False
+
+asymmetric_dec = True
+try:
+    import rsa
+except (ImportError, AttributeError, ModuleNotFoundError) as e:
+    asymmetric_dec = False
+
+enc_tool = symmetric_dec or asymmetric_dec
+
+try:
+    from email.message import EmailMessage
+    email_tool = True
+except (ImportError, AttributeError, ModuleNotFoundError) as e:
+    email_tool = False
+
+try:
+    from pyshorteners import Shortener
+    short_links = True
+except (ImportError, AttributeError, ModuleNotFoundError) as e:
+    short_links = False
 
 # window creation
 class Window(Tk):
@@ -216,6 +260,7 @@ class Window(Tk):
         self.ww = BooleanVar()
         self.rm = BooleanVar()
         self.aus = BooleanVar()
+        self.ccc = BooleanVar()
         # made also here (outside advance settings func) in order to make the usage of variables less wasteful
         self.status_ = True
         self.file_ = True
@@ -252,7 +297,7 @@ class Window(Tk):
         self.op_active = ''
         self.info_page_active = False
         self.vk_active = False
-        open_status_name = ''
+        self.open_status_name = ''
         self.key = ''
         self.fs_value = False
         self.tm_value = False
@@ -265,8 +310,16 @@ class Window(Tk):
         self.stt_chosen_lang = StringVar()
         self.stt_chosen_lang.set('English (US)')
         self.stt_lang_value = 'en-US'
+        self.openai_code = False
+        self.gpt_model = 'gpt-3.5-turbo'
+        self.save_bg = BooleanVar()
+        self.dfpe = BooleanVar()
+        self.bg_count = 1
+        self.hw_active = False
+        self.image_name = ''
+        self.aff = BooleanVar()
 
-        # opening the saved settings early can make us create some widgets with the settings initaly
+        # opening the saved settings early can make us create some widgets with the settings initialy
         try:
             default_needed = self.saved_settings()
             ss_work = True
@@ -293,6 +346,10 @@ class Window(Tk):
                 self.predefined_style = 'clam'
                 self.predefined_relief = 'ridge'
 
+        self.last_c = 'cursors', self.cc.get()
+        self.last_s = 'styles', self.cs.get()
+        self.last_r = 'relief', self.predefined_relief
+
         # default resolution & placenment of the window
         self.width = 1250
         self.height = 830
@@ -305,12 +362,12 @@ class Window(Tk):
         variables for the mains window UI 
         '''
         # window's title
-        ver = '1.12.2+'
+        ver = '1.12.4'
         self.title(f'Egon Text editor - {ver}')
         # function thats loads all the toolbar images
         self.load_images()
         # connecting the prees of the exit button the a custom exit function
-        self.protocol("WM_DELETE_WINDOW", self.exit_app)
+        self.protocol('WM_DELETE_WINDOW', self.exit_app)
         # threads for a stopwatch function that works on advance option window and a function that loads images from the web
         Thread(target=self.stopwatch, daemon=True).start()
         Thread(target=self.load_links, daemon=True).start()
@@ -351,7 +408,7 @@ class Window(Tk):
         # font UI (combo box) and it's values
         font_tuple = font.families()
         self.font_family = StringVar()
-        self.font_ui = ttk.Combobox(self.toolbar_frame, width=30, textvariable=self.font_family, state="readonly",
+        self.font_ui = ttk.Combobox(self.toolbar_frame, width=30, textvariable=self.font_family, state='readonly',
                                     style='TCombobox')
         self.font_ui['values'] = font_tuple
         self.font_ui.current(font_tuple.index('Arial'))
@@ -360,9 +417,9 @@ class Window(Tk):
         # font's size UI (combo box) and it's values
         self.size_var = IntVar()
         self.size_var.set(16)
-        self.font_size = ttk.Combobox(self.toolbar_frame, width=5, textvariable=self.size_var, state="readonly",
+        self.font_size = ttk.Combobox(self.toolbar_frame, width=5, textvariable=self.size_var, state='readonly',
                                       style='TCombobox')
-        self.font_size["values"] = tuple(range(8, 80, 2))
+        self.font_size['values'] = tuple(range(8, 80, 2))
         self.font_Size_c = 4
         self.font_size.current(self.font_Size_c)  # 16 is at index 4
         self.font_size.grid(row=0, column=5, padx=5)
@@ -549,8 +606,11 @@ class Window(Tk):
                                    align_center_button, align_right_button, tts_button, talk_button, self.font_size,
                                    v_keyboard_button, dtt_button, calc_button)
         self.menus_components = [self.file_menu, self.edit_menu, self.tool_menu, self.color_menu, self.options_menu, \
-                                 self.nlp_menu]
+                                 self.nlp_menu, self.links_menu]
         self.other_components = self, self.status_bar, self.file_bar, self.EgonTE, self.toolbar_frame
+        self.determine_highlight()
+        if self.night_mode.get():
+            self.night()
 
     def load_images(self):
         '''
@@ -618,6 +678,7 @@ class Window(Tk):
             self.file_menu.add_command(label='Save', command=self.save, accelerator='(ctrl+s)')
             self.file_menu.add_command(label='Save As', command=self.save_as)
             self.file_menu.add_command(label='Delete', command=self.delete_file)
+            self.file_menu.add_command(label='Change file type', command=self.change_file_ui)
             self.file_menu.add_command(label='New window', command=lambda: new_window(Window), state=ACTIVE)
             self.file_menu.add_command(label='Screenshot',
                                        command=lambda: self.save_images(self.EgonTE, self, self.toolbar_frame, 'main'))
@@ -664,6 +725,9 @@ class Window(Tk):
             self.edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=self.lower_upper)
             self.edit_menu.add_command(label='Sort by characters', command=self.sort_by_characters)
             self.edit_menu.add_command(label='Sort by words', command=self.sort_by_words)
+            self.edit_menu.add_separator()
+            self.edit_menu.add_command(label='Insert image', command=self.insert_image)
+
         # tools menu
         self.tool_menu = Menu(self.app_menu, tearoff=False)
         self.app_menu.add_cascade(label='Tools', menu=self.tool_menu)
@@ -672,7 +736,8 @@ class Window(Tk):
         self.tool_menu.add_command(label='Random name', command=self.ins_random_name)
         if google_trans:
             self.tool_menu.add_command(label='Translate', command=self.translate)
-        self.tool_menu.add_command(label='Url shorter', command=self.url)
+        if short_links:
+            self.tool_menu.add_command(label='Url shorter', command=self.url)
         self.tool_menu.add_command(label='Generate sequence', command=self.generate)
         self.tool_menu.add_command(label='Search online', command=self.search_www)
         self.tool_menu.add_command(label='Sort', command=self.sort)
@@ -685,12 +750,15 @@ class Window(Tk):
         self.tool_menu.add_command(label='Text decorators', command=lambda: Thread(target=(self.text_decorators)).start())
         self.tool_menu.add_command(label='Inspirational quote', command=self.insp_quote)
         self.tool_menu.add_command(label='Get weather', command=self.get_weather)
-        self.tool_menu.add_command(label='Send Email', command=self.send_email)
+        if email_tool:
+            self.tool_menu.add_command(label='Send Email', command=self.send_email)
         if chatgpt_2library or openai_library:
             self.tool_menu.add_command(label='Use ChatGPT', command=self.chatGPT)
         self.tool_menu.add_command(label='Use DallE', command=self.dallE)
         self.tool_menu.add_command(label='Transcript', command=self.transcript)
         self.tool_menu.add_command(label='Symbols translator', command=self.emojicons_hub)
+        if enc_tool:
+            self.tool_menu.add_command(label='Encryption / decryption', command=self.encryption)
         # nlp menu
         self.nlp_menu = Menu(self.app_menu, tearoff=False)
         self.app_menu.add_cascade(label='NLP', menu=self.nlp_menu)
@@ -739,7 +807,7 @@ class Window(Tk):
         self.app_menu.add_cascade(label='Options', menu=self.options_menu)
         # check marks
         self.options_menu.add_checkbutton(label='Night mode', onvalue=True, offvalue=False,
-                                          compound=LEFT, command=self.night)
+                                          compound=LEFT, command=self.night, variable=self.night_mode)
         self.options_menu.add_checkbutton(label='Status Bars', onvalue=True, offvalue=False,
                                           variable=self.show_statusbar, compound=LEFT, command=self.hide_statusbars)
         self.options_menu.add_checkbutton(label='Tool Bar', onvalue=True, offvalue=False,
@@ -753,7 +821,7 @@ class Window(Tk):
         self.options_menu.add_checkbutton(label='Reader mode', onvalue=True, offvalue=False,
                                           compound=LEFT, command=self.reader_mode)
         self.options_menu.add_checkbutton(label='Auto save', onvalue=True, offvalue=False,
-                                          compound=LEFT, variable=self.aus)
+                                          compound=LEFT, variable=self.aus, command=self.save_a_s)
         self.options_menu.add_checkbutton(label='Top most', onvalue=True, offvalue=False,
                                           compound=LEFT, command=self.topmost)
         self.options_menu.add_checkbutton(label='Automatic Emoji detection', compound=LEFT, variable=self.aed)
@@ -766,8 +834,12 @@ class Window(Tk):
         self.app_menu.add_cascade(label='Help', command=lambda: self.info_page('help.txt'))
         # patch notes page
         self.app_menu.add_cascade(label='Patch notes', command=lambda: self.info_page('patch_notes.txt'))
-        # github page
-        self.app_menu.add_cascade(label='GitHub', command=self.github)
+        # extenal links menu
+        self.links_menu = Menu(self.app_menu, tearoff=False)
+        self.app_menu.add_cascade(label='External links', menu=self.links_menu)
+        self.links_menu.add_command(label='GitHub', command=lambda: self.ex_links('g'))
+        self.links_menu.add_command(label='Discord', command=lambda: self.ex_links('d'))
+        self.links_menu.add_command(label='MS store', command=lambda: self.ex_links('m'), state=DISABLED)
 
     def get_time(self):
         '''
@@ -781,11 +853,16 @@ class Window(Tk):
         '''
         return self.EgonTE.index(INSERT)
 
-    def github(self):
+    def ex_links(self, mode):
         '''
-        opens the GitHub page on your browser
+        opens the GitHub \ discord \ miscrosoft store pages on your browser
         '''
-        webbrowser.open('https://github.com/Ariel4545/text_editor')
+        link = ''
+        if mode == 'g':
+            link = 'https://github.com/Ariel4545/text_editor'
+        elif mode == 'd':
+            link = 'https://discord.gg/nnF3GvF42G'
+        webbrowser.open(link)
 
     def undo(self):
         return self.EgonTE.edit_undo()
@@ -798,8 +875,7 @@ class Window(Tk):
         self.file_bar.config(text='New file')
         self.EgonTE.delete('1.0', END)
 
-        global open_status_name
-        open_status_name = False
+        self.open_status_name = ''
 
     def open_file(self, event=None):
         '''
@@ -816,8 +892,7 @@ class Window(Tk):
         self.EgonTE.delete('1.0', END)
         if self.text_name:
             try:
-                global open_status_name
-                open_status_name = self.text_name
+                self.open_status_name = self.text_name
                 self.file_name = self.text_name
                 self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
                 self.file_name.replace('C:/EgonTE/', '')
@@ -909,9 +984,8 @@ class Window(Tk):
         '''
         saves file in its existing location (if its have one)
         '''
-        global open_status_name
-        if open_status_name:
-            text_file = open(open_status_name, 'w')
+        if self.open_status_name:
+            text_file = open(self.open_status_name, 'w')
             text_file.write(self.EgonTE.get(1.0, END))
             text_file.close()
             self.file_bar.config(text=f'Saved: {self.file_name} - {self.get_time()}')
@@ -1037,7 +1111,7 @@ class Window(Tk):
         custom UI colors for all of the main windows components, and for the "knowledge" (wiki/dictionary) window,
         for the help / patch notes window, and for the virtual keyboard
         '''
-        if not (self.night_mode):
+        if not (self.night_mode.get()):
             if not (messagebox.askyesno('EgonTE', 'Night mode is on, still want to procced?')):
                 return
         if components == 'buttons':
@@ -1171,7 +1245,7 @@ class Window(Tk):
         night mode function - have 2 types of night mode, night mode works of all the things that the UI custom colors
         function works on
         '''
-        if self.night_mode:
+        if self.night_mode.get():
             if self.nm_palette.get() == 'black':
                 # black palette night mode
                 main_color = '#110022'
@@ -1184,15 +1258,18 @@ class Window(Tk):
                 second_color = '#04293A'
                 third_color = '#064663'
                 _text_color = '#ECB365'
-            self.record_list.append(f'> [{self.get_time()}] - Night mode activated')
-            self.night_mode = False
+            try:
+                self.record_list.append(f'> [{self.get_time()}] - Night mode activated')
+            except AttributeError:
+                pass
+            # self.night_mode.set(False)
             self.data['night_mode'] = True
         else:
             main_color = 'SystemButtonFace'
             second_color = 'SystemButtonFace'
             third_color = 'SystemButtonFace'
             _text_color = 'black'
-            self.night_mode = True
+            # self.night_mode.set(True)
             self.data['night_mode'] = False
             self.record_list.append(f'> [{self.get_time()}] - Night mode disabled')
 
@@ -1220,6 +1297,34 @@ class Window(Tk):
         if self.vk_active:
             for vk_btn in self.all_vk_buttons:
                 vk_btn.config(bg=second_color, fg=_text_color)
+
+        if self.op_active:
+            for tab in self.opt_frames:
+                tab.configure(bg=main_color)
+            for title in self.opt_labels:
+                title.configure(bg=main_color, fg=_text_color)
+            for cm in self.opt_commands:
+                cm.configure(bg=second_color, fg=_text_color)
+            for button in self.dynamic_buttons:
+                button.configure(bg=third_color, fg=_text_color)
+            self.night_frame.configure(bg=second_color)
+            self.change_button_color(self.last_c[0], self.last_c[1])
+            self.change_button_color(self.last_s[0], self.last_s[1])
+            self.change_button_color(self.last_r[0], self.last_r[1])
+
+        if self.hw_active:
+            for bg in self.hw_bg:
+                bg.configure(bg=main_color)
+            for button in self.hw_buttons:
+                button.configure(bg=third_color, fg=_text_color)
+            for label in self.hw_labels:
+                label.configure(bg=main_color, fg=_text_color)
+            for seperator in self.hw_seperator:
+                seperator.configure(bg=second_color, fg=_text_color)
+
+            if self.night_mode.get():
+                main_color = second_color
+            self.draw_canvas.configure(bg=main_color)
 
         self.style_combobox.configure('TCombobox', background=second_color, foreground=_text_color)
 
@@ -1411,7 +1516,7 @@ class Window(Tk):
         '''
         self.saved_settings(sm='save')
         if self.file_name:
-            text_file = open(self.text_name, 'r')
+            text_file = open(self.file_name, 'r')
             stuff = text_file.read()
             if self.text_changed and (self.EgonTE.get('1.0', 'end')) != stuff:
                 if messagebox.askyesno(self.title_struct + 'Quit',
@@ -1427,7 +1532,7 @@ class Window(Tk):
         '''
         find text in the main text box, with some options, and with navigation
         '''
-        global cpt_settings, by_characters
+        global cpt_settings, by_characters, occurs_label
 
         def match_by_capitalization():
             global cpt_settings
@@ -1452,76 +1557,129 @@ class Window(Tk):
             by_characters = False
 
         def enter():
-            global cpt_settings, by_characters, offset, starting_index, ending_index
+            global cpt_settings, by_characters, offset, starting_index, ending_index, occurs_label
             text_data = self.EgonTE.get('1.0', END + '-1c')
+
+
+            if not (self.nav_frame):
+                self.nav_frame = Frame(search_text_root)
+                self.nav_frame.grid(row=4, column=1)
+
+                # buttons ↑↓
+                self.button_up_find = Button(self.nav_frame, text='Reset', command=lambda: up(starting_index, ending_index),
+                                        width=4, state=DISABLED, relief=FLAT)
+                self.button_down_find = Button(self.nav_frame, text='↓', command=lambda: down(starting_index, ending_index),
+                                          width=4, relief=FLAT, state=DISABLED)
+                self.button_all_find = Button(self.nav_frame, text='All', command=lambda: tag_all(starting_index, ending_index),
+                                     width=4, relief=FLAT, state=DISABLED)
+                self.button_nothing_find = Button(self.nav_frame, text='Nothing', command=lambda: untag_all(starting_index, ending_index),
+                                     width=5, relief=FLAT, state=DISABLED)
+
+            if not(occurs_label):
+                occurs_label = Label(self.nav_frame)
+                self.button_up_find.grid(row=0, column=0)
+                self.button_down_find.grid(row=0, column=1)
+                occurs_label.grid(row=0, column=2)
+                self.button_all_find.grid(row=0, column=3)
+                self.button_nothing_find.grid(row=0, column=4)
+
             # by word/character settings
             if not by_characters:
-                text_data = text_data.split(' ')
+                # text_data = str(text_data.split(' '))
+                text_data = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
+                text_data = ''.join((''.join(words)).split(' '))
 
             # capitalize settings
             if cpt_settings == 'unc':
-                text_data = str(text_data).lower()
-                entry_data = (text_entry.get()).lower()
+                text_data = text_data.lower()
+                entry_data = (self.find_text_entry.get()).lower()
             elif cpt_settings == 'c':
-                text_data = str(text_data)
-                entry_data = text_entry.get()
-            occurs = text_data.count(entry_data)
+                entry_data = self.find_text_entry.get()
+            occurs = str(text_data.count(entry_data))
 
             # check if text occurs
             if occurs:
-                search_label = messagebox.showinfo('EgonTE:', f'{entry_data} has {str(occurs)} occurrences')
+                occurs_label.configure(text=f'{entry_data} has {occurs} occurrences')
+                self.button_up_find.configure(state=ACTIVE)
+                self.button_down_find.configure(state=ACTIVE)
+                self.button_all_find.configure(state=ACTIVE)
+                self.button_nothing_find.configure(state=ACTIVE)
+                if self.aff.get():
+                    self.EgonTE.focus_set()
+            else:
+                occurs_label.configure(text=f'Not found any macthes')
+                self.button_up_find.configure(state=DISABLED)
+                self.button_down_find.configure(state=DISABLED)
+                self.button_all_find.configure(state=ACTIVE)
+                self.button_nothing_find.configure(state=ACTIVE)
 
                 # select first match
-                starting_index = self.EgonTE.search(entry_data, '1.0', END)
-                if starting_index:
-                    offset = '+%dc' % len(entry_data)
-                    ending_index = starting_index + offset
-                    self.EgonTE.tag_add(SEL, starting_index, ending_index)
+            starting_index = self.EgonTE.search(entry_data, '1.0', END)
+            if starting_index:
+                offset = '+%dc' % len(entry_data)
+                ending_index = starting_index + offset
+                self.EgonTE.tag_add(SEL, starting_index, ending_index)
 
+
+            def down(si, ei):
+                global ending_index, starting_index
                 if int(occurs) > 1:
-                    # navigation window
+                    self.EgonTE.tag_remove(SEL, '1.0', END)
+                    starting_index = self.EgonTE.search(entry_data, ei, END)
+                    if si:
+                        offset = '+%dc' % len(entry_data)
+                        ending_index = starting_index + offset
+                        print(f'str:{starting_index} end:{ending_index}')
+                        self.EgonTE.tag_add(SEL, starting_index, ending_index)
+                        self.EgonTE.focus_set()
+                        starting_index = ending_index
+                    self.button_up_find.config(state=ACTIVE)
 
-                    def down(si, ei):
-                        global ending_index, starting_index
-                        self.EgonTE.tag_remove(SEL, '1.0', END)
-                        starting_index = self.EgonTE.search(entry_data, ei, END)
-                        if si:
-                            offset = '+%dc' % len(entry_data)
-                            ending_index = starting_index + offset
-                            print(f'str:{starting_index} end:{ending_index}')
-                            self.EgonTE.tag_add(SEL, starting_index, ending_index)
-                            starting_index = ending_index
-                        button_up.config(state=ACTIVE)
+            def up(si, ei):
+                global starting_index, ending_index
+                if int(occurs) > 1:
+                    self.EgonTE.tag_remove(SEL, '1.0', END)
+                    starting_index = self.EgonTE.search(entry_data, '1.0', si)
+                    if si:
+                        offset = '+%dc' % len(entry_data)
+                        ending_index = starting_index + offset
+                        print(f'str:{starting_index} end:{ending_index}')
+                        self.EgonTE.tag_add(SEL, starting_index, ending_index)
+                        ending_index = starting_index
+                        self.EgonTE.focus_set()
 
-                    def up(si, ei):
-                        global starting_index, ending_index
-                        self.EgonTE.tag_remove(SEL, '1.0', END)
-                        starting_index = self.EgonTE.search(entry_data, '1.0', si)
-                        if si:
-                            offset = '+%dc' % len(entry_data)
-                            ending_index = starting_index + offset
-                            print(f'str:{starting_index} end:{ending_index}')
-                            self.EgonTE.tag_add(SEL, starting_index, ending_index)
-                            ending_index = starting_index
+            def tag_all():
+                global occurs, starting_index, ending_index
+                up(starting_index, ending_index)
+                for i in range(occurs):
+                    starting_index = self.EgonTE.search(entry_content, ending_index, END)
+                    if starting_index:
+                        offset = '+%dc' % len(entry_content)
+                        ending_index = starting_index + offset
+                        print(f'str:{starting_index} end:{ending_index}')
+                        self.EgonTE.tag_add('highlight_all_result', starting_index, ending_index)
+                        starting_index = ending_index
 
-                    search_text_root.destroy()
-                    nav_root = Toplevel()
-                    nav_root.resizable(False, False)
-                    # title label
-                    title = Label(nav_root, text=f'navigate trough the {str(occurs)} occurrences of \'{entry_data}\'',
-                                  font='arial 12 underline')
-                    # buttons ↑↓
-                    button_up = Button(nav_root, text='Reset', command=lambda: up(starting_index, ending_index),
-                                       width=5, state=DISABLED)
-                    button_down = Button(nav_root, text='↓', command=lambda: down(starting_index, ending_index),
-                                         width=5)
-                    # placing widgets
-                    title.grid(row=0, padx=5)
-                    button_up.grid(row=1)
-                    button_down.grid(row=2)
+            def untag_all():
+                self.EgonTE.tag_remove(SEL, 1.0, END)
 
-            else:
-                search_label = messagebox.showinfo('EgonTE:', 'No match found')
+
+
+        def update_list():
+            entry_content = self.find_text_entry.get().lower()
+            if entry_content:
+                popular_terms.delete(0, END)
+                for term in self.ft_popular_content:
+                    if entry_content in term.lower():
+                        popular_terms.insert(END, term)
+
+        def insert_entry(term):
+            self.find_text_entry.delete(0, END)
+            self.find_text_entry.insert(END, popular_terms.get(ACTIVE))
+
+        def keyrelease_events(events=False):
+            update_list()
+            enter()
 
         # window creation
         search_text_root = Toplevel()
@@ -1530,27 +1688,75 @@ class Window(Tk):
         # variables
         cpt_settings = 'c'
         by_characters = True
+        self.nav_frame = ''
+        occurs_label = ''
         # buttons creation and placement
         text = Label(search_text_root, text='Search text', font='arial 14 underline')
-        text_entry = Entry(search_text_root)
-        enter_button = Button(search_text_root, command=enter, text='Enter')
+        self.find_text_entry = Entry(search_text_root)
+        # enter_button = Button(search_text_root, command=enter, text='Enter')
         capitalize_button = Button(search_text_root, command=match_by_capitalization, text='by capitalization ✓')
         by_word = Button(search_text_root, command=match_by_word, text='by characters ✓', state=ACTIVE)
+        auto_focus = Checkbutton(search_text_root, variable=self.aff, text='Auto focus - every search')
+
+        terms_frame = Frame(search_text_root)
+        popular_terms = Listbox(terms_frame, width=25, height=2)
+        pt_scroll = ttk.Scrollbar(terms_frame, command=popular_terms.yview)
+        popular_terms.configure(yscrollcommand=pt_scroll.set)
+
+        words = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
+        words = (''.join(words)).split(' ')
+
+        # words = .replace('\n', '').split(' ')
+        counter = Counter(words)
+        popular_tuple = (counter.most_common()[0:10])
+        self.ft_popular_content = []
+        for i in popular_tuple:
+            self.ft_popular_content.append(i[0])
+        for term in self.ft_popular_content:
+            popular_terms.insert(END, term)
+
         text.grid(row=0, column=1)
-        text_entry.grid(row=1, column=1)
-        enter_button.grid(row=2, column=1)
+        self.find_text_entry.grid(row=1, column=1)
         capitalize_button.grid(row=2, column=0, pady=6, padx=5)
-        by_word.grid(row=2, column=2, padx=10)
+        terms_frame.grid(row=2, column=1)
+        by_word.grid(row=2, column=2, padx=5)
+        auto_focus.grid(row=3, column=1)
+        # enter_button.grid(row=3, column=1)
+
+        pt_scroll.pack(side=RIGHT, fill=Y)
+        popular_terms.pack(fill=BOTH, expand=True)
+
+        popular_terms.bind('<<ListboxSelect>>', insert_entry)
+        self.find_text_entry.bind('<KeyRelease>', keyrelease_events)
+        # self.find_text_entry.bind('<KeyRelease>', enter)
+
 
         if self.is_marked():
-            text_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
+            self.find_text_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
 
     def ins_calc(self):
         '''
         a claculator using eval that gives the user option to see his equation, and an option to paste the result to
         the text editor
+        NEW : claculator buttons
         '''
+
         self.ins_equation = ''
+        self.extra_calc_ui = False
+        padx_b = 1
+        pady_b = 1
+        button_height = 3
+        button_width = 5
+        ex_color = '#B0A695'
+
+
+        def button_ui():
+            if not self.extra_calc_ui:
+                extra_frame.pack(side='right', fill=Y)
+            else:
+                extra_frame.pack_forget()
+            self.extra_calc_ui = not(self.extra_calc_ui)
+
 
         def calculate_button():
             self.ins_equation = calc_entry.get()
@@ -1578,7 +1784,6 @@ class Window(Tk):
                 self.EgonTE.insert(self.get_pos(), eq)
 
         def show_oper():
-
             show_op.config(text='hide operations', command=hide_oper)
             op_frame.pack()
 
@@ -1586,39 +1791,120 @@ class Window(Tk):
             op_frame.pack_forget()
             show_op.config(text='show operations', command=show_oper)
 
-        clac_root = Toplevel(relief=FLAT)
-        clac_root.resizable(False, False)
-        clac_root.attributes('-alpha', '0.95')
-        title = Label(clac_root, text='Calculator', font=self.titles_font, padx=2, pady=3)
-        introduction_text = Label(clac_root, text='Enter a equation below:', font='arial 10 underline', padx=2, pady=3)
-        enter = Button(clac_root, text='Calculate', command=calculate_button, borderwidth=1, font='arial 10 bold')
-        copy_button = Button(clac_root, text='Copy', command=lambda: copy(str(self.ins_equation)), borderwidth=1,
+        def insert_extra(exp):
+            calc_entry.insert(END, str(exp))
+
+        def clear_entry():
+            calc_entry.delete(0, END)
+
+        def clear_one():
+            calc_entry.delete(calc_entry.index(INSERT) - 1)
+
+        calc_root = Toplevel(relief=FLAT)
+        calc_root.resizable(False, False)
+        calc_root.attributes('-alpha', '0.95')
+        left_frame = Frame(calc_root)
+        title = Label(left_frame, text='Calculator', font=self.titles_font, padx=2, pady=3)
+        introduction_text = Label(left_frame, text='Enter a equation below:', font='arial 10 underline', padx=2, pady=3)
+        enter = Button(left_frame, text='Calculate', command=calculate_button, borderwidth=1, font='arial 10 bold')
+        b_frame = Frame(left_frame)
+        copy_button = Button(b_frame, text='Copy', command=lambda: copy(str(self.ins_equation)), borderwidth=1,
                              font='arial 10')
-        insert_button = Button(clac_root, text='Insert', command=insert_eq, borderwidth=1, font='arial 10')
-        last_calc = Entry(clac_root, relief=RIDGE, justify='center', width=25, state='readonly')
-        calc_entry = Entry(clac_root, relief=RIDGE, justify='center', width=25)
-        show_op = Button(clac_root, text='Show operators', relief=FLAT, command=show_oper)
+        insert_button = Button(b_frame, text='Insert', command=insert_eq, borderwidth=1, font='arial 10')
+        last_calc = Entry(left_frame, relief=RIDGE, justify='center', width=25, state='readonly')
+        calc_entry = Entry(left_frame, relief=RIDGE, justify='center', width=25)
+        show_op = Button(left_frame, text='Show operators', bd=1, command=show_oper)
+        calc_ui = Button(left_frame, text='Calculator UI', command=button_ui, bd=1)
+        left_frame.pack(side='left')
         title.pack(padx=10)
         introduction_text.pack(padx=10)
         last_calc.pack()
         calc_entry.pack()
         enter.pack(pady=3)
-        copy_button.pack(pady=1)
-        insert_button.pack(pady=1)
+        b_frame.pack(pady=3)
+        copy_button.grid(row=0, column=0, padx=2)
+        insert_button.grid(row=0, column=2, padx=2)
         show_op.pack()
+        calc_ui.pack()
 
-        op_frame = Frame(clac_root)
-        add_sub = Label(op_frame, text='+ addition, - subtraction')
-        mul_div = Label(op_frame, text='* multiply, / deviation')
-        pow_ = Label(op_frame, text='** power, % modulus')
+        op_frame = Frame(left_frame)
+        add = Button(op_frame, text='+ addition', command=lambda: insert_extra(' + '), relief=FLAT)
+        sub = Button(op_frame, text='- subtraction', command=lambda: insert_extra(' - '), relief=FLAT)
+        mul = Button(op_frame, text='* multiply', command=lambda: insert_extra(' * '), relief=FLAT)
+        div = Button(op_frame, text='/ deviation', command=lambda: insert_extra(' / '), relief=FLAT)
+        pow = Button(op_frame, text='** power', command=lambda: insert_extra(' ** '), relief=FLAT)
+        modu = Button(op_frame, text='% modulus', command=lambda: insert_extra(' % '), relief=FLAT)
 
-        add_sub.pack()
-        mul_div.pack()
-        pow_.pack()
+        add.grid(row=0, column=0)
+        sub.grid(row=0, column=2)
+        mul.grid(row=1, column=0)
+        div.grid(row=1, column=2)
+        pow.grid(row=2, column=0)
+        modu.grid(row=2, column=2)
 
         if self.is_marked():
             if str(self.EgonTE.get('sel.first', 'sel.last')).isnumeric():
                 calc_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
+
+        extra_frame = Frame(calc_root, bg=ex_color)
+        b1 = Button(extra_frame, text='1', command=lambda: insert_extra(1), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b2 = Button(extra_frame, text='2', command=lambda: insert_extra(2), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b3 = Button(extra_frame, text='3', command=lambda: insert_extra(3), pady=pady_b, relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b4 = Button(extra_frame, text='4', command=lambda: insert_extra(4), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b5 = Button(extra_frame, text='5', command=lambda: insert_extra(5), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b6 = Button(extra_frame, text='6', command=lambda: insert_extra(6), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b7 = Button(extra_frame, text='7', command=lambda: insert_extra(7), pady=pady_b, relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b8 = Button(extra_frame, text='8', command=lambda: insert_extra(8), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b9 = Button(extra_frame, text='9', command=lambda: insert_extra(9), padx=padx_b, pady=pady_b,
+                    relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        b0 = Button(extra_frame, text='0', command=lambda: insert_extra(0), pady=pady_b, relief=FLAT, bg=ex_color,
+                    height=button_height
+                    , width=button_width)
+        clear_b = Button(extra_frame, text='C', command=clear_entry, pady=pady_b, relief=FLAT, bg='#F3B664',
+                    height=button_height
+                    , width=button_width)
+        del_b = Button(extra_frame, text='DEL', command=clear_one, pady=pady_b, relief=FLAT, bg='#F3B664',
+                    height=button_height
+                    , width=button_width)
+
+        b1.grid(row=0, column=0)
+        b2.grid(row=0, column=1)
+        b3.grid(row=0, column=2)
+        b4.grid(row=1, column=0)
+        b5.grid(row=1, column=1)
+        b6.grid(row=1, column=2)
+        b7.grid(row=2, column=0)
+        b8.grid(row=2, column=1)
+        b9.grid(row=2, column=2)
+        clear_b.grid(row=3, column=0)
+        b0.grid(row=3, column=1)
+        del_b.grid(row=3, column=2)
+
+        n_list = [b0, b1, b2, b3, b4, b5, b6, b7, b8, b9]
 
         self.record_list.append(f'> [{self.get_time()}] - calculation tool window opened')
 
@@ -2162,7 +2448,7 @@ class Window(Tk):
                 sequence = []
                 for i in range(length):
                     sequence.append(choice(characters))
-                self.EgonTE.insert(self.get_pos(), "".join(sequence))
+                self.EgonTE.insert(self.get_pos(), ''.join(sequence))
 
         enter_button.config(command=generate_sequence)
 
@@ -2267,7 +2553,7 @@ class Window(Tk):
         self.info_page_active = True
         info_root = Toplevel()
         info_root.config(bg='white')
-        info_root.protocol("WM_DELETE_WINDOW", quit_page)
+        info_root.protocol('WM_DELETE_WINDOW', quit_page)
 
         # putting the lines in order
         def place_lines():
@@ -2278,12 +2564,6 @@ class Window(Tk):
 
         def find_content(event=False):
             global occurs, entry_content, starting_index, ending_index, offset
-            '''+
-            some problems that was fixed
-            shows only one of its matches
-            does
-            '''
-            print(entry.get())
             occurs = False
             entry_content = entry.get().lower()
             data = self.info_page_text.get('1.0', END).lower()
@@ -2354,7 +2634,7 @@ class Window(Tk):
                         starting_index = self.info_page_text.search(entry_content, ending_index, END)
                     except Exception:
                         pass
-                    if starting_index and starting_index != "":
+                    if starting_index and starting_index != '':
                         self.info_page_text.tag_remove('highlight_all_result', '1.0', starting_index)
                         offset = '+%dc' % len(entry_content)
                         ending_index = starting_index + offset
@@ -2370,7 +2650,7 @@ class Window(Tk):
                     starting_index = self.info_page_text.search(entry_content, '1.0', starting_index)
                 except Exception:
                     pass
-                if starting_index and starting_index != "":
+                if starting_index and starting_index != '':
                     offset = '+%dc' % len(entry_content)
                     ending_index = starting_index + offset
                     self.info_page_text.tag_remove('highlight_all_result', ending_index, END)
@@ -2382,7 +2662,7 @@ class Window(Tk):
         info_root_frame = Frame(info_root)
         info_root_frame.pack()
         title_frame = Frame(info_root_frame)
-        title_frame.pack()
+        title_frame.pack(fill=X, expand=True)
         help_text_scroll = ttk.Scrollbar(info_root_frame)
         # labels
         self.info_page_title = Label(title_frame, text='Help', font='arial 16 bold underline', justify='left',
@@ -2399,19 +2679,19 @@ class Window(Tk):
         self.info_page_text.config(state='disabled')
         # placing
         info_root_frame.pack()
-        self.info_page_title.pack(fill=X, anchor=W)
+        self.info_page_title.pack(fill=X, anchor=W, expand=True)
         help_text_scroll.pack(side=RIGHT, fill=Y)
         self.info_page_text.pack(fill=BOTH, expand=True)
         help_text_scroll.config(command=self.info_page_text.yview)
 
-        find_frame = Frame(info_root, relief=FLAT, background='white')
-        entry = Entry(find_frame, relief=FLAT, background='SystemButtonFace')
-        button_up = Button(find_frame, text='Reset', relief=FLAT, command=find_upper, background='white', bd=1)
-        button_down = Button(find_frame, text='↓', relief=FLAT, command=find_lower, background='white', bd=1)
-        tag_all_button = Button(find_frame, text='Highlight all', relief=FLAT, command=tag_all_matches, background='white')
-        untag_all_button = Button(find_frame, text='Lowlight all', relief=FLAT, command=untag_all_matches, background='white')
-        found_label = Label(find_frame, text='', background='white')
-        find_frame.pack(side='left')
+        find_frame = Frame(info_root, relief=FLAT, background=self.dynamic_overall)
+        entry = Entry(find_frame, relief=FLAT, background=self.dynamic_bg, fg=self.dynamic_text)
+        button_up = Button(find_frame, text='Reset', relief=FLAT, command=find_upper, background=self.dynamic_button, bd=1, fg=self.dynamic_text)
+        button_down = Button(find_frame, text='↓', relief=FLAT, command=find_lower, background=self.dynamic_button, bd=1, fg=self.dynamic_text)
+        tag_all_button = Button(find_frame, text='Highlight all', relief=FLAT, command=tag_all_matches, background=self.dynamic_button, fg=self.dynamic_text)
+        untag_all_button = Button(find_frame, text='Lowlight all', relief=FLAT, command=untag_all_matches, background=self.dynamic_button, fg=self.dynamic_text)
+        found_label = Label(find_frame, text='', background=self.dynamic_bg, fg=self.dynamic_text)
+        find_frame.pack(side='left', fill=X, expand=True)
         entry.grid(row=0, column=0, padx=3, ipady=button_up.winfo_height())
         button_down.grid(row=0, column=1, padx=3)
         button_up.grid(row=0, column=2)
@@ -2531,6 +2811,9 @@ class Window(Tk):
         if self.is_marked():
             entry_box.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
 
+    def save_a_s():
+        self.data['auto_save'] = self.aus.get()
+
     def advance_options(self):
         '''
         this tool allow you to customize the UI with more option and have also a ton of option regarding many fields
@@ -2552,6 +2835,7 @@ class Window(Tk):
         3. restore saved settings to default
         4. remove newlines and spaces in some text twisters functions
         5. auto save method
+        6. view text corrector changes before applying them
 
         '''
         global tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button
@@ -2655,10 +2939,11 @@ class Window(Tk):
         # window creation and some settings
         global opt_root
         opt_root = Toplevel()
+        opt_root.configure(bg=self.dynamic_overall)
         opt_root.resizable(False, False)
         self.op_active = True
         opt_root.protocol('WM_DELETE_WINDOW', exit_op)
-        self.usage_time = Label(opt_root)
+        self.usage_time = Label(opt_root, fg=self.dynamic_text, bg=self.dynamic_overall)
 
         def predefined_checkbuttons():
             if self.bars_active:
@@ -2684,6 +2969,9 @@ class Window(Tk):
         def nt_save():
             self.data['night_type'] = self.nm_palette.get()
 
+        def ccc_save():
+            self.data['preview_cc'] = self.ccc.get()
+
         def restore_defaults():
 
             if messagebox.askyesno(self.title_struct + 'reset settings',
@@ -2692,7 +2980,7 @@ class Window(Tk):
                              'style': 'clam',
                              'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
                              'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
-                             'night_type': 'black'}
+                             'night_type': 'black', 'preview_cc' : False}
 
                 self.rm.set(self.data['reader_mode'])
                 self.bars_active.set(self.data['status_bar'] and self.data['file_bar'])
@@ -2707,6 +2995,7 @@ class Window(Tk):
                 self.cc.set(self.data['cursor'])
                 self.ww.set(self.data['word_wrap'])
                 self.aus.set(self.data['auto_save'])
+                self.ccc.set(self.data['preview_cc'])
 
                 self.bars_active.set(True)
                 self.show_statusbar.set(True)
@@ -2719,6 +3008,7 @@ class Window(Tk):
                 self.predefined_cursor = 'xterm'
                 self.predefined_style = 'clam'
                 self.predefined_relief = 'ridge'
+                self.save_bg.set(False)
 
         def stt_key(event=False):
             self.stt_lang_value = self.sr_supported_langs[self.stt_chosen_lang.get()]
@@ -2743,65 +3033,70 @@ class Window(Tk):
 
         # expreninting with tabs
         settings_tabs = ttk.Notebook(opt_root)
-        styles_frame = Frame(settings_tabs)
-        functional_frame = Frame(settings_tabs)
+        styles_frame = Frame(settings_tabs, bg=self.dynamic_overall)
+        functional_frame = Frame(settings_tabs, bg=self.dynamic_overall)
 
         button_width = 8
         font_ = 'arial 10 underline'
-        night_frame = Frame(styles_frame)
+        self.night_frame = Frame(styles_frame, bg=self.dynamic_bg)
         bar_frame = Frame(functional_frame)
         predefined_checkbuttons()
         # creating adv-options window UI
-        opt_title = Label(opt_root, text='Advance Options', font='calibri 16 bold')
-        cursor_title = Label(styles_frame, text='Advance Cursor configuration', font=font_)
-        tcross_button = Button(styles_frame, text='tcross', command=lambda: adv_custom_cursor('tcross'), width=button_width)
-        arrow_button = Button(styles_frame, text='arrow', command=lambda: adv_custom_cursor('arrow'), width=button_width)
-        crosshair_button = Button(styles_frame, text='crosshair',
+        opt_title = Label(opt_root, text='Advance Options', font='calibri 16 bold', bg=self.dynamic_overall, fg=self.dynamic_text)
+        cursor_title = Label(styles_frame, text='Advance Cursor configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        tcross_button = Button(styles_frame, text='tcross', command=lambda: adv_custom_cursor('tcross'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        arrow_button = Button(styles_frame, text='arrow', command=lambda: adv_custom_cursor('arrow'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        crosshair_button = Button(styles_frame, text='crosshair', bg=self.dynamic_button, fg=self.dynamic_text,
                                   command=lambda: adv_custom_cursor('crosshair'), width=button_width)
-        pencil_button = Button(styles_frame, text='pencil', command=lambda: adv_custom_cursor('pencil'), width=button_width)
-        fleur_button = Button(styles_frame, text='fleur', command=lambda: adv_custom_cursor('fleur'), width=button_width)
-        xterm_button = Button(styles_frame, text='xterm', command=lambda: adv_custom_cursor('xterm'), width=button_width)
-        hide_title = Label(functional_frame, text='Advance hide status & file bar', font=font_)
-        filebar_check = Checkbutton(bar_frame, text='filebar', command=lambda: hide_('filebar'), variable=self.def_val1)
+        pencil_button = Button(styles_frame, text='pencil', command=lambda: adv_custom_cursor('pencil'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        fleur_button = Button(styles_frame, text='fleur', command=lambda: adv_custom_cursor('fleur'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        xterm_button = Button(styles_frame, text='xterm', command=lambda: adv_custom_cursor('xterm'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        hide_title = Label(functional_frame, text='Advance hide status & file bar', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        filebar_check = Checkbutton(bar_frame, text='filebar', command=lambda: hide_('filebar'), variable=self.def_val1, bg=self.dynamic_bg, fg=self.dynamic_text)
         statusbar_check = Checkbutton(bar_frame, text='statusbar', command=lambda: hide_('statusbar'),
-                                      variable=self.def_val2)
-        style_title = Label(styles_frame, text='Advance style configuration', font=font_)
-        style_clam = Button(styles_frame, text='clam', command=lambda: change_style('clam'), width=button_width)
-        style_classic = Button(styles_frame, text='classic', command=lambda: change_style('classic'), width=button_width)
-        style_vista = Button(styles_frame, text='vista', command=lambda: change_style('vista'), width=button_width)
-        relief_title = Label(styles_frame, text='Advance relief configuration', font=font_)
-        relief_flat = Button(styles_frame, text='flat', command=lambda: change_relief('flat'), width=button_width)
-        relief_ridge = Button(styles_frame, text='ridge', command=lambda: change_relief('ridge'), width=button_width)
-        relief_groove = Button(styles_frame, text='groove', command=lambda: change_relief('groove'), width=button_width)
+                                      variable=self.def_val2, bg=self.dynamic_bg, fg=self.dynamic_text)
+        style_title = Label(styles_frame, text='Advance style configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        style_clam = Button(styles_frame, text='clam', command=lambda: change_style('clam'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        style_classic = Button(styles_frame, text='classic', command=lambda: change_style('classic'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        style_vista = Button(styles_frame, text='vista', command=lambda: change_style('vista'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        relief_title = Label(styles_frame, text='Advance relief configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        relief_flat = Button(styles_frame, text='flat', command=lambda: change_relief('flat'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        relief_ridge = Button(styles_frame, text='ridge', command=lambda: change_relief('ridge'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
+        relief_groove = Button(styles_frame, text='groove', command=lambda: change_relief('groove'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
 
         # the new night mode palettes settings!
-        nm_title = Label(styles_frame, text='Choose night mode type', font=font_)
-        nm_black_checkbox = Radiobutton(night_frame, text='Dracula', variable=self.nm_palette, value='black',
-                                        command=nt_save)
-        nm_blue_checkbox = Radiobutton(night_frame, text='MidNight\nBlue', variable=self.nm_palette, value='blue',
-                                       command=nt_save)
+        nm_title = Label(styles_frame, text='Choose night mode type', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        nm_black_checkbox = Radiobutton(self.night_frame, text='Dracula', variable=self.nm_palette, value='black',
+                                        command=nt_save, bg=self.dynamic_bg, fg=self.dynamic_text)
+        nm_blue_checkbox = Radiobutton(self.night_frame, text='MidNight\nBlue', variable=self.nm_palette, value='blue',
+                                       command=nt_save, bg=self.dynamic_bg, fg=self.dynamic_text)
 
-        stt_title = Label(functional_frame, text='Speech to text language', font=font_)
+        stt_title = Label(functional_frame, text='Speech to text language', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         stt_lang = ttk.Combobox(functional_frame, width=15, textvariable=self.stt_chosen_lang, state='readonly', style='TCombobox')
         stt_lang['values'] = list(self.sr_supported_langs.keys())
 
-        last_file_title = Label(functional_frame, text='Open the last file you used when starting', font=font_)
-        last_file_checkbox = Checkbutton(functional_frame, text='last file setting', variable=self.lf, command=change_lof)
+        lf_frame = Frame(functional_frame)
+        last_file_title = Label(functional_frame, text='Last used files', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        last_file_checkbox = Checkbutton(lf_frame, text='last text file', variable=self.lf, command=change_lof, bg=self.dynamic_bg, fg=self.dynamic_text)
+        last_bg_checkbox = Checkbutton(lf_frame, text='last background file', variable=self.save_bg,
+                                         bg=self.dynamic_bg, fg=self.dynamic_text, state=DISABLED)
 
-        transparency_title = Label(styles_frame, text='Transparency configuration', font=font_)
-        transparency_config = Scale(styles_frame, from_=10, to=100, orient='horizontal', command=change_transparency)
+        transparency_title = Label(styles_frame, text='Transparency configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        transparency_config = Scale(styles_frame, from_=10, to=100, orient='horizontal', command=change_transparency, bg=self.dynamic_bg, fg=self.dynamic_text)
         transparency_config.set(100)
         # transparency_set = Button(styles_frame, text='Change transparency', command=change_transparency)
 
-        title_other = Label(functional_frame, text='Others', font=font_)
-        reset_button = Button(functional_frame, text='Restore default', command=restore_defaults)
+        title_other = Label(functional_frame, text='Others', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        reset_button = Button(functional_frame, text='Restore default', command=restore_defaults, bg=self.dynamic_bg, fg=self.dynamic_text)
         tt_checkbox = Checkbutton(functional_frame, text='Text twisters\nremove special characters', variable=self.tt_sc,
-                                  command=tt_save)
+                                  command=tt_save, bg=self.dynamic_bg, fg=self.dynamic_text)
+        corrector_preview = Checkbutton(functional_frame, text='Text corrector preview changes', variable=self.ccc,
+                                        bg=self.dynamic_bg, fg=self.dynamic_text, command=ccc_save)
 
         auto_save_frame = Frame(functional_frame)
-        auto_save_title = Label(functional_frame, text='Auto save method', font=font_)
-        by_time_rb = Radiobutton(auto_save_frame, text='By time', variable=self.autosave_by, value=1, command=autosave_changes)
-        by_press_rb = Radiobutton(auto_save_frame, text='By pressing', variable=self.autosave_by, value=0, command=autosave_changes)
+        auto_save_title = Label(functional_frame, text='Auto save method', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        by_time_rb = Radiobutton(auto_save_frame, text='By time', variable=self.autosave_by, value=1, command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
+        by_press_rb = Radiobutton(auto_save_frame, text='By pressing', variable=self.autosave_by, value=0, command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
 
         # placing all the widgets
         opt_title.pack(pady=5)
@@ -2829,7 +3124,7 @@ class Window(Tk):
         relief_ridge.grid(row=7, column=1)
         relief_groove.grid(row=7, column=2, pady=3)
         nm_title.grid(row=8, column=1)
-        night_frame.grid(row=9, column=1)
+        self.night_frame.grid(row=9, column=1)
         nm_black_checkbox.grid(row=1, column=0)
         nm_blue_checkbox.grid(row=1, column=2)
         transparency_title.grid(row=10, column=1)
@@ -2844,10 +3139,13 @@ class Window(Tk):
         stt_title.pack()
         stt_lang.pack()
         last_file_title.pack()
-        last_file_checkbox.pack()
+        lf_frame.pack()
+        last_file_checkbox.grid(row=0, column=0)
+        last_bg_checkbox.grid(row=0, column=2)
         title_other.pack()
         reset_button.pack()
         tt_checkbox.pack()
+        corrector_preview.pack(pady=2)
         auto_save_title.pack()
         auto_save_frame.pack()
         by_time_rb.grid(row=0, column=0)
@@ -2856,6 +3154,15 @@ class Window(Tk):
 
         self.usage_time.pack()
         # creating buttons list
+        self.opt_frames = styles_frame, functional_frame, opt_root
+        self.opt_commands = (nm_black_checkbox, nm_blue_checkbox, transparency_config, filebar_check, statusbar_check,
+                             last_file_checkbox, reset_button, tt_checkbox, by_time_rb, by_press_rb, corrector_preview,
+                             last_bg_checkbox)
+        self.opt_labels = (opt_title, cursor_title, style_title, relief_title, nm_title, transparency_title, hide_title,
+                           stt_title, last_file_title, title_other, auto_save_title, self.usage_time)
+        self.dynamic_buttons = (tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button,
+                               style_clam, style_vista, style_classic, relief_groove, relief_flat, relief_ridge)
+
         self.adv_cursor_bs = tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button
         self.adv_style_bs = style_clam, style_vista, style_classic
         self.adv_reliefs_bs = relief_groove, relief_flat, relief_ridge
@@ -2880,9 +3187,11 @@ class Window(Tk):
         :param button:
         '''
         if self.op_active:
+            self.determine_highlight()
             if button_family == 'cursors':
+                self.last_c = [button_family, button]
                 for adv_cursor_b in self.adv_cursor_bs:
-                    adv_cursor_b.config(bg='SystemButtonFace')
+                    adv_cursor_b.config(bg=self._background, fg=self.tc)
                 if button == 'arrow':
                     arrow_button.config(bg='grey')
                 elif button == 'tcross':
@@ -2896,8 +3205,9 @@ class Window(Tk):
                 elif button == 'xterm':
                     xterm_button.config(bg='grey')
             elif button_family == 'styles':
+                self.last_s = [button_family, button]
                 for adv_style_b in self.adv_style_bs:
-                    adv_style_b.config(bg='SystemButtonFace')
+                    adv_style_b.config(bg=self._background, fg=self.tc)
                 if button == 'clam':
                     style_clam.config(bg='grey')
                 elif button == 'vista':
@@ -2905,8 +3215,9 @@ class Window(Tk):
                 elif button == 'classic':
                     style_classic.config(bg='grey')
             elif button_family == 'relief':
+                self.last_r = [button_family, button]
                 for adv_reliefs_b in self.adv_reliefs_bs:
-                    adv_reliefs_b.config(bg='SystemButtonFace')
+                    adv_reliefs_b.config(bg=self._background, fg=self.tc)
                 if button == 'ridge':
                     relief_ridge.config(bg='grey')
                 elif button == 'groove':
@@ -3010,9 +3321,15 @@ class Window(Tk):
         the window for the dictionary and wikipedia tools
         '''
 
+        def redirect():
+            if not(mode == 'wiki'):
+                search()
+            else:
+                Thread(target=search).start()
+
         def search():
             meaning_box.configure(state=NORMAL)
-            paste_b.configure(state=DISABLED)
+            self.paste_b_info.configure(state=DISABLED)
             output_ready = True
             if mode == 'dict':
                 try:
@@ -3028,8 +3345,20 @@ class Window(Tk):
                     output_ready = False
             else:
                 try:
+                    if self.last_wiki_image and not(self.wiki_var.get() == 4):
+                        self.wiki_img_frame.grid_forget()
+                        self.wiki_nav_frame.grid_forget()
+                        self.wiki_nav_forward.grid_forget()
+                        self.wiki_nav_backwards.grid_forget()
+                        meaning_box.grid(row=3, column=1)
+                        self.paste_b_info.grid(row=5, column=1)
+                    self.last_wiki_image = False
+
+                    if self.wiki_var.get() == 3 or self.wiki_var.get() == 4:
+                        wiki_page = page(par_entry.get())
+
                     if self.wiki_var.get() == 1:
-                        wiki_ = summary(par_entry.get())
+                        self.wiki_requsest = summary(par_entry.get())
                     elif self.wiki_var.get() == 2:
                         arcticles = wiki_search(par_entry.get())
                         arcticles = list(arcticles)
@@ -3040,53 +3369,158 @@ class Window(Tk):
                         else:
                             output_ready = False
                     elif self.wiki_var.get() == 3:
-                        wiki_page = page(par_entry.get())
-                        wiki_ = f'{wiki_page.title}\n{wiki_page.content}'
+                        self.wiki_requsest = f'{wiki_page.title}\n{wiki_page.content}'
+
+
                     elif self.wiki_var.get() == 4:
-                        wiki_page = page(par_entry.get())
-                        wiki_ = wiki_page.images
+                        self.last_wiki_image = True
+                        self.image_selected_index = 0
+                        meaning_box.grid_forget()
+                        self.paste_b_info.grid_forget()
+                        self.wiki_img_frame.grid(row=3, column=1)
+                        self.wiki_nav_frame.grid(row=4, column=1)
+                        self.wiki_nav_backwards.grid(row=4, column=0)
+                        self.wiki_nav_forward.grid(row=4, column=2)
+
+                        row_index = 0
+                        self.wiki_requsest = wiki_page.images
+                        self.wiki_img_list = []
+                        label_list = []
+                        for index, img_link in enumerate(self.wiki_requsest):
+                            # label_list.append(Label(self.wiki_img_frame))
+                            with urllib.request.urlopen(img_link) as img_url:
+                                img = img_url.read()
+                                img = Image.open(BytesIO(img))
+                                img_width, img_height = img.size
+                                print(img.size)
+                                if (img_width > 600 and img_width < 1200)  or (img_height > 600 and img_height < 1200):
+                                    img_width, img_height = img_width // 2, img_height // 2
+                                elif (img_width > 1200 and img_width < 1800) or (img_height > 1200 and img_height < 1800):
+                                    img_width, img_height = img_width // 4, img_height // 4
+                                elif img_width > 1800 or img_height > 1800:
+                                    img_width, img_height = 600, 600
+                                img = img.resize((img_width, img_height)) # , Image.ANTIALIAS)
+                                img = ImageTk.PhotoImage(img)
+                                self.wiki_img_list.append(img)
+                        # if wiki_img_list:
+                        navigate_pics('initial')
+
+                                # for output in self.wiki_img_list:
+                                #     label_list[index].configure(image=output)
+                                #     label.pack()
+                                #     label_list[index].bind('<ButtonRelease-1>', webbrowser.open_new(img_link))
+                        '''+ 
+                        initial image
+                        '''
 
                     if not (self.wiki_var.get() == 2):
                         meaning_box.delete('1.0', 'end')
-                        meaning_box.insert('1.0', wiki_)
+                        meaning_box.insert('1.0', self.wiki_requsest)
                 except requests.exceptions.ConnectionError:
                     messagebox.showerror(self.title_struct + 'error', 'check your internet connection')
                     output_ready = False
-                except exceptions.DisambiguationError:
-                    messagebox.showerror(self.title_struct + 'error', 'check your searched term')
+                except exceptions.DisambiguationError as e:
+                    messagebox.showerror(self.title_struct + 'error', 'check your searched term\ninserting the most close match')
+                    print(f'Error :{e}')
+                    search_terms = (str(e)).split('\n')
+                    closest = search_terms[1]
+                    par_entry.delete(0, END)
+                    par_entry.insert(0, closest)
                     output_ready = False
                 except exceptions.PageError:
                     messagebox.showerror(self.title_struct + 'error', 'Invalid page ID')
                     output_ready = False
 
             if output_ready:
-                paste_b.configure(state=ACTIVE)
+                self.paste_b_info.configure(state=ACTIVE)
             else:
-                paste_b.configure(state=DISABLED)
+                self.paste_b_info.configure(state=DISABLED)
             meaning_box.configure(state=DISABLED)
 
         def paste():
             content_to_paste = meaning_box.get('1.0', 'end')
             self.EgonTE.insert(self.get_pos(), content_to_paste)
 
+        def navigate_pics(mode, event=False):
+            def bind_links(event=False):
+                webbrowser.open_new(self.wiki_requsest[self.image_selected_index])
+
+            if self.wiki_var.get() == 4 and self.wiki_requsest: # and self.wiki_img_list
+                # if self.mode
+                if mode == 'f':
+                    try:
+                        limit_condition = self.wiki_img_list[self.image_selected_index] == self.wiki_img_list[-1]
+                    except IndexError:
+                        limit_condition = True
+                    if not (limit_condition):
+                        self.image_selected_index += 1
+                    else:
+                        self.image_selected_index = 0
+                elif mode == 'b':
+                    try:
+                        limit_condition = self.wiki_img_list[self.image_selected_index] == self.wiki_img_list[0]
+                    except IndexError:
+                        limit_condition = True
+                    if not (limit_condition):
+                        self.image_selected_index += -1
+                    else:
+                        self.image_selected_index = self.wiki_img_list.index(self.wiki_img_list[-1])
+                elif mode == 'initial':
+                    self.wiki_image_label.grid(row=3, column=1)
+
+                self.wiki_image_label.unbind_all('<ButtonRelease-1>')
+                self.wiki_image_label.grid_forget()
+                try:
+                    selected_image = self.wiki_img_list[self.image_selected_index]
+                except IndexError:
+                    self.image_selected_index = 0
+                    selected_image = self.wiki_img_list[self.image_selected_index]
+
+                self.wiki_image_label.configure(image=selected_image)
+                self.wiki_image_label.grid(row=3, column=1)
+                self.wiki_image_label.bind('<ButtonRelease-1>', bind_links)
+            else:
+                messagebox.showerror(self.title_struct + 'wiki', 'you are not in images mode \ didn\'t search')
+
         par_root = Toplevel()
         par_root.resizable(False, False)
         par_root.attributes('-alpha', '0.95')
         par_entry = Entry(par_root, width=35)
-        par_search = Button(par_root, text='Search definition', command=search)
-        if mode == 'wiki':
-            par_search.configure(text='Search - Wikipedia')
+        knowledge_search = Button(par_root, text='Search definition', command=redirect)
         meaning_box = Text(par_root, height=15, width=50, wrap=WORD)
         meaning_box.configure(state=DISABLED)
-        paste_b = Button(par_root, text='Paste to ETE', command=paste)
-        paste_b.configure(state=DISABLED)
+        self.paste_b_info = Button(par_root, text='Paste to ETE', command=paste)
+        self.paste_b_info.configure(state=DISABLED)
 
         par_entry.grid(row=1, column=1, pady=3)
-        par_search.grid(row=2, column=1, pady=3)
-        meaning_box.grid(row=3, column=1)
-        paste_b.grid(row=6, column=1)
+        knowledge_search.grid(row=2, column=1, pady=3)
 
+        par_root.unbind('<Control-Key-.>')
+        par_root.unbind('<Control-Key-,>')
         if mode == 'wiki':
+            self.wiki_requsest = ''
+            self.wiki_img_list = []
+            self.wiki_img_frame = Frame(par_root, width=35, height=40)
+            self.wiki_image_label = Label(self.wiki_img_frame)
+            self.wiki_nav_frame = Frame(self.wiki_img_frame)
+            self.wiki_nav_forward = Button(self.wiki_nav_frame, text='>>', command=lambda: navigate_pics(mode='f'))
+            self.wiki_nav_backwards = Button(self.wiki_nav_frame, text='<<', command=lambda: navigate_pics(mode='b'))
+            par_root.bind('<Control-Key-.>', lambda e: navigate_pics('f', event=e))
+            par_root.bind('<Control-Key-,>', lambda e: navigate_pics('b', event=e))
+
+            if not (self.wiki_var.get() == 4):
+                meaning_box.grid(row=3, column=1)
+                self.paste_b_info.grid(row=5, column=1)
+                self.last_wiki_image = False
+            else:
+                self.wiki_img_frame.grid(row=3, column=1)
+                self.wiki_nav_frame.grid(row=4, column=1)
+                self.wiki_nav_backwards.grid(row=4, column=0)
+                self.wiki_nav_forward.grid(row=4, column=2)
+                self.last_wiki_image = True
+
+            knowledge_search.configure(text='Search - Wikipedia')
+
             radio_frame = Frame(par_root)
             return_summery = Radiobutton(radio_frame, text='Summery', variable=self.wiki_var, value=1)
             return_related_articles = Radiobutton(radio_frame, text='Related articles', variable=self.wiki_var, value=2)
@@ -3120,12 +3554,19 @@ class Window(Tk):
         keyboard_root = Toplevel()
         keyboard_root.attributes('-alpha', '0.90')
         keyboard_root.resizable(False, False)
+        self.sym_var1 = False
+        self.sym_var2 = False
         keyboard_root.configure(bg='black')
-        keyboard_root.protocol("WM_DELETE_WINDOW", close)
+        keyboard_root.protocol('WM_DELETE_WINDOW', close)
         self.vk_active = True
         sym_n = ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
                  '+', '-', '*', '^', '=', '<', '>', '[', ']',
-                 '#', '!', '&', '*', ':', '/', '~')
+                 '#', '!', '&', '?', ':', '/', '~')
+
+        '''+ clean conditions'''
+        syn_only = ('`', '_', '|', '$', '@', '£', '€', '¢', '¥', '§',
+                 '%', '°', r'\\', ';', '"', '\'', '®', '¿', 'ƒ',
+                 '√', '™', '©', '±', '≈', 'Ω', 'Φ')
 
         ### unused: '`' '_' '|' '$'
 
@@ -3144,7 +3585,7 @@ class Window(Tk):
             global last_abc
             modes_buttons = caps, sym_button
 
-            if not (self.night_mode):
+            if (self.night_mode.get()):
                 if self.nm_palette.get() == 'black':
                     highlighted_color = '#042f42'
                 else:
@@ -3157,7 +3598,9 @@ class Window(Tk):
 
             if mode == 'upper' or mode == 'lower':
                 last_abc = mode
-                sym_button.configure(command=lambda: modes('sym'), text='1!*')
+                sym_button.configure(command=lambda: modes('sym'))
+                sym_button_2.configure(command=lambda: modes('sym2'))
+
 
             if mode == 'upper':
                 for asc in range(len(ascii_uppercase)):
@@ -3171,14 +3614,46 @@ class Window(Tk):
                                               command=lambda i=asc: press(ascii_lowercase[i]))
                     caps.configure(command=lambda: modes('upper'))
             elif mode == 'sym':
-                for counter, sn in enumerate(sym_n):
-                    characters_by_order[counter].configure(text=sn,
-                                                           command=lambda i=sn: press(i))
-                sym_button.configure(command=lambda: modes('abc'), text='ABC')
-                sym_button.configure(bg=highlighted_color)
+                if not(self.sym_var1):
+                    for counter, sn in enumerate(sym_n):
+                        characters_by_order[counter].configure(text=sn,
+                                                               command=lambda i=sn: press(i))
+                    sym_button.configure(command=lambda: modes(last_abc), bg=highlighted_color)
+                    if self.sym_var2:
+                        self.sym_var2 = False
+                        sym_button_2.configure(bg=self.dynamic_button, command=lambda: modes('sym2'))
+                else:
+                    sym_button.configure(command=lambda: modes('sym'), bg=self.dynamic_button)
+                    # if last_abc == 'upper' or last_abc == 'lower':
+                    #     modes(last_abc)
+                self.sym_var1 = not(self.sym_var1)
+
+            elif mode == 'sym2':
+                if not(self.sym_var2):
+                    for counter, sn in enumerate(syn_only):
+                        characters_by_order[counter].configure(text=sn,
+                                                               command=lambda i=sn: press(i))
+                    sym_button_2.configure(command=lambda: modes(last_abc), bg=highlighted_color)
+                    if self.sym_var1:
+                        self.sym_var1 = False
+                        sym_button.configure(bg=self.dynamic_button, text='1!*', command=lambda: modes('sym'))
+                else:
+                    sym_button_2.configure(bg=self.dynamic_button, command=lambda: modes('sym2'))
+                    # if last_abc == 'upper' or last_abc == 'lower':
+                    #     modes(last_abc)
+                self.sym_var2 = not(self.sym_var2)
             else:
-                sym_button.configure(command=lambda: modes('sym'), text='1!*')
+                sym_button.configure(command=lambda: modes('sym'), bg=self.dynamic_button)
+                sym_button_2.configure(bg=self.dynamic_button, command=lambda: modes('sym2'))
                 modes(last_abc)
+
+            if mode == 'upper' or mode == 'lower':
+                self.sym_var1 = False
+                self.sym_var2 = False
+                sym_button.configure(command=lambda: modes('sym'), bg=self.dynamic_button)
+                sym_button_2.configure(bg=self.dynamic_button, command=lambda: modes('sym2'))
+
+
 
         btn_frame = Frame(keyboard_root)
         extras_frame = Frame(keyboard_root)
@@ -3297,7 +3772,7 @@ class Window(Tk):
         dot.grid(row=2, column=11, ipady=10)
 
         space = Button(extras_frame, text='Space', width=6, command=lambda: press(' '))
-        space.grid(row=0, column=1, ipadx=156, ipady=10)
+        space.grid(row=0, column=1, ipadx=130, ipady=10)
 
         open_b = Button(extras_frame, text='(', width=6, command=lambda: press('('))
         open_b.grid(row=0, column=2, ipady=10)
@@ -3305,21 +3780,24 @@ class Window(Tk):
         close_b = Button(extras_frame, text=')', width=6, command=lambda: press(')'))
         close_b.grid(row=0, column=3, ipady=10)
 
-        tab = Button(extras_frame, text='Tab', width=6, command=tab)
-        tab.grid(row=0, column=4, ipady=10)
+        tab_b = Button(extras_frame, text='Tab', width=6, command=tab)
+        tab_b.grid(row=0, column=4, ipady=10)
 
-        caps = Button(extras_frame, text='Caps', width=6, command=lambda: modes('lower'), background='light grey')
+        caps = Button(extras_frame, text='Caps', width=6, command=lambda: modes('lower'))
         caps.grid(row=0, column=5, ipady=10)
 
         sym_button = Button(extras_frame, text='1!*', width=6, command=lambda: modes('sym'))
         sym_button.grid(row=0, column=6, ipady=10)
+
+        sym_button_2 = Button(extras_frame, text='ƒ√€', width=6, command=lambda: modes('sym2'))
+        sym_button_2.grid(row=0, column=7, ipady=10)
 
         self.record_list.append(f'> [{self.get_time()}] - Virtual Keyboard tool window opened')
 
         characters = A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
         characters_by_order = Q, W, E, R, T, Y, U, I, O, P, A, S, D, F, G, H, J, K, L, Z, X, C, V, B, N, M
         symbols = semi_co, cur, cur_c, back_slash, d_colon, left, right, slas, q_mark, coma, dot, open_b, close_b
-        functional_buttons = space, tab, caps, sym_button
+        functional_buttons = space, tab_b, caps, sym_button, sym_button_2
         self.all_vk_buttons = characters_by_order + symbols + functional_buttons
 
         for vk_btn in self.all_vk_buttons:
@@ -3344,6 +3822,7 @@ class Window(Tk):
         # initial condition to not activate the function every interaction with the text box
         # peruse: not cause lag and prevent bugs
         active = False
+        rep_t = False
         if via_settings:
             active = True
         elif active == False:
@@ -3622,7 +4101,7 @@ class Window(Tk):
                 difference = Differ()
                 c_diffrence_frame = Frame(compare_root)
                 c_difference_title = Label(c_diffrence_frame, text='Content diffrence', font='arial 14 underline')
-                files_diffrence = ''.join(difference.compare(file_content, another_fc))
+                files_diffrence = ''.join(difference.compare(file_content, another_fc)).replace('  ', ' ')
                 content_diffrence = Label(c_diffrence_frame, text=files_diffrence, font='arial 12')
 
                 # the diffrence in the count of : words, lines, characters, spaces
@@ -3680,10 +4159,49 @@ class Window(Tk):
         self.record_list.append(f'> [{self.get_time()}] - File\'s comparison tool window opened')
 
     def corrector(self):
+        def insert():
+            if self.advance_correction:
+                self.EgonTE.delete('1.0', 'end')
+                self.EgonTE.insert('1.0', corrected_content)
+
+        def preview_ui():
+            def res(mode):
+                if mode == 'a':
+                    self.advance_correction = True
+                else:
+                    self.advance_correction = False
+                insert()
+                preview_root.destroy()
+
+            preview_root = Toplevel()
+            preview_root.title(self.title_struct + 'text corrctor preview')
+            title = Label(preview_root, text='Accept this text changes', font='arial 12 underline')
+            text_frame = Frame(preview_root)
+            preview_text_scroll = ttk.Scrollbar(text_frame)
+            changes_text_box = Text(text_frame, wrap=WORD, yscrollcommand=preview_text_scroll.set, relief=RIDGE)
+            preview_text_scroll.config(command=changes_text_box.yview)
+            difference = Differ()
+            differ_content = ''.join(difference.compare(content, corrected_content))
+            changes_text_box.insert('1.0', differ_content)
+            decision_frame = Frame(preview_root)
+            accept_b = Button(decision_frame, text='Accept', command=lambda:res('a'))
+            deny_b = Button(decision_frame, text='Deny', command=lambda:res('d'))
+            title.pack()
+            text_frame.pack(expand=True, fill=BOTH)
+            preview_text_scroll.pack(fill=Y, side=RIGHT)
+            changes_text_box.pack(expand=True, fill=BOTH)
+            decision_frame.pack()
+            accept_b.grid(row=0, column=0)
+            deny_b.grid(row=0, column=2)
+
         content = self.EgonTE.get('1.0', 'end')
         corrected_content = TextBlob(content).correct()
-        self.EgonTE.delete('1.0', 'end')
-        self.EgonTE.insert('1.0', corrected_content)
+        if self.ccc.get():
+            preview_ui()
+        else:
+            self.advance_correction = True
+            insert()
+
 
     def organize(self):
         '''
@@ -4059,7 +4577,6 @@ class Window(Tk):
         loc_button = Button(init_root, text='A Local file', command=lambda: change_initial_mode('l'))
         enter_button = Button(init_root, text='Enter', command=lambda: comb_upload(chosen_init, True),
                               font='arial 10 bold')
-        ### skip_button = ?
         title_label.grid(row=1, column=1)
         web_button.grid(row=2, column=0, padx=5)
         this_button.grid(row=2, column=1)
@@ -4103,6 +4620,11 @@ class Window(Tk):
         tool_c = BooleanVar()
         mw_shortcut = BooleanVar()
         mw_shortcut.set(True)
+        self.hw_active = True
+
+        def quit_hw():
+            self.hw_active = False
+            hw_root.destroy()
 
         def paint(event):
             global previous_point, current_point
@@ -4154,26 +4676,27 @@ class Window(Tk):
                 images_list.append(canvas_image)
                 self.ci_from = 'upload'
 
-        def save():
-
+        def save_canvas():
             self.convert_image = self.save_images(self.draw_canvas, hw_root, buttons_frame)
             self.ci_from = 'save'
 
         def erase():
             global current_tool
+            self.determine_highlight()
             current_tool = 'eraser'
             color.set('white')
             update_sizes()
             self.draw_canvas.configure(cursor='target')
-            eraser.configure(bg='light gray'), pencil.configure(bg='SystemButtonFace')
+            eraser.configure(bg=self._background), pencil.configure(bg=self.dynamic_button)
 
         def pencil_():
             global current_tool
+            self.determine_highlight()
             current_tool = 'pencil'
             update_sizes()
             color.set('black')
             self.draw_canvas.configure(cursor='pencil')
-            pencil.configure(bg='light gray'), eraser.configure(bg='SystemButtonFace')
+            pencil.configure(bg=self._background), eraser.configure(bg=self.dynamic_button)
 
         def update_sizes(scrollwheel_event=False):
             if current_tool == 'pencil':
@@ -4237,7 +4760,7 @@ class Window(Tk):
 
         def convert():
             if not (self.convert_image):
-                save()
+                save_canvas()
 
             # saving gives you the name
             if self.ci_from == 'save':
@@ -4342,22 +4865,22 @@ class Window(Tk):
         hw_root = Toplevel()
         hw_root.geometry('600x350')
         hw_root.title(self.title_struct + 'Draw and convert')
-        draw_frame = Frame(hw_root)
-        buttons_frame = Frame(hw_root)
-        self.draw_canvas = Canvas(draw_frame, width=canvas_x, height=canvas_y, bg='white', cursor='pencil')
+        draw_frame = Frame(hw_root, bg=self.dynamic_overall)
+        buttons_frame = Frame(hw_root, bg=self.dynamic_overall)
+        self.draw_canvas = Canvas(draw_frame, width=canvas_x, height=canvas_y, bg=self.dynamic_bg, cursor='pencil')
         self.draw_canvas.bind('<B1-Motion>', paint)
         self.draw_canvas.bind('<ButtonRelease-1>', paint)
-        pencil = Button(buttons_frame, text='Pencil', command=pencil_, borderwidth=1)
-        eraser = Button(buttons_frame, text='Eraser', command=erase, borderwidth=1)
-        seperator = Label(buttons_frame, text='|')
-        save_png = Button(buttons_frame, text='Save as png', command=save, borderwidth=1)
-        upload_writing = Button(buttons_frame, text='Upload', command=upload, state=tes, borderwidth=1)
+        pencil = Button(buttons_frame, text='Pencil', command=pencil_, borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
+        eraser = Button(buttons_frame, text='Eraser', command=erase, borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
+        seperator = Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text)
+        save_png = Button(buttons_frame, text='Save as png', command=save_canvas, borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
+        upload_writing = Button(buttons_frame, text='Upload', command=upload, state=tes, borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
         convert_to_writing = Button(buttons_frame, text='Convert to writing', command=convert,
-                                    borderwidth=1)  # convert)
+                                    borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)  # convert)
         erase_all = Button(buttons_frame, text='Erase all', command=lambda: self.draw_canvas.delete('all'),
-                           borderwidth=1)
-        seperator_2 = Label(buttons_frame, text='|')
-        info_button = Button(buttons_frame, text='i', command=information)
+                           borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
+        seperator_2 = Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text)
+        info_button = Button(buttons_frame, text='i', command=information, bg=self.dynamic_button, fg=self.dynamic_text)
 
         self.pencil_size = ttk.Combobox(buttons_frame, width=10, textvariable=self.pnc_width, state='normal')
         self.pencil_size['values'] = (1, 2, 3, 4, 6, 8)
@@ -4366,9 +4889,9 @@ class Window(Tk):
         self.eraser_size['values'] = (3, 5, 8, 10, 12, 15)
         self.eraser_size.current(self.ers_current)
 
-        cords_frame = Frame(hw_root)
-        tool_lc = Label(cords_frame, text='')
-        cords_label = Label(cords_frame, text='')
+        cords_frame = Frame(hw_root, bg=self.dynamic_bg)
+        tool_lc = Label(cords_frame, text='',  bg=self.dynamic_overall, fg=self.dynamic_text)
+        cords_label = Label(cords_frame, text='',  bg=self.dynamic_overall, fg=self.dynamic_text)
 
         buttons_frame.pack()
         draw_frame.pack(fill=BOTH, expand=True)
@@ -4385,6 +4908,11 @@ class Window(Tk):
         info_button.grid(row=0, column=10, padx=2)
         self.draw_canvas.pack(fill=BOTH, expand=True)
 
+        self.hw_bg = draw_frame, buttons_frame
+        self.hw_buttons = pencil, eraser, save_png, upload_writing, convert_to_writing, erase_all, info_button
+        self.hw_labels = tool_lc, cords_label
+        self.hw_seperator = seperator, seperator_2
+
         cords_frame.pack(fill=BOTH)
         cords_label.pack(fill=BOTH)
 
@@ -4398,6 +4926,7 @@ class Window(Tk):
         self.pencil_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
         self.eraser_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
         self.draw_canvas.bind('<MouseWheel>', sizes_shortcus)
+        hw_root.protocol('WM_DELETE_WINDOW', quit_hw)
         # existing file to writing
 
         self.record_list.append(f'> [{self.get_time()}] - Hand writing tool window opened')
@@ -4666,6 +5195,7 @@ class Window(Tk):
                 self.night_mode.set(self.data['night_mode'])
                 self.tt_sc.set(self.data['text_twisters'])
                 self.nm_palette.set(self.data['night_type'])
+                self.ccc.set(self.data['preview_cc'])
                 # maybe need to be deleted
                 self.cs.set(self.data['style'])
                 self.cc.set(self.data['cursor'])
@@ -4676,9 +5206,14 @@ class Window(Tk):
                 self.predefined_cursor = self.cc.get()
                 self.predefined_style = self.cs.get()
                 self.predefined_relief = self.data['relief']
+                # self.bg_saved_image.set(self.data['bg_image'])
 
                 if self.lf.get():
                     self.file_name = self.data['open_last_file']
+
+                # if self.bg_saved_image.get():
+                #     self.save_bg.set(True)
+                #     self.upload_bg_image()
 
                 return False
 
@@ -4688,7 +5223,7 @@ class Window(Tk):
                              'style': 'clam',
                              'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
                              'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
-                             'night_type': 'black'}
+                             'night_type': 'black', 'preview_cc': False}
 
                 with open(file_name, 'w') as f:
                     dump(self.data, f)
@@ -5107,13 +5642,28 @@ class Window(Tk):
             this_file.grid(row=2, column=0)
             new_file.grid(row=2, column=2)
 
-    def delete_file(self):
-        if self.file_name:
-            if messagebox.askyesno('EgonTE', 'Are tou sure you want to delete this file?'):
-                self.EgonTE.delete('1.0', 'end')
-                os.remove(self.file_name)
-                self.file_bar.configure(text=f'deleted {self.file_name}')
+    def delete_file(self, custom=False):
+        if self.file_name or custom:
+            advance = False
+            remove_fn = False
+            if self.file_name and not(custom):
+                if messagebox.askyesno('EgonTE', 'Are tou sure you want to delete this file?'):
+                    self.EgonTE.delete('1.0', 'end')
+                    advance = True
+                    file_to_del = self.file_name
+                    remove_fn = True
+            if custom:
+                advance = True
+                file_to_del = custom
+
+
+            if advance:
+                os.remove(file_to_del)
+                self.file_bar.configure(text=f'deleted {file_to_del}')
+
+            if remove_fn:
                 self.file_name = ''
+
         else:
             messagebox.showerror(self.title_struct + 'error', 'you are not using a file')
 
@@ -5255,12 +5805,12 @@ class Window(Tk):
                 paste_button = Button(weather_root, text='Paste to ETE', command=lambda: copy_paste_weather('p')
                                       , pady=2, bd=1)
 
-                loc.pack(fill="none", expand=True)
-                temp.pack(fill="none", expand=True)
-                tim.pack(fill="none", expand=True)
-                des.pack(fill="none", expand=True)
-                copy_button.pack(fill="none", expand=True)
-                paste_button.pack(fill="none", expand=True)
+                loc.pack(fill='none', expand=True)
+                temp.pack(fill='none', expand=True)
+                tim.pack(fill='none', expand=True)
+                des.pack(fill='none', expand=True)
+                copy_button.pack(fill='none', expand=True)
+                paste_button.pack(fill='none', expand=True)
 
         city_list = ['Agra', 'Aires', 'Amsterdam', 'Angeles', 'Antalya', 'Athens', 'Atlanta', 'Auckland', 'Bali',
                      'Bangkok', 'Barcelona', 'Beijing', 'Berlin', 'Bogotá', 'Boston', 'Brussels', 'Bucharest',
@@ -5503,11 +6053,11 @@ class Window(Tk):
             scroll.config(command=txt.yview)
 
             self.gpt_entry = Entry(interact_frame, bg='#2C3E50', fg=TEXT_COLOR, font=FONT, width=55)
-            send = Button(interact_frame, text='Send', font=FONT_BOLD, bg=BG_GRAY, command=ask_gpt)
-            interact_frame.pack()
+            send = Button(interact_frame, text='Send', font=FONT_BOLD, bg=BG_GRAY, command=lambda:Thread(target=ask_gpt).start())
+            interact_frame.pack(fill=X)
 
-            self.gpt_entry.grid(row=0, column=0)
-            send.grid(row=0, column=1)
+            self.gpt_entry.pack(side='left', fill=BOTH, expand=True)
+            send.pack(side='right')
             # title_gpt.grid(row=0)
             # txt.grid(row=1, column=0, columnspan=2)
             # self.gpt_entry.grid(row=2, column=0)
@@ -5525,27 +6075,39 @@ class Window(Tk):
             txt.configure(state=NORMAL)
             try:
                 if openai_library:
-                    openai.api_key = self.key  # os.getenv(self.key)
-                    completion = openai.ChatCompletion.create(
-                        model='gpt-3.5-turbo',
-                        messages=[
-                            {'role': 'user',
-                             'content': self.gpt_entry.get()}
-                        ]
-                    )
+                    txt.insert(END ,f'>>> {self.gpt_entry.get()}\n')
+                    # openai.api_key = self.key  # os.getenv(self.key)
+                    if self.service_type.get() == 0:
+                        completion = self.api_client.chat.completions.create(
+                            model='gpt-35-turbo',
+                            engine = self.deployment_name,
+                            messages=[
+                                {'role': 'user',
+                                 'content': self.gpt_entry.get()}
+                            ]
+                        )
+                    else:
+                        completion = self.api_client.chat.completions.create(
+                            model=self.gpt_model,
+                            messages=[
+                                {'role': 'user',
+                                 'content': self.gpt_entry.get()}
+                            ]
+                        )
+
                     answer = (completion.choices[0].message.content)
 
                 else:
                     answer = self.alt_chat.ask(self.gpt_entry.get())
-                txt.insert(END, '\n' + answer)
-            except openai.error.RateLimitError:
+                txt.insert(END, f'OpenAI: {answer}\n')
+            except openai.RateLimitError:
                 messagebox.showerror('OpenAI',
                                      'You exceeded your current quota, please check your plan and billing details')
             txt.configure(state=DISABLED)
 
         # checking multiple libraries / keys to find the most effective window
         if openai_library:
-            if self.key:
+            if self.openai_code:
                 active_ui()
             else:
                 active_bot()
@@ -5566,10 +6128,20 @@ class Window(Tk):
             if prompt_entry.get():
                 PROMPT = prompt_entry.get()
             try:
-                response = openai.Image.create(prompt=PROMPT, n=1, size=im_size_var.get())
-                result = (response['data'][0]['url'])
-                label = Label(dallE_root, text=result)
-            except openai.error.RateLimitError:
+                image_resp = self.api_client.images.generate(
+                    model='dall-e-3', size=im_size_var.get(),
+                    prompt=PROMPT,
+                )
+                # Grab the URL out of the response
+                image_url = image_resp.data[0].url
+                # Download the image
+                data = requests.get(image_url)
+                # Save the image
+                with open(f'{image_resp.created}.png', 'wb') as image:
+                    image.write(data.content)
+                # Open it
+                subprocess.call(['start', f'{image_resp.created}.png'], shell=True)
+            except openai.RateLimitError:
                 messagebox.showerror('OpenAI',
                                      'You exceeded your current quota, please check your plan and billing details')
             label.grid(row=5)
@@ -5601,7 +6173,7 @@ class Window(Tk):
 
             self.record_list.append(f'> [{self.get_time()}] - Dall-E tool window opened')
 
-        if not self.key:
+        if not self.openai_code:
             self.key_page(ui)
         else:
             ui()
@@ -5613,17 +6185,53 @@ class Window(Tk):
         :param after_func:
         '''
 
+        def change_ui():
+            global end_entry, dep_entry
+            get_key.unbind_all('<Button-1>')
+            if self.service_type.get() == 0:
+                if not self.end_entry_state:
+                    end_entry = Entry(login_root, width=35)
+                    dep_entry = Entry(login_root, width=35)
+                    end_entry.grid(row=3)
+                    dep_entry.grid(row=4)
+                    end_entry.insert(END, 'Azure endpoint')
+                    dep_entry.insert(END, 'Azure deployment name')
+                    self.end_entry_state = True
+                get_key.bind('<Button-1>', lambda e: key_link('https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython&pivots=programming-language-python'))
+
+            elif self.service_type.get() == 1:
+                if self.end_entry_state:
+                    end_entry.destroy()
+                    dep_entry.destroy()
+                    self.end_entry_state = False
+                get_key.bind('<Button-1>', lambda e: key_link('https://platform.openai.com/account/api-keys'))
+
         def enter():
             try:
                 self.key = key_entry.get()
-                openai.api_key = self.key
+                # openai.api_key = self.key
+                if self.service_type.get() == 0:
+                    #  your endpoint should look like the following https://YOUR_RESOURCE_NAME.openai.azure.com/
+                    endpoint = end_entry.get()
+                    self.deployment_name = dep_entry.get()
+                    self.api_client = AzureOpenAI(api_key=self.key, api_version='2023-05-15', azure_endpoint=endpoint)
+                elif self.service_type.get() == 1:
+                    self.api_client = OpenAI(api_key=self.key)
                 login_root.destroy()
 
-                if after_func:
+                valid_code = False
+                try:
+                    self.api_client.models.list()
+                    valid_code = True
+                except:
+                    messagebox.showerror('Error', 'The OpenAI key is invalid')
+
+                if after_func and valid_code:
+                    self.openai_code = True
                     after_func()
 
                 return True
-            except openai.error.AuthenticationError:
+            except openai.AuthenticationError:
                 messagebox.showerror('EgonTE', 'Error not provided/Incorrect key')
                 return False
 
@@ -5632,20 +6240,28 @@ class Window(Tk):
 
         login_root = Toplevel()
         login_root.resizable(False, False)
-        login_root.geometry('350x120')
         login_root.title(self.title_struct + 'connect to OpenAI')
+        self.service_type = IntVar()
+        self.service_type.set(1)
+        self.end_entry_state = False
 
         login_title = Label(login_root, text='Enter your OpenAI key to connect', font='arial 12')
-        key_title = Label(login_root, text='Key entry', font='arial 12 underline')
+        key_title = Label(login_root, text='Key entry', font='arial 12 underline', width=60)
         key_entry = Entry(login_root, width=35, show='*')
+        service_frame = Frame(login_root)
+        via_azure = Radiobutton(service_frame, text='Azure key', variable=self.service_type, value=0, command=change_ui)
+        via_openai = Radiobutton(service_frame, text='OpenAI key', variable=self.service_type, value=1, command=change_ui)
         get_key = Label(login_root, text='Dosen\'t have/forget key?', fg='blue', font='arial 10 underline')
         enter_button = Button(login_root, text='Enter', font='arial 10 bold', command=enter, relief=FLAT)
+        via_azure.grid(row=0, column=0)
+        via_openai.grid(row=0, column=2)
+        login_title.grid(row=0)
+        key_title.grid(row=1)
+        key_entry.grid(row=2)
+        service_frame.grid(row=5)
 
-        login_title.pack()
-        key_title.pack(expand=True, fill='none')
-        key_entry.pack(expand=True, fill='none')
-        get_key.pack(expand=True, fill='none')
-        enter_button.pack(expand=True, fill='none')
+        get_key.grid(row=6)
+        enter_button.grid(row=7)
 
         get_key.bind('<Button-1>', lambda e: key_link('https://platform.openai.com/account/api-keys'))
 
@@ -5668,14 +6284,14 @@ class Window(Tk):
         '''
 
         def youtube():
+            video_id = simpledialog.askstring('EgonTE', 'please enter the video ID')
             tr_root = Toplevel()
             tr_root.title(self.title_struct + 'youtube transcript')
-            video_id = simpledialog.askstring('EgonTE', 'please enter the video ID')
             if video_id:
                 tr = YouTubeTranscriptApi.get_transcript(video_id)
                 tr_str = ''
-                for t in tr:
-                    tr_str += f'text: {t["text"]}, starting: {t["start"]}\n'
+                for count, t in enumerate(tr):
+                    tr_str += f'time: {t["start"]}, iteration: {count} | content: {t["text"]} \n'
 
                 text_frame = Frame(tr_root)
                 scroll = ttk.Scrollbar(text_frame)
@@ -5715,12 +6331,14 @@ class Window(Tk):
 
         if yt_api:
             trans_option = Toplevel()
-            op_label = Label(trans_option, text='Where you want to take the content from', font='arial 12')
-            youtube_button = Button(trans_option, text='Youtube', command=youtube)
-            file_button = Button(trans_option, text='File')
-            op_label.grid(row=1, column=1)
-            youtube_button.grid(row=2, column=0)
-            file_button.grid(row=2, column=2)
+            buttons_frame = Frame(trans_option)
+            op_label = Label(trans_option, text='Take the content from', font='arial 12 underline')
+            youtube_button = Button(buttons_frame, text='Youtube', command=youtube, bd=1)
+            file_button = Button(buttons_frame, text='File', bd=1, command=file_trans)
+            op_label.pack()
+            buttons_frame.pack(pady=8)
+            youtube_button.grid(row=0, column=0, padx=10)
+            file_button.grid(row=0, column=2, padx=10)
         else:
             file_trans()
 
@@ -5947,7 +6565,7 @@ class Window(Tk):
         log_root = Toplevel()
         log_root.title(self.title_struct + 'events\' record')
         self.record_window = True
-        log_root.protocol("WM_DELETE_WINDOW", close)
+        log_root.protocol('WM_DELETE_WINDOW', close)
 
         scrollbar = ttk.Scrollbar(log_root)
         record_tb = Text(log_root, cursor=self.predefined_cursor, relief=self.predefined_relief,
@@ -6017,7 +6635,7 @@ class Window(Tk):
                 self.app_menu.delete('Options')
                 self.app_menu.delete('Help')
                 self.app_menu.delete('Patch notes')
-                self.app_menu.delete('GitHub')
+                self.app_menu.delete('External links')
 
                 if self.dm.get():
                     self.app_menu.delete('Record')
@@ -6274,7 +6892,6 @@ class Window(Tk):
             content = content.replace('XL', 'XXXX').replace('XC', 'LXXXX')
             content = content.replace('CD', 'CCCC').replace('CM', 'DCCCC')
             print(content)
-
             content = reSplit('; |, |\*|\n', content)  # reSplit('; |, |\*|\n', content)
             content = ''.join(content)
             content = content.split(' ')
@@ -6483,6 +7100,226 @@ class Window(Tk):
         else:
             opt_root.attributes('-topmost', True)
             opt_root.attributes('-topmost', False)
+
+    def insert_image(self):
+        delete_mode = False
+        if self.image_name:
+            if messagebox.askyesno('EgonTE', 'it look like you have an image\ndo you want to remove it?'):
+                self.image_name = ''
+                image_index = self.EgonTE.index(f'bg{self.bg_count}')
+                self.EgonTE.delete(image_index)
+                delete_mode = True
+
+        if not(self.image_name):
+            self.image_name = filedialog.askopenfilename(title='Open file',
+                                                            filetypes=(('PNG Files', '*.png'), ('JPG Files', '*.jpg'),
+                                                                       ('JPEG Files', '*.jpeg ')))
+
+        if not(delete_mode) and self.image_name:
+            self.bg_image = PhotoImage(self.image_name)
+            # self.EgonTE.configure(image=self.bg_image)
+            # self.EgonTE.image_create(END, image=self.bg_image)
+            # self.EgonTE.window_create(END, window=Label(self.EgonTE, image=self.bg_image))
+            self.EgonTE.image_create('current', image=self.bg_image, name=f'bg{self.bg_count}')
+            self.bg_count += 1
+
+
+    def change_file_ui(self):
+        self.change_text_var = StringVar()
+
+        def change_file_extension():
+            if self.file_name:
+                chosen_ext = self.change_text_var.get()
+                if chosen_ext:
+                    old_name = self.file_name
+                    path_object = Path(old_name)
+                    if self.dfpe.get():
+                        self.delete_file(custom=old_name)
+                    self.file_name = path_object.with_suffix('.' + chosen_ext)
+                    self.open_status_name = self.file_name
+                    print(self.file_name)
+                    self.save()
+                    self.file_bar.configure(text=f'File extension changed to {chosen_ext}')
+                else:
+                    messagebox.showerror('EgonTE', 'choose desired file\'s extension!')
+            else:
+                messagebox.showerror('EgonTE', 'Function can\'t be used without a file!')
+
+        cfui = Toplevel()
+        cfui.title(self.title_struct + 'Change file type')
+        title = Label(cfui, text='Change text to:', font='arial 12 underline')
+        cfui_combo = ttk.Combobox(cfui, width=10, textvariable=self.change_text_var)
+        cfui_combo['values'] = 'txt', 'html', 'log', 'asc', 'py'
+        delete_last_title = Label(cfui, text='Delete file', font='arial 10 underline')
+        delete_last_combo = Checkbutton(cfui, text='with previous extension', variable=self.dfpe)
+        change = Button(cfui, text='Change type', font='arial 10 bold', command=change_file_extension)
+
+        title.pack(padx=50)
+        cfui_combo.pack(pady=5)
+        delete_last_title.pack()
+        delete_last_combo.pack()
+        change.pack(pady=3)
+
+    def encryption(self):
+
+        def get_method():
+            self.enc_dec_method = False
+            if self.enc_methods_var.get():
+                if self.enc_methods_var.get() == 'Symmetric key':
+                    self.enc_dec_method = 'symmetric'
+                elif self.enc_methods_var.get() == 'Asymmetric key':
+                    self.enc_dec_method = 'asymmetric'
+
+        ''' overflow error'''
+        def configure_modes(event=False):
+            global last_mode
+            get_method()
+            entry_title.grid_forget()
+            self.enc_entry.grid_forget()
+            if self.is_enc.get():
+                if self.enc_dec_method == 'symmetric':
+                    pass
+                    # entry_title.configure(text='Key length:')
+                    # self.enc_entry.configure(show='')
+                elif self.enc_dec_method == 'asymmetric':
+                    entry_title.grid(row=5, column=1)
+                    self.enc_entry.grid(row=6, column=1)
+                    entry_title.configure(text='Key length:')
+                    self.enc_entry.configure(show='')
+            else:
+                if self.enc_dec_method == 'symmetric':
+                    # entry_title.configure(text='Key length:')
+                    # self.enc_entry.configure(show='')
+                    pass
+                elif self.enc_dec_method == 'asymmetric':
+                    entry_title.configure(text='Private Key\n(saves the last one):')
+                    self.enc_entry.configure(show='*')
+                    entry_title.grid(row=5, column=1)
+                    self.enc_entry.grid(row=6, column=1)
+            last_mode = self.enc_dec_method
+
+
+        def redirect_enc():
+            if self.is_enc.get():
+                enc_text()
+            else:
+                dec_text()
+
+        def enc_text():
+            get_method()
+            content = input_box.get('1.0', END)
+            if content and self.enc_dec_method:
+                if self.enc_dec_method == 'symmetric':
+                    key = Fernet.generate_key()
+                    self.fernet = Fernet(key)
+                    self.encrypted_message = self.fernet.encrypt(content.encode())
+                elif self.enc_dec_method == 'asymmetric':
+                    key_length = int(self.enc_entry.get())
+                    if not (key_length):
+                        key_length = randint(10, 20)
+                    publicKey, self.private_key = rsa.newkeys(key_length)
+                    self.encrypted_message = rsa.encrypt(content.encode(), publicKey)
+
+                if self.encrypted_message:
+                    output_box_.configure(state=NORMAL)
+                    output_box_.delete('1.0', END)
+                    output_box_.insert('1.0', self.encrypted_message)
+                    output_box_.configure(state=DISABLED)
+
+        def dec_text():
+            get_method()
+            if self.enc_dec_method == 'symmetric':
+                decrypted_message = self.fernet.decrypt(self.encrypted_message).decode()
+            elif self.enc_dec_method == 'asymmetric':
+                if self.enc_entry.get():
+                    self.private_key = self.enc_entry.get()
+                if self.private_key:
+                    decrypted_message = rsa.decrypt(self.encrypted_message, self.private_key).decode()
+                else:
+                    messagebox.showerror(self.title_struct + 'decryption', 'You don\'t have the private key!')
+
+            if decrypted_message:
+                output_box_.configure(state=NORMAL)
+                output_box_.delete('1.0', END)
+                output_box_.insert('1.0', decrypted_message)
+                output_box_.configure(state=DISABLED)
+
+        def copy_from():
+            content = self.EgonTE.get(self.get_indexes)
+            if content:
+                input_box.insert(END, content)
+
+        def paste_to():
+            content = output_box_.get('1.0', END)
+            if content:
+                self.EgonTE.insert(self.get_pos(), content)
+
+        self.encryption_methods = []
+        if symmetric_dec:
+            self.encryption_methods.append('Symmetric key')
+        if asymmetric_dec:
+            self.encryption_methods.append('Asymmetric key')
+        self.enc_methods_var = StringVar()
+
+        self.is_enc = BooleanVar()
+        self.private_key = ''
+
+        enc_root = Toplevel()
+        enc_root.title(self.title_struct + 'encryption')
+        enc_root.resizable(False, False)
+        title = Label(enc_root, text='Encrypt and decrypt', font='arial 12 underline')
+        box_frame = Frame(enc_root)
+        input_title = Label(box_frame, text='Input text', font='arial 10 underline')
+        output_title = Label(box_frame, text='Output text', font='arial 10 underline')
+        input_box = Text(box_frame, width=30, height=15)
+        output_box_ = Text(box_frame, state=DISABLED, width=30, height=15)
+        method_title = Label(enc_root, text='Method / key', font='arial 10 underline')
+        method_frame = Frame(enc_root)
+        self.enc_methods = ttk.Combobox(method_frame, textvariable=self.enc_methods_var)
+        self.enc_methods['values'] = self.encryption_methods
+        enc_radio = Radiobutton(method_frame, text='Encrypt', variable=self.is_enc, value=True, command=configure_modes)
+        dec_radio = Radiobutton(method_frame, text='Decrypt', variable=self.is_enc, value=False, command=configure_modes)
+        entry_title = Label(enc_root, text='Key length:', font='arial 10 underline')
+        self.enc_entry = Entry(enc_root)
+        buttons_frame = Frame(enc_root)
+        copy_from_ete = Button(buttons_frame, text='Copy from', command=copy_from)
+        enter_button = Button(buttons_frame, text='Enter', command=redirect_enc)
+        paste_to_ete = Button(buttons_frame, text='Paste to', command=paste_to)
+
+        title.grid(row=0, column=1)
+        box_frame.grid(row=2, column=1)
+        method_title.grid(row=3, column=1)
+        method_frame.grid(row=4, column=1)
+        entry_title.grid(row=5, column=1)
+        self.enc_entry.grid(row=6, column=1)
+        buttons_frame.grid(row=7, column=1)
+
+        input_title.grid(row=1, column=0)
+        output_title.grid(row=1, column=2)
+        input_box.grid(row=2, column=0)
+        output_box_.grid(row=2, column=2)
+
+        enc_radio.grid(row=4, column=0)
+        self.enc_methods.grid(row=4, column=1)
+        dec_radio.grid(row=4, column=2)
+
+        copy_from_ete.grid(row=4, column=0, padx=5)
+        enter_button.grid(row=4, column=1, padx=5)
+        paste_to_ete.grid(row=4, column=2, padx=5)
+
+        self.enc_methods.bind('<<ComboboxSelected>>', configure_modes)
+
+    def determine_highlight(self):
+        if (self.night_mode.get()):
+            if not (self.nm_palette.get() == 'blue'):
+                self._background = '#064663'
+                self.tc = '#ECB365'
+            else:
+                self._background = '#110022'
+                self.tc = 'green'
+        else:
+            self._background = 'SystemButtonFace'
+            self.tc = 'black'
 
     if RA:
         right_align_language_support()
