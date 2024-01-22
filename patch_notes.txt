@@ -1,6 +1,55 @@
 Version - name - release date
 
-[ 1.12.4 - improvements along the way - 23/12/23]
+[ 1.12.5 - getting ready for the Microsoft store ]
+
+Added:
+added fun numbers saved settings - determines if random numbers will be inserted into text entries (that is useful for them) when opening these tools
+added search functions tool - search function by menus, name and run them from this tool
+added advanced options to the custom color functions
+added restart function to the main program's window
+added options more options to the "generate sequence" tool:
+insert at the text's pointer / at the end of the text
+preview window where you can choose whether to insert the content or dismiss it
+added binding settings in the advanced options window -
+right now you can choose to enable or disable the following shortcut categories:
+file-related common shortcuts
+typefaces shortcuts
+edit function (like goto and replace)
+text twisters shortcuts
+window actions shortcuts
+added a "topmost" shortcut
+
+Improved:
+improved to the tooltip with a custom library - now it looks modern, has a constant delay before showing up and the tooltip will follow the mouse on the widget's borders
+the new tooltip can be adjusted to night mode - for now only if the program opens in night mode
+made that for window 11 (and maybe 10), when night mode is activated the title bar will also turn black, and vice versa
+combined all typeface functions
+improved some menus' names of functions
+changed the calculator calculating method from eval() to numexpr.evaluate() - safer and provides many more calculating options, and added a button with a link to a tutorial about this library
+changed the number that will warn you about lag in the generate sequence tool from 25k to 20k
+changed the mention of what tool you are using in the knowledge window (Wikipedia or dictionary) from the enter button to the title bar
+changed "HTTP" links to "HTTPS" for security reasons
+made the encryption root 5% transparent like the other tools' windows
+improved info window's night/light modes by giving the highlight of text search foreground and background depending on the mode
+made the declaration of some night mode variables conditional to make them less wasteful
+replaced some wasteful buttons commands' configures methods with a placing of the function that can prevent that
+improved "insert random number" UI, by placing the widgets in a different way that made the window less wide and unorganized
+improved the "generate sequence" UI, by using more modern UI elements, and making the design more consistent
+improved very lightly the knowledge window's UI
+improved the "encryption/decryption" tool's UI by giving the buttons more space and making them look more modern
+changed some cities in the  "known cities" list in the weather tool to more known ones
+improved email tool by making the send email window unresizable, and adding to the custom text box scrollbar and more parameters that make it richer
+
+Fixed:
+fixed a bug that made half of the dictionary's tool UI elements wasn't placed
+fixed variable scope error in the info window
+fixed polyglot name in the library installer
+fixed emoticon library name in the import
+fixed the bug in the info root's night mode that the occurrences label even without output will show its color
+fixed custom_ui_colors night mode condition
+fixed the errors of the "known cities" list in the weather tool
+
+[ 1.12.4 - improvements along the way]
 Added:
 added a restart button to the library installer after you finish installing the libraries
 added bonus installations of upgrade pip and the optional libraries
@@ -23,7 +72,7 @@ made Wikipedia tool -> images method to show images with image viewer instead of
 changed "open_status_name" to a class variable
 made the find text tool have an interactive text entry
 combined the find text tool search and result windows
-improved the text split for words search in the fFindtext tool
+improved the text split for words search in the find text tool
 made the occurrences count display a label that updates in real time instead of a message box
 made the A.I. tools support the new OpenAI library
 Improved the ChatGPT tool U.I. and made it function more like a chat
