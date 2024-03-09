@@ -1,5 +1,66 @@
 Version - name - release date
 
+[1.12.6 - rise of windows - 9/3/24]
+Added
+Added side windows advanced settings:
+1. open at the middle of the screen
+2. cancel the limitation of window sizes
+3. transparency
+4. top most
+5. window count warning
+6. text corrector changes (moved from functional)
+Added night mode for these tools:
+1. search functions
+2. record
+3. insert images
+Added the ability to make a report usage file (saved setting) right after closing the program, the file will contain:
+1. usage time
+2. the date and time of the beginning and the end
+3. the record tool content
+Added some functions to the record window:
+1. save the records as a file
+2. copy the record to the clipboard
+3. paste the records to ETE
+Added a function that checks if you're using the latest version (saved setting)
+added a function that manages some of the opened windows:
+gives warning if too many windows are opened (can be disabled with saved setting)
+if you try to open a tool window that is already opened it will make the window show up instead (can be disabled with a saved setting)
+remade the insert image function:
+(can manage more than one image at a time.)
+1. manage a bunch of images and be aware of their current state
+2. can point you to their index
+3. can add/remove a specific image
+4. can rename an image but only inside the program
+5. can remove all of them with a press of a button
+added more docstrings
+
+Improved / Changed:
+Improved record call -  if the window is opened instead of opening another one it will make the current running window appear in front of you
+Improved the connection between the advanced options and saved settings by combining all the saved settings - save functions in the advanced settings into one
+made the restore defaults and the creation of a new saved settings file have a middle-ground function to save up lines of code
+changed the corrector preview place in the advanced settings to the new "pop-ups" tab
+changed some textual names - fixed misspellings, made some names fit their purpose
+made more use of the general pop-up window title structure
+removed many useless print statements + improved some
+made the unbinding of the event of the "save by writing" function objective to the function
+improved Wikipedia's image tool conditions
+made weather tool city name capitalized
+made the record tool run via a specialized thread's function - won't duplicate
+improved some placing of windows widgets that now don't have to be limited by their size
+improved the compare file window UI
+
+Fixed:
+fixed that the record list was resetting in some occurrences
+fixed a bug that the file info function will try to proceed even when it doesn't have a file
+fixed some repo's function conditions
+fixed some search function modes
+fixed inconsistency in some advanced settings night mode colors
+fixed RuntimeError - with the download of "FFmpeg"
+fixed that Wikipedia's tool images function wasn't getting many images because of the bytes conversion
+fixed some bugs with the program's  main loop
+fixed the call of git commands
+
+
 [ 1.12.5 - getting ready for the Microsoft store ]
 
 Added:
