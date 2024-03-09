@@ -44,9 +44,10 @@ def library_installer():
             spec = True
         if spec is not None:
             global lib_index, dw_fails
+
             end_msg.configure(text=f'Download in progress', fg='orange')
             library_list = ['bs4', 'emoji', 'keyboard', 'matplotlib', 'names', 'pandas', 'PIL',
-                            'pyaudio', 'pydub', 'PyPDF2', 'nltk', 'PyDictionary', 'tkinter-tooltip',
+                            'pyaudio', 'pydub', 'ffmpeg-downloader', 'PyPDF2', 'nltk', 'PyDictionary', 'tkinter-tooltip',
                             'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
                             'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
                             'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr']
@@ -63,6 +64,7 @@ def library_installer():
                     end_msg.configure(text=f'Failded to upgrade pip', fg='red')
 
             try:
+                subprocess.check_output(['ffdl', 'install', '--add-path'])
                 for lib in library_list[lib_index::]:
                     reqs = subprocess.check_output([executable, '-m', 'pip', 'install', lib])
                     lib_index += 1
@@ -121,6 +123,7 @@ try:
     import webbrowser
     import names
     import urllib.request, urllib.error
+    from urllib.parse import urlparse
     import requests
     # matplotlib (graphs library) in a way that suits tkinter
     import matplotlib
@@ -138,7 +141,7 @@ try:
     from PyPDF2 import PdfReader
     from bs4 import BeautifulSoup
     from spacy.matcher import Matcher
-    from PIL import ImageGrab, Image, ImageTk
+    from PIL import ImageGrab, Image, ImageTk, UnidentifiedImageError
     import spacy  # download also en_core_web_sm - https://spacy.io/usage
     from pydub import AudioSegment
     from keyboard import is_pressed
@@ -155,7 +158,6 @@ try:
 
 except (ModuleNotFoundError) as e:
     print(e)
-    RA = False
     library_installer()
 
 
@@ -198,7 +200,6 @@ try:
 except (ImportError, ModuleNotFoundError) as e:
     RA = False
 
-print(RA)
 
 try:
     from googletrans import Translator  # req version 3.1.0a0
@@ -262,6 +263,12 @@ class Window(Tk):
         self.rm = BooleanVar()
         self.aus = BooleanVar()
         self.ccc = BooleanVar()
+        self.us_rp = BooleanVar()
+        self.check_v = BooleanVar()
+        self.check_v.set(True)
+        self.awc = BooleanVar()
+        self.awc.set(True)
+        self.adw = BooleanVar()
         # made also here (outside advance settings func) in order to make the usage of variables less wasteful
         self.status_ = True
         self.file_ = True
@@ -275,14 +282,22 @@ class Window(Tk):
         self.autosave_by.set(1)
         self.fun_n = BooleanVar()
         self.fun_n.set(True)
+        self.all_tm_v = BooleanVar()
         '''
         variables of the program that doesn't save when you close the program
         '''
         # don't inculuded in the saved settings
+        self.func_window = {}
+        self.remove_wiki_img = []
+        self.in_images_list_n = []
+        self.in_images_dict = {}
         self.sta.set(True)
         self.aed.set(True)
         self.dm.set(False)
+        self.st_value = 0.95
         self.prefer_gpu = BooleanVar()
+        self.opened_windows = []
+        self.limit_list = []
         # python file
         self.auto_cc = BooleanVar()
         self.auto_cc.set(True)
@@ -297,8 +312,8 @@ class Window(Tk):
         self.text_changed = False
         self.aul = False
         self.op_active = ''
-        self.info_page_active = False
-        self.vk_active = False
+        self.info_page_active, self.vk_active, self.search_active, self.record_window = False, False, False, False
+        self.in_images_open = False
         self.open_status_name = ''
         self.key = ''
         self.fs_value = False
@@ -321,6 +336,10 @@ class Window(Tk):
         self.image_name = ''
         self.aff = BooleanVar()
         self.highlight_search_c = 'blue' , 'white'
+        self.limit_w_s = BooleanVar()
+        self.limit_w_s.set(True)
+        self.open_middle_s = BooleanVar()
+        self.open_middle_s.set(True)
 
         # opening the saved settings early can make us create some widgets with the settings initialy
         try:
@@ -365,15 +384,16 @@ class Window(Tk):
         variables for the mains window UI 
         '''
         # window's title
-        ver = '1.12.5'
-        self.title(f'Egon Text editor - {ver}')
+        self.ver = '1.12.6'
+        self.title(f'Egon Text editor - {self.ver}')
         # function thats loads all the toolbar images
         self.load_images()
         # connecting the prees of the exit button the a custom exit function
         self.protocol('WM_DELETE_WINDOW', self.exit_app)
         # threads for a stopwatch function that works on advance option window and a function that loads images from the web
         Thread(target=self.stopwatch, daemon=True).start()
-        Thread(target=self.load_links, daemon=True).start()
+        # Thread(target=self.load_links, daemon=True).start()
+        self.load_links()
         # variables for the (UI) style of the program
         self.titles_font = '@Microsoft YaHei Light', 16, 'underline'
         self.title_struct = 'EgonTE - '
@@ -526,11 +546,11 @@ class Window(Tk):
 
         self.v_keyboard_button.grid(row=0, column=11, padx=5)
         self.dtt_button = Button(self.toolbar_frame, image=self.DTT_IMAGE, relief=FLAT,
-                            command=self.handwriting)
+                            command=lambda:self.open_windows_control(self.handwriting))
         self.dtt_button.grid(row=0, column=12, padx=5)
 
         self.calc_button = Button(self.toolbar_frame, image=self.CALC_IMAGE, relief=FLAT,
-                             command=self.ins_calc)
+                             command=lambda:self.open_windows_control(self.ins_calc))
         self.calc_button.grid(row=0, column=13, padx=5)
 
         # opening sentence that will be inserted if there is no last opened file option
@@ -573,6 +593,12 @@ class Window(Tk):
 
         self.place_toolt()
         self.binds(mode='initial')
+        self.stt_time = self.get_time()
+        # Thread(target=self.record_logs, daemon=False).start()
+        # self.record_logs()
+        if self.check_v.get():
+            Thread(target=self.check_version, daemon=True).start()
+
 
     def load_images(self):
         '''
@@ -640,14 +666,15 @@ class Window(Tk):
             self.file_menu.add_command(label='Save', command=self.save, accelerator='(ctrl+s)')
             self.file_menu.add_command(label='Save As', command=self.save_as)
             self.file_menu.add_command(label='Delete file', command=self.delete_file)
-            self.file_menu.add_command(label='Change file type', command=self.change_file_ui)
+            self.file_menu.add_command(label='Change file type', command=lambda:self.open_windows_control(self.change_file_ui))
             self.file_menu.add_command(label='New window', command=lambda: new_window(Window), state=ACTIVE)
             self.file_menu.add_command(label='Screenshot content',
                                        command=lambda: self.save_images(self.EgonTE, self, self.toolbar_frame, 'main'))
             self.file_menu.add_separator()
-            self.file_menu.add_command(label='File\'s Info', command=self.file_info)
-            self.file_menu.add_command(label='Content\'s stats', command=self.content_stats, font=self.ex_tool)
-            self.file_menu.add_command(label='File\'s comparison', command=self.compare)
+            self.file_menu.add_command(label='File\'s Info', command=lambda:self.open_windows_control(self.file_info))
+            self.file_menu.add_command(label='Content\'s stats', command=lambda:self.open_windows_control(self.content_stats)
+                                       , font=self.ex_tool)
+            self.file_menu.add_command(label='File\'s comparison', command=lambda:self.open_windows_control(self.compare))
             self.file_menu.add_command(label='Merge files', command=self.merge_files)
             self.file_menu.add_separator()
             self.file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=self.print_file)
@@ -689,21 +716,21 @@ class Window(Tk):
             self.edit_menu.add_command(label='Sort by characters', command=self.sort_by_characters)
             self.edit_menu.add_command(label='Sort by words', command=self.sort_by_words)
             self.edit_menu.add_separator()
-            self.edit_menu.add_command(label='Insert image', command=self.insert_image)
+            self.edit_menu.add_command(label='Insert images', command=lambda:self.open_windows_control(self.insert_image))
 
         # tools menu
         self.tool_menu = Menu(self.app_menu, tearoff=False)
         self.app_menu.add_cascade(label='Tools', menu=self.tool_menu)
         self.tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=self.dt)
-        self.tool_menu.add_command(label='Random number', command=self.ins_random)
-        self.tool_menu.add_command(label='Random name', command=self.ins_random_name)
+        self.tool_menu.add_command(label='Random number', command=lambda:self.open_windows_control(self.ins_random))
+        self.tool_menu.add_command(label='Random name', command=lambda:self.open_windows_control(self.ins_random_name))
         if google_trans:
-            self.tool_menu.add_command(label='Translate', command=self.translate)
+            self.tool_menu.add_command(label='Translate', command=lambda:self.open_windows_control(self.translate))
         if short_links:
             self.tool_menu.add_command(label='Url shorter', command=self.url)
-        self.tool_menu.add_command(label='Generate sequence', command=self.generate)
-        self.tool_menu.add_command(label='Search online', command=self.search_www)
-        self.tool_menu.add_command(label='Sort input', command=self.sort)
+        self.tool_menu.add_command(label='Generate sequence',command=lambda:self.open_windows_control(self.generate))
+        self.tool_menu.add_command(label='Search online', command=lambda:self.open_windows_control(self.search_www))
+        self.tool_menu.add_command(label='Sort input', command=lambda:self.open_windows_control(self.sort))
         self.tool_menu.add_command(label='Dictionary',
                                    command=lambda: Thread(target=self.knowledge_window('dict')).start())
         self.tool_menu.add_command(label='Wikipedia',
@@ -714,14 +741,14 @@ class Window(Tk):
         self.tool_menu.add_command(label='Inspirational quote', command=self.insp_quote)
         self.tool_menu.add_command(label='Get weather', command=self.get_weather)
         if email_tool:
-            self.tool_menu.add_command(label='Send Email', command=self.send_email)
+            self.tool_menu.add_command(label='Send Email', command=lambda:self.open_windows_control(self.send_email))
         if chatgpt_2library or openai_library:
             self.tool_menu.add_command(label='Use ChatGPT', command=self.chatGPT)
         self.tool_menu.add_command(label='Use DallE', command=self.dallE)
         self.tool_menu.add_command(label='Transcript', command=self.transcript)
-        self.tool_menu.add_command(label='Symbols translator', command=self.emojicons_hub)
+        self.tool_menu.add_command(label='Symbols translator', command=lambda:self.open_windows_control(self.emojicons_hub))
         if enc_tool:
-            self.tool_menu.add_command(label='Encryption / decryption', command=self.encryption)
+            self.tool_menu.add_command(label='Encryption / decryption', command=lambda:self.open_windows_control(self.encryption))
         # nlp menu
         self.nlp_menu = Menu(self.app_menu, tearoff=False)
         self.app_menu.add_cascade(label='NLP', menu=self.nlp_menu)
@@ -797,9 +824,9 @@ class Window(Tk):
         self.options_menu.add_separator()
         self.options_menu.add_command(label='Advance options', command=self.call_settings)
         # help page
-        self.app_menu.add_cascade(label='Help', command=lambda: self.info_page('help'))
+        self.app_menu.add_cascade(label='Help', command=lambda:self.open_windows_control(lambda: self.info_page('help')))
         # patch notes page
-        self.app_menu.add_cascade(label='Patch notes', command=lambda: self.info_page('patch_notes'))
+        self.app_menu.add_cascade(label='Patch notes', command=lambda:self.open_windows_control(lambda: self.info_page('patch_notes')))
         # search function
         self.app_menu.add_cascade(label='Search', command=self.search_functions)
         # extenal links menu
@@ -810,6 +837,11 @@ class Window(Tk):
         self.links_menu.add_command(label='MS store', command=lambda: self.ex_links('m'), state=DISABLED)
 
     def place_toolt(self):
+
+        '''
+        placing tooltips with a function gives us the abillty to be in charge of more settings
+        '''
+
         # tooltips to the toolbar's buttons
         tt1 = ToolTip(self.bold_button, msg='Bold (ctrl+b)', delay=0.9, follow=True, fg=self.dynamic_text, bg=self.dynamic_button)
         tt2 = ToolTip(self.italics_button, msg='Italics (ctrl+i)', delay=0.9, follow=True, fg=self.dynamic_text, bg=self.dynamic_button)
@@ -825,9 +857,17 @@ class Window(Tk):
         tt12 = ToolTip(self.dtt_button, msg='Draw to text', delay=0.9, follow=True, fg=self.dynamic_text, bg=self.dynamic_button)
 
     def binds(self, mode):
+
+        '''
+        binding shortcuts,
+        made in a seperate function to control some unbindings via the advance settings
+        '''
+
         # conventional shortcuts for functions
         if mode == 'initial':
             self.EgonTE.bind('<KeyPress>', self.emoji_detection)
+            self.EgonTE.bind('<KeyRelease>', self.update_insert_image_list)
+            '''+ settings for the key-press/release events'''
             # special events
             self.font_size.bind('<<ComboboxSelected>>', self.change_font_size)
             self.font_ui.bind('<<ComboboxSelected>>', self.change_font)
@@ -885,6 +925,44 @@ class Window(Tk):
             self.bind('<F11>', self.full_screen)
             self.bind('<Control-Key-t>', self.topmost)
             self.bind('<Control-Key-T>', self.topmost)
+
+    def open_windows_control(self, func):
+        '''+ beta tool
+
+        this function is used to control some tools windows
+        - warn the user about opening to much tools windows at once ( can be disabled )
+        - wont duplicate windows, instead will show the window that is already opened more clearly ( can be disabled )
+
+        maybe for future updates:
+        integrate with knowledge window
+        make some tools not call the warning
+        '''
+        window = False
+        # searching if function is in the dictionary
+        for func_saved in self.func_window.keys():
+            if func_saved == func:
+                # searching if function's window is open
+                if self.func_window[func_saved] in self.opened_windows and not(self.adw.get()):
+                    window = self.func_window[func_saved]
+                    window.attributes('-topmost', True)
+                    window.attributes('-topmost', self.all_tm_v.get())
+                    break
+
+        # if window:
+        #     if window in self.opened_windows:
+
+        if not window:
+            opened_count = len(self.opened_windows)
+            open_window = False
+            if opened_count > 5 and self.awc.get():
+                if messagebox.askyesno('EgonTE', f'you have {opened_count} opened windows\nare you sure you want'
+                                                 f' to open another one?'):
+                    open_window = True
+            else:
+                open_window = True
+
+            if open_window:
+                func()
 
 
     def get_time(self):
@@ -987,7 +1065,7 @@ class Window(Tk):
                 if self.data['open_last_file']:
                     self.save_last_file()
 
-                self.record_list = [f'> [{self.get_time()}] - Opened {self.file_name}']
+                self.record_list.append(f'> [{self.get_time()}] - Opened {self.file_name}')
 
             except UnicodeDecodeError:
                 messagebox.showerror(self.title_struct + 'error', 'File contains not supported characters')
@@ -1016,7 +1094,7 @@ class Window(Tk):
                 if self.data['open_last_file']:
                     self.save_last_file()
 
-                self.record_list = [f'> [{self.get_time()}] - Saved {text_file}']
+                self.record_list.append(f'> [{self.get_time()}] - Saved {text_file}')
 
         if event == 'get name':
             try:
@@ -1035,7 +1113,7 @@ class Window(Tk):
             text_file.write(self.EgonTE.get(1.0, END))
             text_file.close()
             self.file_bar.config(text=f'Saved: {self.file_name} - {self.get_time()}')
-            self.record_list = [f'> [{self.get_time()}] - Saved {self.file_name}']
+            self.record_list.append(f'> [{self.get_time()}] - Saved {self.file_name}')
         else:
             self.save_as(event=None)
 
@@ -1129,7 +1207,7 @@ class Window(Tk):
                     toolbar_button.config(background=selected_color)
 
         elif components == 'menus':
-            selected_main_color = colorchooser.askcolor(title='Menu color')[1]
+            selected_main_color = colorchooser.askcolor(title='Menu background color')[1]
             selected_text_color = colorchooser.askcolor(title='Menu text color')[1]
             if selected_main_color and selected_text_color:
                 self.record_list.append(
@@ -1217,7 +1295,7 @@ class Window(Tk):
                 if messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
                     ShellExecute(0, 'print', file2p, None, '.', 0)
         else:
-            printer_name = simpledialog.askstring('EgonTE - Print', 'What is your printer name?')
+            printer_name = simpledialog.askstring(self.title_struct + 'Print', 'What is your printer name?')
             if printer_name and file2p:
                 os.system(f'lpr -P f{printer_name} f{file2p}')
 
@@ -1349,6 +1427,15 @@ class Window(Tk):
             for vk_btn in self.all_vk_buttons:
                 vk_btn.config(bg=second_color, fg=_text_color)
 
+        if self.search_active:
+            for widget in self.search_widgets:
+                widget.configure(bg=second_color, fg=_text_color)
+            self.search_widgets[-1].configure(bg=third_color, fg=_text_color)
+            self.search_bg.configure(bg=main_color)
+
+        if self.record_window:
+            self.record_night.configure(bg=second_color, fg=_text_color)
+
         if self.op_active:
             for tab in self.opt_frames:
                 tab.configure(bg=main_color)
@@ -1372,10 +1459,16 @@ class Window(Tk):
                 label.configure(bg=main_color, fg=_text_color)
             for seperator in self.hw_seperator:
                 seperator.configure(bg=second_color, fg=_text_color)
-
             if self.night_mode.get():
                 main_color = second_color
-            self.draw_canvas.configure(bg=main_color)
+                self.draw_canvas.configure(bg=main_color)
+
+        if self.in_images_open:
+            for widget in self.in_im_commands:
+                widget.configure(bg=second_color, fg=_text_color)
+            for background in self.in_im_bgs:
+                background.configure(bg=main_color)
+
 
         self.style_combobox.configure('TCombobox', background=second_color, foreground=_text_color)
 
@@ -1428,7 +1521,9 @@ class Window(Tk):
 
         # window creation
         replace_root = Toplevel()
-        replace_root.resizable(False, False)
+        self.make_tm(replace_root)
+        if self.limit_w_s.get():
+            replace_root.resizable(False, False)
         # ui components
         replace_text = Label(replace_root, text='Enter the word that you wish to replace')
         find_input = Entry(replace_root, width=20)
@@ -1566,6 +1661,10 @@ class Window(Tk):
         for it, and make sure that everything closes
         '''
         self.saved_settings(sm='save')
+        
+        if self.us_rp.get():
+            self.usage_report()
+        
         if self.file_name:
             text_file = open(self.file_name, 'r')
             stuff = text_file.read()
@@ -1573,6 +1672,7 @@ class Window(Tk):
                 if messagebox.askyesno(self.title_struct + 'Quit',
                                        'Some changes  warn\'t saved, do you wish to save first?'):
                     self.save()
+        
 
         # if event == 'r':
         #     try:
@@ -1591,6 +1691,10 @@ class Window(Tk):
             quit()
             exit()
             raise Exception('Close')
+
+    def close_pop_ups(self, root):
+        self.opened_windows.remove(root)
+        root.destroy()
 
     def find_text(self, event=None):
         '''
@@ -1747,8 +1851,10 @@ class Window(Tk):
 
         # window creation
         search_text_root = Toplevel()
-        search_text_root.resizable(False, False)
-        search_text_root.attributes('-alpha', '0.95')
+        self.make_tm(search_text_root)
+        if self.limit_w_s.get():
+            search_text_root.resizable(False, False)
+        search_text_root.attributes('-alpha', self.st_value)
         # variables
         cpt_settings = 'c'
         by_characters = True
@@ -1866,9 +1972,15 @@ class Window(Tk):
         def clear_one():
             calc_entry.delete(calc_entry.index(INSERT) - 1)
 
+
         calc_root = Toplevel(relief=FLAT)
-        calc_root.resizable(False, False)
-        calc_root.attributes('-alpha', '0.95')
+        calc_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(calc_root))
+        self.opened_windows.append(calc_root)
+        self.func_window[self.ins_calc] = calc_root
+        self.make_tm(calc_root)
+        if self.limit_w_s.get():
+            calc_root.resizable(False, False)
+        calc_root.attributes('-alpha', self.st_value)
         left_frame = Frame(calc_root)
         title = Label(left_frame, text='Calculator', font=self.titles_font, padx=2, pady=3)
         introduction_text = Label(left_frame, text='Enter a equation below:', font='arial 10 underline', padx=2, pady=3)
@@ -2019,9 +2131,15 @@ class Window(Tk):
             random_int = str(random_int) + ' '
             self.EgonTE.insert(self.get_pos(), random_int)
 
+
         ran_num_root = Toplevel()
-        ran_num_root.resizable(False, False)
-        ran_num_root.attributes('-alpha', '0.95')
+        ran_num_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(ran_num_root))
+        self.opened_windows.append(ran_num_root)
+        self.func_window[self.ins_random] = ran_num_root
+        self.make_tm(ran_num_root)
+        if self.limit_w_s.get():
+            ran_num_root.resizable(False, False)
+        ran_num_root.attributes('-alpha', self.st_value)
         title = Label(ran_num_root, text='Random numbers:', justify='center',
                       font=self.titles_font)
         introduction_text = Label(ran_num_root, text='Enter numbers below:', justify='center',
@@ -2046,7 +2164,6 @@ class Window(Tk):
             ran_numbers = self.EgonTE.get('sel.first', 'sel.last')
             numbers_separation = ran_numbers.split(' ')
             if str(ran_numbers[0]).isnumeric():
-                print(numbers_separation)
                 number_entry1.insert('end', numbers_separation[0])
             try:
                 number_entry2.insert('end', numbers_separation[1])
@@ -2202,9 +2319,15 @@ class Window(Tk):
 
             re_roll.config(command=adv_random_name)
 
+
         name_root = Toplevel()
-        name_root.resizable(False, False)
-        name_root.attributes('-alpha', '0.95')
+        name_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(name_root))
+        self.opened_windows.append(name_root)
+        self.func_window[self.ins_random_name] = name_root
+        self.make_tm(name_root)
+        if self.limit_w_s.get():
+            name_root.resizable(False, False)
+        name_root.attributes('-alpha', self.st_value)
         random_name = names.get_full_name()
         text = Label(name_root, text='Random name that generated:', font='arial 10 underline')
         rand_name = Label(name_root, text=random_name)
@@ -2254,9 +2377,14 @@ class Window(Tk):
             if content:
                 self.EgonTE.insert(self.get_pos(), content)
 
+
         # window creation
         translate_root = Toplevel()
-        translate_root.attributes('-alpha', '0.95')
+        translate_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(translate_root))
+        self.opened_windows.append(translate_root)
+        self.func_window[self.translate] = translate_root
+        self.make_tm(translate_root)
+        translate_root.attributes('-alpha', self.st_value)
         boxes_frame = Frame(translate_root)
         combo_frame = Frame(translate_root)
         button_frame = Frame(translate_root)
@@ -2269,7 +2397,7 @@ class Window(Tk):
 
         chosen_language = ttk.Combobox(combo_frame, width=20, textvariable=languages, state='readonly', font='arial 10')
 
-        auto_detect['values'] = ('Auto Detect',)
+        auto_detect['values'] = ('Auto Detect')
         auto_detect.current(0)
 
 
@@ -2325,11 +2453,17 @@ class Window(Tk):
         '''
         a simple tool that takes an input of url and inserts a shorter version
         '''
+
+
         # window creation
         url_root = Toplevel()
+        self.make_tm(url_root)
+        self.opened_windows.append(url_root)
+        url_root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(url_root))
         url_root.title(self.title_struct + 'Url shorter')
-        url_root.resizable(False, False)
-        url_root.attributes('-alpha', '0.95')
+        if self.limit_w_s.get():
+            url_root.resizable(False, False)
+        url_root.attributes('-alpha', self.st_value)
         # ui components creation & placement
         url_text = Label(url_root, text='Enter url below:', font='arial 10 underline')
         url_entry = Entry(url_root, relief=GROOVE, width=40)
@@ -2383,7 +2517,6 @@ class Window(Tk):
                 n = ''
             else:
                 n = '\n'
-            print(content)
         content = ''.join(content)
         reversed_content = content[::-1] + n
 
@@ -2474,7 +2607,6 @@ class Window(Tk):
                     else:
                         approved = False
             if approved:
-                print('yes')
                 sym_char = '!', '@', '#', '$', '%', '^', '&', '*', '(', ')'
                 if self.generate_sym.get():
                     for character in sym_char:
@@ -2485,7 +2617,6 @@ class Window(Tk):
                             for i in characters:
                                 if i in remove_list:
                                     characters.remove(i)
-                            print()
                         except ValueError as e:
                             print(e)
                 shuffle(characters)
@@ -2501,6 +2632,7 @@ class Window(Tk):
                         self.EgonTE.insert(desired_pos, ''.join(sequence))
                         preview_root.destroy()
                     preview_root = Toplevel()
+                    self.make_tm(preview_root)
                     preview_root.title(self.title_struct + 'preview of G.S')
                     text = Text(preview_root)
                     text.insert(END, ''.join(sequence))
@@ -2515,8 +2647,13 @@ class Window(Tk):
         self.preview_sequence = BooleanVar()
         self.insert_mc.set(True)
         generate_root = Toplevel()
-        generate_root.resizable(False, False)
-        generate_root.attributes('-alpha', '0.95')
+        generate_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(generate_root))
+        self.opened_windows.append(generate_root)
+        self.func_window[self.generate] = generate_root
+        self.make_tm(generate_root)
+        if self.limit_w_s.get():
+            generate_root.resizable(False, False)
+        generate_root.attributes('-alpha', self.st_value)
         characters = list(ascii_letters + digits)
         intro_text = Label(generate_root, text='Generate a random sequence', font=self.titles_font)
         length_entry = Entry(generate_root, width=15)
@@ -2647,12 +2784,17 @@ class Window(Tk):
         '''
 
         def quit_page():
+            self.opened_windows.remove(info_root)
             self.info_page_active = False
             info_root.destroy()
 
         # window creation
         self.info_page_active = True
         info_root = Toplevel()
+        info_root.attributes('-alpha', self.st_value)
+        self.opened_windows.append(info_root)
+        self.func_window[lambda: self.info_page(path)] = info_root
+        self.make_tm(info_root)
         info_root.config(bg='white')
         info_root.protocol('WM_DELETE_WINDOW', quit_page)
 
@@ -2822,9 +2964,10 @@ class Window(Tk):
         # bug if using your second dislay
         if abs(mid_y - self.winfo_screenheight()) <= 80:
             mid_y = (self.winfo_screenheight() // 2)
-            print(mid_y)
-        info_root.geometry(f'{win_w}x{win_h}+{mid_x}+{mid_y}')
-        info_root.resizable(False, False)
+        if self.open_middle_s.get():
+            info_root.geometry(f'{win_w}x{win_h}+{mid_x}+{mid_y}')
+        if self.limit_w_s.get():
+            info_root.resizable(False, False)
 
         entry.bind('<KeyRelease>', find_content)
 
@@ -2839,9 +2982,15 @@ class Window(Tk):
         this tool is a shortcut for web usage, you can also choose some brower beside the default one,
         and choose session type
         '''
+
         ser_root = Toplevel()
-        ser_root.resizable(False, False)
-        ser_root.attributes('-alpha', '0.95')
+        self.opened_windows.append(ser_root)
+        self.func_window[self.search_www] = ser_root
+        ser_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(ser_root))
+        self.make_tm(ser_root)
+        if self.limit_w_s.get():
+            ser_root.resizable(False, False)
+        ser_root.attributes('-alpha', self.st_value)
 
         def enter():
             if not (str(br_modes.get()) == 'default'):
@@ -2950,7 +3099,8 @@ class Window(Tk):
         3. restore saved settings to default
         4. remove newlines and spaces in some text twisters functions
         5. auto save method
-        6. view text corrector changes before applying them
+        6. check (if using updated) version - when the program is opening
+        7. usage report - make a file upon exit - with your usage time + record window information
 
         activate / disable shortcuts:
         - file actions
@@ -2959,7 +3109,13 @@ class Window(Tk):
         - window shortcuts
         - text twisters
 
-
+        other windows:
+        1. topmost
+        2. open at the middle of the screen (for those who had it already)
+        3. don't limit sizes
+        4. warning when you are opening a large amount of windows
+        5. transparency
+        6. view text corrector changes before applying them
         '''
         global tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button
         global style_clam, style_vista, style_classic
@@ -3024,8 +3180,9 @@ class Window(Tk):
                     self.unbind('<Control-Key-T>')
 
         def exit_op():
+            self.opened_windows.remove(self.opt_root)
             self.op_active = ''
-            opt_root.destroy()
+            self.opt_root.destroy()
 
         def adv_custom_cursor(cursor):
             self.EgonTE.config(cursor=cursor)
@@ -3118,13 +3275,15 @@ class Window(Tk):
                 self.data['open_last_file'] = ''
 
         # window creation and some settings
-        global opt_root
-        opt_root = Toplevel()
-        opt_root.configure(bg=self.dynamic_overall)
-        opt_root.resizable(False, False)
+        self.opt_root = Toplevel()
+        self.make_tm(self.opt_root)
+        self.opt_root.configure(bg=self.dynamic_overall)
+        if self.limit_w_s.get():
+            self.opt_root.resizable(False, False)
         self.op_active = True
-        opt_root.protocol('WM_DELETE_WINDOW', exit_op)
-        self.usage_time = Label(opt_root, fg=self.dynamic_text, bg=self.dynamic_overall)
+        self.opt_root.protocol('WM_DELETE_WINDOW', exit_op)
+        self.opened_windows.append(self.opt_root)
+        self.usage_time = Label(self.opt_root, fg=self.dynamic_text, bg=self.dynamic_overall)
 
         def predefined_checkbuttons():
             if self.bars_active:
@@ -3144,45 +3303,25 @@ class Window(Tk):
 
                 # the assignment of the builtin boolean values is important to make the file & status bar work well
 
-        def tt_save():
+        def save_variables():
+            self.data['usage_report'] = self.us_rp.get()
             self.data['text_twisters'] = self.tt_sc.get()
-
-        def nt_save():
             self.data['night_type'] = self.nm_palette.get()
-
-        def ccc_save():
             self.data['preview_cc'] = self.ccc.get()
+            self.data['check_version'] = self.check_v.get()
+            self.data['window_c_warning'] = self.awc.get()
+            self.data['allow_duplicate'] = self.adw.get()
 
         def restore_defaults():
 
             if messagebox.askyesno(self.title_struct + 'reset settings',
                                    'Are you sure you want to reset all your current\nand saved settings?'):
-                self.data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
-                             'style': 'clam',
-                             'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
-                             'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
-                             'night_type': 'black', 'preview_cc' : False, 'fun_numbers' : True}
-
-                self.rm.set(self.data['reader_mode'])
-                self.bars_active.set(self.data['status_bar'] and self.data['file_bar'])
-                self.show_statusbar.set(self.bars_active.get())
-                self.status_ = self.data['status_bar']
-                self.file_ = self.data['file_bar']
-                self.show_toolbar.set(self.data['toolbar'])
-                self.night_mode.set(self.data['night_mode'])
-                self.tt_sc.set(self.data['text_twisters'])
-                self.nm_palette.set(self.data['night_type'])
-                self.cs.set(self.data['style'])
-                self.cc.set(self.data['cursor'])
-                self.ww.set(self.data['word_wrap'])
-                self.aus.set(self.data['auto_save'])
-                self.ccc.set(self.data['preview_cc'])
+                self.make_default_data()
+                self.match_saved_settings()
 
                 self.bars_active.set(True)
                 self.show_statusbar.set(True)
                 self.show_toolbar.set(True)
-                self.cc.set('xterm')
-                self.cs.set('clam')
                 self.ww.set(True)
                 self.aus.set(True)
                 self.rm.set(False)
@@ -3190,7 +3329,6 @@ class Window(Tk):
                 self.predefined_style = 'clam'
                 self.predefined_relief = 'ridge'
                 self.save_bg.set(False)
-                self.fun_n.set(self.data['fun_numbers'])
 
         def stt_key(event=False):
             self.stt_lang_value = self.sr_supported_langs[self.stt_chosen_lang.get()]
@@ -3202,7 +3340,7 @@ class Window(Tk):
                 self.record_list.append(
                     f'> [{self.get_time()}] - AutoSave methond changed: save by pressing')
             else:
-                self.EgonTE.unbind('<KeyRelease>')
+                self.EgonTE.unbind('<KeyRelease>', self.auto_save_press)
                 self.record_list.append(
                     f'> [{self.get_time()}] - AutoSave methond changed: save by waiting 30 seconds')
 
@@ -3218,10 +3356,11 @@ class Window(Tk):
         # self.nm_val = IntVar()
 
         # expreninting with tabs
-        settings_tabs = ttk.Notebook(opt_root)
+        settings_tabs = ttk.Notebook(self.opt_root)
         styles_frame = Frame(settings_tabs, bg=self.dynamic_overall)
         functional_frame = Frame(settings_tabs, bg=self.dynamic_overall)
         bindings_frame = Frame(settings_tabs, bg=self.dynamic_overall)
+        pop_ups_frame = Frame(settings_tabs, bg=self.dynamic_overall)
 
         button_width = 8
         font_ = 'arial 10 underline'
@@ -3229,7 +3368,7 @@ class Window(Tk):
         bar_frame = Frame(functional_frame)
         predefined_checkbuttons()
         # creating adv-options window UI
-        opt_title = Label(opt_root, text='Advance Options', font='calibri 16 bold', bg=self.dynamic_overall, fg=self.dynamic_text)
+        opt_title = Label(self.opt_root, text='Advance Options', font='calibri 16 bold', bg=self.dynamic_overall, fg=self.dynamic_text)
         cursor_title = Label(styles_frame, text='Advance Cursor configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         tcross_button = Button(styles_frame, text='tcross', command=lambda: adv_custom_cursor('tcross'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
         arrow_button = Button(styles_frame, text='arrow', command=lambda: adv_custom_cursor('arrow'), width=button_width, bg=self.dynamic_button, fg=self.dynamic_text)
@@ -3254,19 +3393,21 @@ class Window(Tk):
         # the new night mode palettes settings!
         nm_title = Label(styles_frame, text='Choose night mode type', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         nm_black_checkbox = Radiobutton(self.night_frame, text='Dracula', variable=self.nm_palette, value='black',
-                                        command=nt_save, bg=self.dynamic_bg, fg=self.dynamic_text)
+                                        command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
         nm_blue_checkbox = Radiobutton(self.night_frame, text='MidNight\nBlue', variable=self.nm_palette, value='blue',
-                                       command=nt_save, bg=self.dynamic_bg, fg=self.dynamic_text)
+                                       command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
 
         stt_title = Label(functional_frame, text='Speech to text language', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         stt_lang = ttk.Combobox(functional_frame, width=15, textvariable=self.stt_chosen_lang, state='readonly', style='TCombobox')
         stt_lang['values'] = list(self.sr_supported_langs.keys())
 
-        lf_frame = Frame(functional_frame)
-        last_file_title = Label(functional_frame, text='Last used files', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
-        last_file_checkbox = Checkbutton(lf_frame, text='last text file', variable=self.lf, command=change_lof, bg=self.dynamic_bg, fg=self.dynamic_text)
-        last_bg_checkbox = Checkbutton(lf_frame, text='last background file', variable=self.save_bg,
-                                         bg=self.dynamic_bg, fg=self.dynamic_text, state=DISABLED)
+        # lf_frame = Frame(functional_frame)
+        file_opt_title = Label(functional_frame, text='Files', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        last_file_checkbox = Checkbutton(functional_frame, text='Open initially last file', variable=self.lf, command=change_lof, bg=self.dynamic_bg, fg=self.dynamic_text)
+        usage_report_checkbox = Checkbutton(functional_frame, text='Usage report', variable=self.us_rp, command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
+
+        # last_bg_checkbox = Checkbutton(lf_frame, text='last background file', variable=self.save_bg,
+        #                                  bg=self.dynamic_bg, fg=self.dynamic_text, state=DISABLED)
 
         transparency_title = Label(styles_frame, text='Transparency configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         transparency_config = Scale(styles_frame, from_=10, to=100, orient='horizontal', command=change_transparency, bg=self.dynamic_bg, fg=self.dynamic_text)
@@ -3274,28 +3415,51 @@ class Window(Tk):
         # transparency_set = Button(styles_frame, text='Change transparency', command=change_transparency)
 
         title_other = Label(functional_frame, text='Others', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        check_v_checkbox = Checkbutton(functional_frame, text='Check version', variable=self.check_v,
+                                        bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
         reset_button = Button(functional_frame, text='Restore default', command=restore_defaults, bg=self.dynamic_bg, fg=self.dynamic_text)
         tt_checkbox = Checkbutton(functional_frame, text='Text twisters\nremove special characters', variable=self.tt_sc,
-                                  command=tt_save, bg=self.dynamic_bg, fg=self.dynamic_text)
-        corrector_preview = Checkbutton(functional_frame, text='Text corrector preview changes', variable=self.ccc,
-                                        bg=self.dynamic_bg, fg=self.dynamic_text, command=ccc_save)
+                                  command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
+        # open_record_cb = Checkbutton(functional_frame, text='Text twisters\nremove special characters', variable=self.tt_sc,
+        #                           command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
 
         auto_save_frame = Frame(functional_frame)
         auto_save_title = Label(functional_frame, text='Auto save method', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         by_time_rb = Radiobutton(auto_save_frame, text='By time', variable=self.autosave_by, value=1, command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
         by_press_rb = Radiobutton(auto_save_frame, text='By pressing', variable=self.autosave_by, value=0, command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
 
-        state_title = Label(bindings_frame, text='State of shortcuts', font=font_)
+        state_title = Label(bindings_frame, text='State of shortcuts', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
         file_actions_check = Checkbutton(bindings_frame, text='file actions', command=lambda:custom_binding('f'),
-                                         variable=self.file_actions_v, bg=self.dynamic_overall, fg=self.dynamic_text)
+                                         variable=self.file_actions_v, bg=self.dynamic_bg, fg=self.dynamic_text)
         typefaces_action_check = Checkbutton(bindings_frame, text='typefaces actions', command=lambda:custom_binding('tf'),
-                                             variable=self.typefaces_actions_v, bg=self.dynamic_overall, fg=self.dynamic_text)
+                                             variable=self.typefaces_actions_v, bg=self.dynamic_bg, fg=self.dynamic_text)
         edit_functions_check = Checkbutton(bindings_frame, text='edit functions', command=lambda:custom_binding('e'),
-                                           variable=self.edit_functions_v, bg=self.dynamic_overall, fg=self.dynamic_text)
+                                           variable=self.edit_functions_v, bg=self.dynamic_bg, fg=self.dynamic_text)
         win_actions_check = Checkbutton(bindings_frame, text='window functions', command=lambda:custom_binding('w'),
-                                           variable=self.win_actions_v, bg=self.dynamic_overall, fg=self.dynamic_text)
+                                           variable=self.win_actions_v, bg=self.dynamic_bg, fg=self.dynamic_text)
         textt_function_check = Checkbutton(bindings_frame, text='text twisters functions', command=lambda: custom_binding('tt'),
-                                         variable=self.texttwisters_functions_v, bg=self.dynamic_overall, fg=self.dynamic_text)
+                                         variable=self.texttwisters_functions_v, bg=self.dynamic_bg, fg=self.dynamic_text)
+
+        attr_title = Label(pop_ups_frame, text='Attributes', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        trans_s_title = Label(pop_ups_frame, text='Transparency configuration', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        self.transparency_s = Scale(pop_ups_frame, from_=10, to=100, orient='horizontal',
+                                    command=self.other_transparency, bg=self.dynamic_bg, fg=self.dynamic_text)
+        self.transparency_s.set(95)
+        top_most_s = Checkbutton(pop_ups_frame, text='TopMost', variable=self.all_tm_v,
+                               bg=self.dynamic_bg, fg=self.dynamic_text, command=self.make_tm)
+        open_m_s = Checkbutton(pop_ups_frame, text='Open at middle (some)', variable=self.open_middle_s,
+                               bg=self.dynamic_bg, fg=self.dynamic_text)
+        never_limit_s = Checkbutton(pop_ups_frame, text='Don\'t limit sizes', variable=self.limit_w_s,
+                               bg=self.dynamic_bg, fg=self.dynamic_text, command=self.limit_sizes)
+        warning_title =  Label(pop_ups_frame, text='Warnings', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        many_windows_checkbox = Checkbutton(pop_ups_frame, text='Many windows', variable=self.awc,
+                                        bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
+        corrector_title = Label(pop_ups_frame, text='Text corrector', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        corrector_preview = Checkbutton(pop_ups_frame, text='Preview changes', variable=self.ccc,
+                                        bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
+        other_w_title = Label(pop_ups_frame, text='Others', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
+        duplicate_windows = Checkbutton(pop_ups_frame, text='Allow duplicates', variable=self.adw,
+                                        bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
 
 
         # placing all the widgets
@@ -3307,6 +3471,7 @@ class Window(Tk):
         settings_tabs.add(styles_frame, text='Styles')
         settings_tabs.add(functional_frame, text='Functions')
         settings_tabs.add(bindings_frame, text='Bindings')
+        settings_tabs.add(pop_ups_frame, text='Other windows')
 
         # styles widgets
         cursor_title.grid(row=1, column=1)
@@ -3339,14 +3504,15 @@ class Window(Tk):
         statusbar_check.grid(row=1, column=2)
         stt_title.pack()
         stt_lang.pack()
-        last_file_title.pack()
-        lf_frame.pack()
-        last_file_checkbox.grid(row=0, column=0)
-        last_bg_checkbox.grid(row=0, column=2)
+        file_opt_title.pack()
+        # lf_frame.pack()
+        last_file_checkbox.pack()
+        usage_report_checkbox.pack()
+        # last_bg_checkbox.grid(row=0, column=2)
         title_other.pack()
+        check_v_checkbox.pack()
         reset_button.pack()
         tt_checkbox.pack()
-        corrector_preview.pack(pady=2)
         auto_save_title.pack()
         auto_save_frame.pack()
         by_time_rb.grid(row=0, column=0)
@@ -3360,16 +3526,34 @@ class Window(Tk):
         textt_function_check.pack()
         win_actions_check.pack()
 
+        # other windows options
+        attr_title.pack()
+        top_most_s.pack()
+        open_m_s.pack()
+        never_limit_s.pack()
+        warning_title.pack()
+        many_windows_checkbox.pack()
+        trans_s_title.pack()
+        self.transparency_s.pack()
+        corrector_title.pack()
+        corrector_preview.pack(pady=2)
+        other_w_title.pack()
+        duplicate_windows.pack(pady=2)
+
+
 
         self.usage_time.pack()
         # creating buttons list
-        self.opt_frames = styles_frame, functional_frame, opt_root, bindings_frame
+
+        self.opt_frames = styles_frame, functional_frame, self.opt_root, bindings_frame, pop_ups_frame
         self.opt_commands = (nm_black_checkbox, nm_blue_checkbox, transparency_config, filebar_check, statusbar_check,
                              last_file_checkbox, reset_button, tt_checkbox, by_time_rb, by_press_rb, corrector_preview,
-                             last_bg_checkbox, file_actions_check, typefaces_action_check, edit_functions_check,
-                             textt_function_check, win_actions_check)
+                             file_actions_check, typefaces_action_check, edit_functions_check,
+                             textt_function_check, win_actions_check, open_m_s, never_limit_s, self.transparency_s, usage_report_checkbox,
+                             duplicate_windows, many_windows_checkbox, top_most_s, check_v_checkbox)
         self.opt_labels = (opt_title, cursor_title, style_title, relief_title, nm_title, transparency_title, hide_title,
-                           stt_title, last_file_title, title_other, auto_save_title, self.usage_time, state_title)
+                           stt_title, file_opt_title, title_other, auto_save_title, self.usage_time, state_title,
+                           attr_title, trans_s_title, corrector_title, warning_title, other_w_title)
         self.dynamic_buttons = (tcross_button, arrow_button, crosshair_button, pencil_button, fleur_button, xterm_button,
                                style_clam, style_vista, style_classic, relief_groove, relief_flat, relief_ridge)
 
@@ -3383,6 +3567,10 @@ class Window(Tk):
             self.change_button_color('relief', self.predefined_relief)
 
         stt_lang.bind('<<ComboboxSelected>>', stt_key)
+
+        self.opt_root.update_idletasks()
+        opt_sizes = self.opt_root.winfo_width(), self.opt_root.winfo_width()
+        self.limit_list.append([self.opt_root, opt_sizes])
 
         self.record_list.append(f'> [{self.get_time()}] - advanced option window opened')
 
@@ -3452,7 +3640,9 @@ class Window(Tk):
 
         # window creation
         goto_root = Toplevel()
-        goto_root.resizable(False, False)
+        self.make_tm(goto_root)
+        if self.limit_w_s.get():
+            goto_root.resizable(False, False)
         # UI components
         goto_text = Label(goto_root, text='Enter the word that you wish to go to:', font='arial 10 underline')
         goto_input = Entry(goto_root, width=20)
@@ -3501,8 +3691,13 @@ class Window(Tk):
 
         # window creation
         sort_root = Toplevel()
-        sort_root.resizable(False, False)
-        sort_root.attributes('-alpha', '0.95')
+        sort_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(sort_root))
+        self.opened_windows.append(sort_root)
+        self.func_window[self.sort] = sort_root
+        self.make_tm(sort_root)
+        if self.limit_w_s.get():
+            sort_root.resizable(False, False)
+        sort_root.attributes('-alpha', self.st_value)
         # variables
         mode_ = 'asc'
         str_loop = 1
@@ -3599,10 +3794,26 @@ class Window(Tk):
                         for index, img_link in enumerate(self.wiki_requsest):
                             # label_list.append(Label(self.wiki_img_frame))
                             with urllib.request.urlopen(img_link) as img_url:
+                                continue_ = False
+                                # img_url.seek(0)
                                 img = img_url.read()
-                                img = Image.open(BytesIO(img))
+                                # img = img.read()
+                                bytes_image = BytesIO(img)
+                                try:
+                                    img = Image.open(bytes_image)
+                                except UnidentifiedImageError as e:
+                                    image_short_name = os.path.basename(urlparse(img_link).path)
+                                    url = urllib.request.urlretrieve(img_link, image_short_name)
+                                    try:
+                                        img = Image.open(image_short_name)
+                                    except:
+                                        continue_ = True
+                                    finally:
+                                        os.remove(image_short_name)
+                                if continue_:
+                                    continue
+
                                 img_width, img_height = img.size
-                                print(img.size)
                                 if (img_width > 600 and img_width < 1200)  or (img_height > 600 and img_height < 1200):
                                     img_width, img_height = img_width // 2, img_height // 2
                                 elif (img_width > 1200 and img_width < 1800) or (img_height > 1200 and img_height < 1800):
@@ -3620,7 +3831,7 @@ class Window(Tk):
                                 #     label.pack()
                                 #     label_list[index].bind('<ButtonRelease-1>', webbrowser.open_new(img_link))
                         '''+ 
-                        initial image
+                        initial image - takes time to load / or indexes bugs
                         '''
 
                     if not (self.wiki_var.get() == 2):
@@ -3651,32 +3862,34 @@ class Window(Tk):
             content_to_paste = meaning_box.get('1.0', 'end')
             self.EgonTE.insert(self.get_pos(), content_to_paste)
 
+
+        '''+ make when navigating that the window will more from the upward pos and not the bottom'''
         def navigate_pics(mode, event=False):
             def bind_links(event=False):
                 webbrowser.open_new(self.wiki_requsest[self.image_selected_index])
 
             if self.wiki_var.get() == 4 and self.wiki_requsest: # and self.wiki_img_list
                 # if self.mode
-                if mode == 'f':
+                if mode == 'b' or mode == 'f':
+                    if mode == 'f':
+                        limit_value, index_change, limit_reset = -1, 1, 0
+                    elif mode == 'b':
+                        limit_value, index_change, limit_reset = 0, -1, self.wiki_img_list.index(self.wiki_img_list[-1])
                     try:
-                        limit_condition = self.wiki_img_list[self.image_selected_index] == self.wiki_img_list[-1]
+                        limit_condition = self.wiki_img_list[self.image_selected_index] == self.wiki_img_list[limit_value]
                     except IndexError:
                         limit_condition = True
                     if not (limit_condition):
-                        self.image_selected_index += 1
+                        self.image_selected_index += index_change
                     else:
-                        self.image_selected_index = 0
-                elif mode == 'b':
-                    try:
-                        limit_condition = self.wiki_img_list[self.image_selected_index] == self.wiki_img_list[0]
-                    except IndexError:
-                        limit_condition = True
-                    if not (limit_condition):
-                        self.image_selected_index += -1
-                    else:
-                        self.image_selected_index = self.wiki_img_list.index(self.wiki_img_list[-1])
+                        self.image_selected_index = limit_reset
+                    print(self.image_selected_index)
                 elif mode == 'initial':
+                    self.image_selected_index = 0
                     self.wiki_image_label.grid(row=3, column=1)
+                    # for image in
+                    # image_condition =  self.wiki_img_list[self.image_selected_index].verify()
+                    # if not image_condition:
 
                 self.wiki_image_label.unbind_all('<ButtonRelease-1>')
                 self.wiki_image_label.grid_forget()
@@ -3692,9 +3905,15 @@ class Window(Tk):
             else:
                 messagebox.showerror(self.title_struct + 'wiki', 'you are not in images mode \ didn\'t search')
 
+
         par_root = Toplevel()
-        par_root.resizable(False, False)
-        par_root.attributes('-alpha', '0.95')
+        self.opened_windows.append(par_root)
+        # self.func_window[self.knowledge_window] = par_root
+        par_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(par_root))
+        self.make_tm(par_root)
+        if self.limit_w_s.get():
+            par_root.resizable(False, False)
+        par_root.attributes('-alpha', self.st_value)
         par_entry = Entry(par_root, width=35)
         knowledge_search = Button(par_root, text='Search', command=redirect)
         meaning_box = Text(par_root, height=15, width=50, wrap=WORD)
@@ -3752,19 +3971,24 @@ class Window(Tk):
         tab, symbols, caps, numbers, and english characters in the qwert organization
         '''
 
-        def close():
+        def close_vk():
+            self.opened_windows.remove(keyboard_root)
             keyboard_root.destroy()
             self.vk_active = False
 
         global last_abc
         # window creation and settings
         keyboard_root = Toplevel()
-        keyboard_root.attributes('-alpha', '0.90')
-        keyboard_root.resizable(False, False)
+        self.make_tm(keyboard_root)
+        keyboard_root.attributes('-alpha', self.st_value)
+        if self.limit_w_s.get():
+            keyboard_root.resizable(False, False)
         self.sym_var1 = False
         self.sym_var2 = False
         keyboard_root.configure(bg='black')
-        keyboard_root.protocol('WM_DELETE_WINDOW', close)
+        keyboard_root.protocol('WM_DELETE_WINDOW', close_vk)
+        self.opened_windows.append(keyboard_root)
+        # self.func_window[self.virtual_keyboard] = keyboard_root
         self.vk_active = True
         sym_n = ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
                  '+', '-', '*', '^', '=', '<', '>', '[', ']',
@@ -4018,9 +4242,13 @@ class Window(Tk):
         if abs(mid_y - self.winfo_screenheight()) <= 80:
             mid_y = self.winfo_screenheight() // 2
         keyboard_root.geometry(f'{win_w}x{win_h}+{mid_x}+{mid_y}')
-        keyboard_root.resizable(False, False)
+        if self.limit_w_s.get():
+            keyboard_root.resizable(False, False)
 
         modes('lower')
+
+        self.vk_sizes = win_w, win_h
+        self.limit_list.append([keyboard_root, self.vk_sizes])
 
         keyboard_root.mainloop()  # using ending point
 
@@ -4055,10 +4283,8 @@ class Window(Tk):
                 lang = self.get_k_lang()[1]
                 if not lang:
                     lang = 'en'
-                print(lang)
 
                 content = self.EgonTE.get(1.0, END).split(' ')
-                print(content)
                 new_content = []
                 indexes = []
                 rep_nl = False
@@ -4137,6 +4363,7 @@ class Window(Tk):
                     extra[key] = value
 
         e_root = Toplevel()
+        self.make_tm(e_root)
         e_root.title(f'{self.title_struct}{mode} list')
 
         scroll = ttk.Scrollbar(e_root)
@@ -4179,48 +4406,56 @@ class Window(Tk):
                                                                    ('Python Files', '*.py')))
 
         try:
-            stat = os.stat(file_info_name)
-            # getting the actual file info
-            file_size = os.path.getsize(file_info_name)
+            if file_info_name:
+                stat = os.stat(file_info_name)
+                # getting the actual file info
+                file_size = os.path.getsize(file_info_name)
 
-            if system().lower() == 'windows':
-                creation_time = datetime.fromtimestamp((os.path.getctime(file_info_name)))
-                modified_time = datetime.fromtimestamp((os.path.getmtime(file_info_name)))
-            else:
+                if system().lower() == 'windows':
+                    creation_time = datetime.fromtimestamp((os.path.getctime(file_info_name)))
+                    modified_time = datetime.fromtimestamp((os.path.getmtime(file_info_name)))
+                else:
+                    try:
+                        creation_time = stat.st_birthtime
+                        modified_time = stat.st_mtime
+                    except AttributeError:
+                        pass
+
+
+                # creating the window
+                file_info_root = Toplevel()
+                file_info_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(file_info_root))
+                file_info_root.attributes('-alpha', self.st_value)
+                self.opened_windows.append(file_info_root)
+                self.func_window[self.file_info] = file_info_root
+                self.make_tm(file_info_root)
+                file_info_root.title(self.title_struct + 'File information')
+                if self.limit_w_s.get():
+                    file_info_root.resizable(False, False)
+                # creating the widgets
+                access_time = datetime.fromtimestamp(stat.st_atime)
+                file_type = os.path.splitext(file_info_name)[-1][1:]
+                lib_path = Path(file_info_name)
                 try:
-                    creation_time = stat.st_birthtime
-                    modified_time = stat.st_mtime
-                except AttributeError:
-                    pass
+                    owner = f'{lib_path.owner()} : {lib_path.group()}'
+                except:
+                    owner = ''
+                # attaching info to labels
+                size_label = Label(file_info_root, text=f'file size - {file_size} bytes', font=res_font)
+                modified_time_label = Label(file_info_root, text=f'file modified time - {modified_time}', font=res_font)
+                creation_time_label = Label(file_info_root, text=f'file creation time - {creation_time}', font=res_font)
+                access_time_label = Label(file_info_root, text=f'file accessed time - {access_time}', font=res_font)
+                file_type_label = Label(file_info_root, text=f'file type - {file_type}', font=res_font)
+                if owner:
+                    owner_label = Label(file_info_root, text=f'file owner - {owner}', font=res_font)
 
-            # creating the window
-            root = Toplevel()
-            root.title(self.title_struct + 'File information')
-            root.resizable(False, False)
-            # creating the widgets
-            access_time = datetime.fromtimestamp(stat.st_atime)
-            file_type = os.path.splitext(file_info_name)[-1][1:]
-            lib_path = Path(file_info_name)
-            try:
-                owner = f'{lib_path.owner()} : {lib_path.group()}'
-            except:
-                owner = ''
-            # attaching info to labels
-            size_label = Label(root, text=f'file size - {file_size} bytes', font=res_font)
-            modified_time_label = Label(root, text=f'file modified time - {modified_time}', font=res_font)
-            creation_time_label = Label(root, text=f'file creation time - {creation_time}', font=res_font)
-            access_time_label = Label(root, text=f'file accessed time - {access_time}', font=res_font)
-            file_type_label = Label(root, text=f'file type - {file_type}', font=res_font)
-            if owner:
-                owner_label = Label(root, text=f'file owner - {owner}', font=res_font)
-
-            size_label.pack(expand=True)
-            modified_time_label.pack(expand=True)
-            creation_time_label.pack(expand=True)
-            access_time_label.pack(expand=True)
-            file_type_label.pack(expand=True)
-            if owner:
-                owner_label.pack(expand=True)
+                size_label.pack(expand=True)
+                modified_time_label.pack(expand=True)
+                creation_time_label.pack(expand=True)
+                access_time_label.pack(expand=True)
+                file_type_label.pack(expand=True)
+                if owner:
+                    owner_label.pack(expand=True)
 
         except NameError:
             messagebox.showerror(self.title_struct + 'error', 'you aren\'nt using a file!')
@@ -4303,13 +4538,25 @@ class Window(Tk):
                         return
                 # window creation
                 compare_root = Toplevel()
+                if self.limit_w_s.get()
+                    compare_root.resizable(False, False)
+                self.opened_windows.append(compare_root)
+                self.func_window[self.compare] = compare_root
+                compare_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(compare_root))
+                self.make_tm(compare_root)
                 compare_root.title(self.title_struct + '2 files compression')
                 # the precise diffrence in content between files with the Differ function
                 difference = Differ()
                 c_diffrence_frame = Frame(compare_root)
                 c_difference_title = Label(c_diffrence_frame, text='Content diffrence', font='arial 14 underline')
                 files_diffrence = ''.join(difference.compare(file_content, another_fc)).replace('  ', ' ')
-                content_diffrence = Label(c_diffrence_frame, text=files_diffrence, font='arial 12')
+                cd_inner_frame = Frame(c_diffrence_frame)
+                cd_scroll = ttk.Scrollbar(cd_inner_frame)
+                content_diffrence = Text(cd_inner_frame, font='arial 12', wrap=WORD, yscrollcommand=cd_scroll.set)
+                cd_scroll.config(command=content_diffrence.yview)
+                content_diffrence.insert(END, files_diffrence)
+                content_diffrence.configure(state=DISABLED)
+
 
                 # the diffrence in the count of : words, lines, characters, spaces
                 def counts_file(file):
@@ -4343,11 +4590,15 @@ class Window(Tk):
                 file_1_count = Label(file_1_frame, text=counts_file(file_content))
                 file_2_count = Label(file_2_frame, text=counts_file(another_fc))
 
-                c_diffrence_frame.pack()
-                c_difference_title.pack()
+                c_diffrence_frame.grid(row=0, column=1)
+                c_difference_title.grid(row=1, column=1)
+                '''+ fix this placing'''
+                cd_inner_frame.grid(row=3, column=1)
+                cd_scroll.pack(fill=Y, side=RIGHT)
                 content_diffrence.pack(expand=True, fill=BOTH)
 
-                count_frame.pack(expand=True, fill=BOTH)
+
+                count_frame.grid(row=4, column=1)
                 file_counts_title.grid(row=0, column=1)
                 file_1_frame.grid(row=1, column=0)
                 file_2_frame.grid(row=1, column=2)
@@ -4381,6 +4632,7 @@ class Window(Tk):
                 preview_root.destroy()
 
             preview_root = Toplevel()
+            self.make_tm(preview_root)
             preview_root.title(self.title_struct + 'text corrctor preview')
             title = Label(preview_root, text='Accept this text changes', font='arial 12 underline')
             text_frame = Frame(preview_root)
@@ -4603,7 +4855,7 @@ class Window(Tk):
                     title_text = 'website link:'
 
                 if file_ready:
-                    main_ui()
+                    lambda:self.open_windows_control(main_ui)
             else:
                 file_name_output.configure(text=self.wbs_path)
 
@@ -4693,8 +4945,14 @@ class Window(Tk):
             global tag_input, file_name_output, file_via_internet, chosen_init, class_input, upload_btns, file_title
             if connection:
                 self.ws_root = Toplevel()
+                self.opened_windows.append(self.ws_root)
+                self.func_window[main_ui] = self.ws_root
+                self.ws_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(self.ws_root))
+                self.ws_root.attributes('-alpha', self.st_value)
+                self.make_tm(self.ws_root)
                 self.ws_root.title(self.title_struct + 'Scrapping')
-                self.ws_root.resizable(False, False)
+                if self.limit_w_s.get():
+                    self.ws_root.resizable(False, False)
                 info_title = Label(self.ws_root, text='Quick information', font=self.titles_font)
                 file_title = Label(self.ws_root, text=title_text, font=sub_titles_font)
                 file_name_output = Label(self.ws_root, text=self.wbs_path)
@@ -4777,6 +5035,7 @@ class Window(Tk):
 
         # init window to not delay / limit users
         init_root = Toplevel()
+        self.make_tm(init_root)
         init_root.title(self.title_struct + 'web scrapping')
         title_label = Label(init_root, text='What you would like to scrape?', font='arial 10 underline')
         web_button = Button(init_root, text='A website', command=lambda: change_initial_mode('w'))
@@ -4830,6 +5089,7 @@ class Window(Tk):
         self.hw_active = True
 
         def quit_hw():
+            self.opened_windows.remove(hw_root)
             self.hw_active = False
             hw_root.destroy()
 
@@ -5014,6 +5274,7 @@ class Window(Tk):
 
         def information():
             draw_info_root = Toplevel()
+            self.make_tm(draw_info_root)
             draw_info_root.title(f'{self.title_struct} Handwriting bonuses')
 
             arrows_desc = 'with the arrows keys, you can move the entire content \nof the canvas to the direction that' \
@@ -5070,8 +5331,12 @@ class Window(Tk):
 
         # drawing board
         hw_root = Toplevel()
+        self.make_tm(hw_root)
+        hw_root.attributes('-alpha', self.st_value)
         hw_root.geometry('600x350')
         hw_root.title(self.title_struct + 'Draw and convert')
+        self.opened_windows.append(hw_root)
+        self.func_window[self.handwriting] = hw_root
         draw_frame = Frame(hw_root, bg=self.dynamic_overall)
         buttons_frame = Frame(hw_root, bg=self.dynamic_overall)
         self.draw_canvas = Canvas(draw_frame, width=canvas_x, height=canvas_y, bg=self.dynamic_bg, cursor='pencil')
@@ -5160,6 +5425,7 @@ class Window(Tk):
                 spacy.prefer_gpu()
 
             nlp_root = Toplevel()
+            self.make_tm(nlp_root)
             result_frame = Frame(nlp_root)
             nlp_root.title(self.title_struct + 'natural language processor')
             text = self.EgonTE.get('1.0', 'end')
@@ -5281,7 +5547,6 @@ class Window(Tk):
                     if not token.is_stop and not token.is_punct
                 ]
                 result_text = text = Counter(words).most_common(10)  # !!!
-                print(result_text)
 
                 for res in result_text:
                     result.insert('', END, value=res)
@@ -5387,51 +5652,17 @@ class Window(Tk):
         else:
 
             if os.path.exists(file_name):
-                print('file exist')
+                print('saved settings file exist')
                 with open(file_name, 'r') as f:
                     self.data = load(f)
                     print(self.data)
-
-                self.rm.set(self.data['reader_mode'])
-                self.bars_active.set(self.data['status_bar'] and self.data['file_bar'])
-                self.show_statusbar.set(self.bars_active.get())
-                self.status_ = self.data['status_bar']
-                self.file_ = self.data['file_bar']
-
-                self.show_toolbar.set(self.data['toolbar'])
-                self.night_mode.set(self.data['night_mode'])
-                self.tt_sc.set(self.data['text_twisters'])
-                self.nm_palette.set(self.data['night_type'])
-                self.ccc.set(self.data['preview_cc'])
-                # maybe need to be deleted
-                self.cs.set(self.data['style'])
-                self.cc.set(self.data['cursor'])
-                # ------------------------------
-                self.ww.set(self.data['word_wrap'])
-                self.aus.set(self.data['auto_save'])
-
-                self.predefined_cursor = self.cc.get()
-                self.predefined_style = self.cs.get()
-                self.predefined_relief = self.data['relief']
-                self.fun_n.set(self.data['fun_numbers'])
-                # self.bg_saved_image.set(self.data['bg_image'])
-
-                if self.lf.get():
-                    self.file_name = self.data['open_last_file']
-
-                # if self.bg_saved_image.get():
-                #     self.save_bg.set(True)
-                #     self.upload_bg_image()
+                self.match_saved_settings()
 
                 return False
 
             else:
-                print('settings file doesn\'t exist')
-                self.data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
-                             'style': 'clam',
-                             'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
-                             'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
-                             'night_type': 'black', 'preview_cc': False, 'fun_numbers': True}
+                print('saved settings file doesn\'t exist')
+                self.make_default_data()
 
                 with open(file_name, 'w') as f:
                     dump(self.data, f)
@@ -5439,6 +5670,41 @@ class Window(Tk):
                 # print(self.data)
 
                 return True
+
+    def make_default_data(self):
+        self.data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
+                     'style': 'clam',
+                     'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
+                     'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
+                     'night_type': 'black', 'preview_cc': False, 'fun_numbers': True, 'usage_report': False,
+                     'check_version': False, 'window_c_warning' : True, 'allow_duplicate': False}
+
+    def match_saved_settings(self):
+
+        self.rm.set(self.data['reader_mode'])
+        self.bars_active.set(self.data['status_bar'] and self.data['file_bar'])
+        self.show_statusbar.set(self.bars_active.get())
+        self.status_ = self.data['status_bar']
+        self.file_ = self.data['file_bar']
+        self.show_toolbar.set(self.data['toolbar'])
+        self.night_mode.set(self.data['night_mode'])
+        self.tt_sc.set(self.data['text_twisters'])
+        self.nm_palette.set(self.data['night_type'])
+        self.cs.set(self.data['style'])
+        self.cc.set(self.data['cursor'])
+        self.ww.set(self.data['word_wrap'])
+        self.aus.set(self.data['auto_save'])
+        self.ccc.set(self.data['preview_cc'])
+        self.awc.set(self.data['window_c_warning'])
+        self.adw.set(self.data['allow_duplicate'])
+        self.fun_n.set(self.data['fun_numbers'])
+        self.us_rp.set(self.data['usage_report'])
+        self.check_v.set(self.data['check_version'])
+        self.predefined_cursor = self.cc.get()
+        self.predefined_style = self.cs.get()
+        self.predefined_relief = self.data['relief']
+        if self.lf.get():
+            self.file_name = self.data['open_last_file']
 
     def text_decorators(self):
         '''
@@ -5747,6 +6013,10 @@ class Window(Tk):
         self.dec_plc.set('hrz')
         # window and it's widgets
         td_root = Toplevel()
+        td_root.attributes('-alpha', self.st_value)
+        self.opened_windows.append(td_root)
+        td_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(td_root))
+        self.make_tm(td_root)
         # td_root.resizable(False, False)
         td_root.minsize(355, 311)
         td_root.title(self.title_struct + 'text decorators')
@@ -5797,10 +6067,12 @@ class Window(Tk):
         print(td_root.winfo_width(), td_root.winfo_height())
 
     def stopwatch(self):
-        start_time = time.time()
+        self.start_time = time.time()
+        self.start_date = datetime.now().strftime('%Y-%m-%d')
+        self.stt = timedelta(seconds=int(time.time() - self.start_time))
         while True:
             time.sleep(0.5)
-            self.ut = timedelta(seconds=int(time.time() - start_time))
+            self.ut = timedelta(seconds=int(time.time() - self.start_time))
             if self.op_active:
                 self.usage_time.configure(text=f' Usage time: {self.ut}')
 
@@ -5841,6 +6113,7 @@ class Window(Tk):
             data = data_1 + '\n' + data2
 
             ask_op_root = Toplevel()
+            self.make_tm(ask_op_root)
             ask_op_root.title(self.title_struct + 'merge files')
             q_label = Label(ask_op_root, text='where you would like to put the merged data?')
             this_file = Button(ask_op_root, text='In this file', command=lambda: outport_data('this'))
@@ -5923,8 +6196,6 @@ class Window(Tk):
         sp_x = 0
         if sp_mode == 'main':
             sp_x = (self.eFrame.winfo_width() - self.EgonTE.winfo_width())
-            print(sp_x)
-        print(sp_x)
         x = root_name.winfo_rootx() + widget_name.winfo_x() + sp_x
         if upper_name:
             y = root_name.winfo_rooty() + widget_name.winfo_y() + upper_name.winfo_height()
@@ -5943,9 +6214,7 @@ class Window(Tk):
         '''
 
         def activate_weather():
-
             city_name = city_entry.get()
-
             ask_w.destroy()
 
             city_name = city_name.replace(' ', '+').replace('_', '+')
@@ -5993,6 +6262,10 @@ class Window(Tk):
 
             if working:
                 weather_root = Toplevel()
+                self.make_tm(weather_root)
+                self.opened_windows.append(weather_root)
+                self.func_window[activate_weather] = weather_root
+                weather_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(weather_root))
                 weather_root.title(self.title_struct + 'Weather')
                 weather_root.tk.call('wm', 'iconphoto', weather_root._w, self.weather_image)
                 w_font = 'arial 10'
@@ -6000,15 +6273,15 @@ class Window(Tk):
                 if '+' in location:
                     location = location.replace('+', ' ')
 
-                loc_text = ('Location: ' + location)
+                loc_text = ('Location: ' + location.capitalize())
                 temp_text = ('Temperature: ' + temperature + '&deg;C')
                 time_text = ('Time: ' + time)
-                desc = ('Weather Description: ' + info)
+                weather_desc = ('Weather Description: ' + info)
 
                 loc = Label(weather_root, text=loc_text, font=w_font)
                 temp = Label(weather_root, text=temp_text, font=w_font)
                 tim = Label(weather_root, text=time_text, font=w_font)
-                des = Label(weather_root, text=desc, font=w_font)
+                des = Label(weather_root, text=weather_desc, font=w_font)
                 copy_button = Button(weather_root, text='Copy', command=copy_paste_weather, pady=2, bd=1)
                 paste_button = Button(weather_root, text='Paste to ETE', command=lambda: copy_paste_weather('p')
                                       , pady=2, bd=1)
@@ -6028,7 +6301,7 @@ class Window(Tk):
                      'Istanbul', 'Jakarta', 'Janeiro', 'Jerusalem', 'Johannesburg', 'Kiev', 'hanoi', 'riyadh', 'mecca']
 
         def copy_paste_weather(m='copy'):
-            all_content = f'{loc_text}\n{temp_text}\n{time_text}\n{desc}'
+            all_content = f'{loc_text}\n{temp_text}\n{time_text}\n{weather_desc}'
             if m == 'copy':
                 copy(all_content)
             else:
@@ -6037,23 +6310,24 @@ class Window(Tk):
 
         def rand_city():
             choosen_city = choice(city_list)
-            print(choosen_city)
             city_entry.delete(0, END)
             city_entry.insert(0, choosen_city)
 
         # a more advanced window to select the city
         ask_w = Toplevel()
+        self.make_tm(ask_w)
         ask_w.title(self.title_struct + 'city selector')
-        ask_w.resizable(False, False)
+        if self.limit_w_s.get():
+            ask_w.resizable(False, False)
 
         ask_title = Label(ask_w, text='Select city', font=self.titles_font)
-        desc = Label(ask_w, text='What is the name of the city\n you want to get the weather for')
+        weather_subtitle = Label(ask_w, text='What is the name of the city\n you want to get the weather for')
         city_entry = Entry(ask_w)
         random_city = Button(ask_w, text='Random known city', command=rand_city, bd=1)
-        enter_city = Button(ask_w, text='Enter', command=activate_weather, bd=1)
+        enter_city = Button(ask_w, text='Enter', command=lambda:self.open_windows_control(activate_weather), bd=1)
 
         ask_title.grid(row=0, column=1, pady=3)
-        desc.grid(row=1, column=1)
+        weather_subtitle.grid(row=1, column=1)
         city_entry.grid(row=2, column=1)
         random_city.grid(row=3, column=1, pady=3)
         enter_city.grid(row=4, column=1, pady=5)
@@ -6149,8 +6423,14 @@ class Window(Tk):
 
         messagebox.showinfo('EgonTE', 'you might cannot use this function\n if you have 2 step verification')
         email_root = Toplevel()
+        self.opened_windows.append(email_root)
+        self.func_window[self.send_email] = email_root
+        email_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(email_root))
+        email_root.attributes('-alpha', self.st_value)
+        self.make_tm(email_root)
         email_root.title(self.title_struct + 'send emails')
-        email_root.resizable(False, False)
+        if self.limit_w_s.get():
+            email_root.resizable(False, False)
         req = Label(email_root, text='Requirements', font='arial 12 underline')
         sender_title = Label(email_root, text='Your Email:')
         password_title = Label(email_root, text='Your Password:')
@@ -6217,22 +6497,24 @@ class Window(Tk):
                         options.record = True
                         options.track = True
                         options.proxies = 'https://localhost:8080'
-                        self.alt_chat = Chat(email=email_entry.get(), password=password_entry.get(), options=options)
+                        self.alt_chat = Chat(email=username_entry.get(), password=password_entry.get(), options=options)
                         login_root.destroy()
                         active_ui()
 
                     # custom login interface exclusively for this library
                     login_root = Toplevel()
-                    login_root.resizable(False, False)
+                    self.make_tm(login_root)
+                    if self.limit_w_s.get():
+                        login_root.resizable(False, False)
                     login_root.title(self.title_struct + 'sign to ChatGPT')
-                    email_title = Label(login_root, text='username:')
-                    email_entry = Entry(login_root, width=25)
+                    username_title = Label(login_root, text='username:')
+                    username_entry = Entry(login_root, width=25)
                     password_title = Label(login_root, text='password:')
                     password_entry = Entry(login_root, width=25, show='*')
                     enter_button = Button(login_root, text='Enter', command=enter)
 
-                    email_title.grid(row=1, column=1)
-                    email_entry.grid(row=2, column=1, padx=10)
+                    username_title.grid(row=1, column=1)
+                    username_entry.grid(row=2, column=1, padx=10)
                     password_title.grid(row=3, column=1)
                     password_entry.grid(row=4, column=1)
                     enter_button.grid(row=6, column=1, pady=5)
@@ -6244,11 +6526,15 @@ class Window(Tk):
                     e_label = Label(login_root, text=str(gpt_expection), fg='red')
                     e_label.grid(row=5, column=1)
                     print(gpt_expection)
-                    print(working)
 
         def active_ui():
             global txt
             gpt_root = Toplevel()
+            self.opened_windows.append(gpt_root)
+            self.func_window[active_ui] = gpt_root
+            gpt_root.attributes('-alpha', self.st_value)
+            gpt_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(gpt_root))
+            self.make_tm(gpt_root)
             gpt_root.title(self.title_struct + 'ChatGPT')
             gpt_root.tk.call('wm', 'iconphoto', gpt_root._w, self.gpt_image)
             BG_GRAY = '#ABB2B9'
@@ -6367,7 +6653,13 @@ class Window(Tk):
 
         def ui():
             global prompt_entry, dallE_root
+
             dallE_root = Toplevel()
+            self.opened_windows.append(dallE_root)
+            self.func_window[ui] = dallE_root
+            dallE_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(dallE_root))
+            dallE_root.attributes('-alpha', self.st_value)
+            self.make_tm(dallE_root)
             dallE_root.title(self.title_struct + 'DallE')
             prompt_title = Label(dallE_root, text='Enter the prompt here', font='arial 10 underline')
             prompt_entry = Entry(dallE_root, width=30)
@@ -6458,7 +6750,9 @@ class Window(Tk):
             webbrowser.open_new(url)
 
         login_root = Toplevel()
-        login_root.resizable(False, False)
+        self.make_tm(login_root)
+        if self.limit_w_s.get():
+            login_root.resizable(False, False)
         login_root.title(self.title_struct + 'connect to OpenAI')
         self.service_type = IntVar()
         self.service_type.set(1)
@@ -6503,8 +6797,13 @@ class Window(Tk):
         '''
 
         def youtube():
+
             video_id = simpledialog.askstring('EgonTE', 'please enter the video ID')
             tr_root = Toplevel()
+            self.opened_windows.append(close_tr)
+            tr_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(tr_root))
+            tr_root.attributes('-alpha', self.st_value)
+            self.make_tm(tr_root)
             tr_root.title(self.title_struct + 'youtube transcript')
             if video_id:
                 tr = YouTubeTranscriptApi.get_transcript(video_id)
@@ -6543,6 +6842,7 @@ class Window(Tk):
                     content = r.recognize_google(audio)
 
                 file_trans_root = Toplevel()
+                self.make_tm(file_trans_root)
                 file_trans_root.title(self.title_struct + 'file transcript')
                 transcript = Text(file_trans_root)
                 transcript.insert('1.0', content)
@@ -6550,6 +6850,7 @@ class Window(Tk):
 
         if yt_api:
             trans_option = Toplevel()
+            self.make_tm(trans_option)
             buttons_frame = Frame(trans_option)
             op_label = Label(trans_option, text='Take the content from', font='arial 12 underline')
             youtube_button = Button(buttons_frame, text='Youtube', command=youtube, bd=1)
@@ -6566,12 +6867,16 @@ class Window(Tk):
         This function will output you the stats of the content of the file,
         many numeric values, presentation in a table about the usage of words and characters, and more
         '''
-
         res_font = 'arial 10'
         special_characters = list(printable[62:])
         print(special_characters)
 
         stats_root = Toplevel()
+        self.opened_windows.append(stats_root)
+        self.func_window[self.content_stats] = stats_root
+        stats_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(stats_root))
+        stats_root.attributes('-alpha', self.st_value)
+        self.make_tm(stats_root)
         stats_root.title(self.title_struct + 'Content statistics')
 
         content = self.EgonTE.get('1.0', 'end')
@@ -6770,45 +7075,88 @@ class Window(Tk):
 
         self.record_list.append(f'> [{self.get_time()}] - Content\'s statistics tool window opened')
 
-    def record_(self):
+    def record_logs(self):
         '''
         the ability to use this function is activated when you active developer mode via options menu.
         this function captures all / most the main events that happened in the program and writes them
         in order with the time of the occurrence
         '''
 
-        def close():
+        def close_record():
+            self.opened_windows.remove(self.log_root)
             self.record_window = False
-            log_root.destroy()
+            self.log_root.destroy()
 
-        log_root = Toplevel()
-        log_root.title(self.title_struct + 'events\' record')
+        def save_info():
+            file_name = filedialog.asksaveasfilename(title='Save record as file') + '.txt'
+            info = record_tb.get(1.0, END)
+            with open(file_name, 'w') as f:
+                for record in self.record_list:
+                    f.write(record + '\n')
+
+        def update_content():
+            while self.record_window:
+                time.sleep(1)
+                if self.record_window:
+                    # condition is important if we want the tool to be a lot smoother, but it's also fine without it
+                    record_string = ''.join(self.record_list).replace('\n', '')
+                    record_textbox = record_tb.get(1.0, END).replace('\n', '')
+                    if record_string != record_textbox:
+                        record_tb.configure(state=NORMAL)
+                        record_tb.delete(1.0, END)
+                        for record in self.record_list:
+                            record_tb.insert('end', record + '\n')
+                        record_tb.configure(state=DISABLED)
+                else:
+                    break
+
+        self.log_root = Toplevel()
+        self.make_tm(self.log_root)
+        self.log_root.title(self.title_struct + 'events\' record')
+        self.log_root.minsize(400, 250)
         self.record_window = True
-        log_root.protocol('WM_DELETE_WINDOW', close)
+        self.log_root.protocol('WM_DELETE_WINDOW', close_record)
+        self.log_root.attributes('-alpha', self.st_value)
+        self.opened_windows.append(self.log_root)
 
-        scrollbar = ttk.Scrollbar(log_root)
-        record_tb = Text(log_root, cursor=self.predefined_cursor, relief=self.predefined_relief,
-                         yscrollcommand=scrollbar.set)
+        rc_scrollbar = ttk.Scrollbar(self.log_root)
+        record_tb = Text(self.log_root, cursor=self.predefined_cursor, relief=self.predefined_relief,
+                         yscrollcommand=rc_scrollbar.set, bg=self.dynamic_bg, fg=self.dynamic_text)
+
+
+        # menu for functions
+        record_menu = Menu(self.log_root)
+        self.log_root.config(menu=record_menu)
+        record_menu.add_cascade(label='Copy', command=lambda: copy(record_tb.get(1.0, END)))
+        record_menu.add_cascade(label='Paste (ETE)', command=lambda:self.EgonTE.insert(self.get_pos(),record_tb.get(1.0, END)))
+        record_menu.add_cascade(label='Save', command=save_info)
+
+        # initial output
         for record in self.record_list:
             record_tb.insert('end', record + '\n')
 
-        scrollbar.pack(side=RIGHT, fill=Y)
+        rc_scrollbar.pack(side=RIGHT, fill=Y)
         record_tb.pack(fill=BOTH, expand=True)
-        scrollbar.config(command=record_tb.yview)
+        rc_scrollbar.configure(command=record_tb.yview)
         record_tb.configure(state=DISABLED)
 
-        while self.record_window:
-            time.sleep(1)
-            if self.record_window:
-                # condition is important if we want the tool to be a lot smoother, but it's also fine without it
-                record_string = ''.join(self.record_list).replace('\n', '')
-                record_textbox = record_tb.get(1.0, END).replace('\n', '')
-                if record_string != record_textbox:
-                    record_tb.configure(state=NORMAL)
-                    record_tb.delete(1.0, END)
-                    for record in self.record_list:
-                        record_tb.insert('end', record + '\n')
-                    record_tb.configure(state=DISABLED)
+        Thread(target=update_content).start()
+
+        self.record_night = record_tb
+        self.log_root.mainloop()
+
+    def call_record(self):
+        '''
+        like the call settings function.
+        calls the function with a thread in a simplefied block of code,
+        make that if the window is opened instead of calling the function again, it will show you the window
+        '''
+        if not self.record_window:
+            self.record_object = self.record_logs
+            self.record_object()
+        else:
+            self.log_root.attributes('-topmost', True)
+            self.log_root.attributes('-topmost', False)
 
     def manage_menus(self, mode):
         '''
@@ -6825,21 +7173,21 @@ class Window(Tk):
                 except:
                     self.menus_components.pop(-1)
             else:
-                self.app_menu.add_cascade(label='Record', command=lambda: Thread(target=self.record_).start())
+                self.app_menu.add_cascade(label='Record', command=self.call_record)
                 self.options_menu.add_checkbutton(label='prefer gpu', variable=self.prefer_gpu)
 
                 self.git_menu = Menu(self.app_menu, tearoff=False)
                 self.app_menu.add_cascade(label='Git', menu=self.git_menu)
-                self.git_menu.add_command(label='Pull', command=lambda: gitp('pull'))
-                self.git_menu.add_command(label='Push', command=lambda: gitp('push'))
-                self.git_menu.add_command(label='Commit', command=lambda: gitp('commit'))
-                self.git_menu.add_command(label='Add', command=lambda: gitp('add'))
+                self.git_menu.add_command(label='Pull', command=lambda: self.gitp('pull'))
+                self.git_menu.add_command(label='Push', command=lambda: self.gitp('push'))
+                self.git_menu.add_command(label='Commit', command=lambda: self.gitp('commit'))
+                self.git_menu.add_command(label='Add', command=lambda: self.gitp('add'))
                 self.git_menu.add_separator()
-                self.git_menu.add_command(label='Clone', state=gstate, command=lambda: gitp('clone'))
-                self.git_menu.add_command(label='Commit data', state=gstate, command=lambda: gitp('c.d'))
-                self.git_menu.add_command(label='Repository Information', state=gstate, command=lambda: gitp('r.i'))
+                self.git_menu.add_command(label='Clone', state=gstate, command=lambda: self.gitp('clone'))
+                self.git_menu.add_command(label='Commit data', state=gstate, command=lambda: self.gitp('c.d'))
+                self.git_menu.add_command(label='Repository Information', state=gstate, command=lambda: self.gitp('r.i'))
                 self.git_menu.add_separator()
-                self.git_menu.add_command(label='Custom command', command=lambda: gitp('excute'))
+                self.git_menu.add_command(label='Custom command', command=lambda: self.gitp('execute'))
 
                 self.menus_components.append(self.git_menu)
 
@@ -6864,7 +7212,7 @@ class Window(Tk):
                 self.create_menus(initial=False)
 
                 if self.dm.get():
-                    self.app_menu.add_cascade(label='Record', command=lambda: Thread(target=self.record_).start())
+                    self.app_menu.add_cascade(label='Record', command=self.call_record)
         elif mode == 'python':
             # python menu
             if self.python_file:
@@ -6921,6 +7269,7 @@ class Window(Tk):
             return languages[language_id_hex]
         else:
             return ['not found', False]
+
 
     def emoticons(self, reverse):
         content = self.EgonTE.get('1.0', 'end').split(' ')
@@ -6987,8 +7336,6 @@ class Window(Tk):
             transform.configure(text=f'Transform to {self.spc_mode}')
             random_e.configure(text=f'Random {self.spc_mode}')
 
-            print(self.spc_mode)
-
         def transf(reverse=False):
             if self.spc_mode == 'emojis':
                 self.emoji_detection(via_settings=True, reverse=reverse)
@@ -7013,8 +7360,15 @@ class Window(Tk):
                 rdm_e = choice(list(rdm_e)) + ' '
                 self.EgonTE.insert('end', rdm_e)
 
+
         ejc_root = Toplevel()
-        ejc_root.resizable(False, False)
+        self.opened_windows.append(ejc_root)
+        self.func_window[self.emojicons_hub] = ejc_root
+        ejc_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(ejc_root))
+        ejc_root.attributes('-alpha', self.st_value)
+        self.make_tm(ejc_root)
+        if self.limit_w_s.get():
+            ejc_root.resizable(False, False)
         ejc_root.title(self.title_struct + 'Symbols translator')
         m_title = Label(ejc_root, text='Choose a mode', font=self.titles_font)
         emojis = Button(ejc_root, text='Emojis', command=lambda: change_mode('j'), borderwidth=1)
@@ -7053,10 +7407,8 @@ class Window(Tk):
         '''
         if not (reverse):
             content = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', 'end'))
-            print(content)
         else:
             content = reSplit('[^.-]|\s', self.EgonTE.get('1.0', 'end'))
-            print(content)
         new_content = []
         new_word = ''
         if reverse:
@@ -7083,7 +7435,6 @@ class Window(Tk):
 
             else:
 
-                print(new_content)
                 if word in morse_code_dict.values() or word == '':
                     # accessing the keys using their values (reverse of encryption)
                     new_word += reverse_morse_dict[word]
@@ -7110,12 +7461,10 @@ class Window(Tk):
             content = content.replace('IV', 'IIII').replace('IX', 'VIIII')
             content = content.replace('XL', 'XXXX').replace('XC', 'LXXXX')
             content = content.replace('CD', 'CCCC').replace('CM', 'DCCCC')
-            print(content)
             content = reSplit('; |, |\*|\n', content)  # reSplit('; |, |\*|\n', content)
             content = ''.join(content)
             content = content.split(' ')
 
-            print(content)
             for roman_value in content:
                 word_value = 0
                 if roman_value.isalpha():
@@ -7145,15 +7494,12 @@ class Window(Tk):
             rev_roman_dict = {}
             for key, value in self.roman_dict.items():
                 rev_roman_dict[value] = key
-            print(rev_roman_dict)
 
-            print(content)
 
             content = reSplit('; |, |\*|\n', content)  # reSplit('; |, |\*|\n', content)
             content = ''.join(content)
             content = content.split(' ')
 
-            print(content)
             for word in content:
                 if word.isdigit():
                     word = int(word)
@@ -7220,42 +7566,76 @@ class Window(Tk):
         '''
 
         ui = False
-        if (action == 'r.i') and (action == 'c.d'):
+        if (action == 'r.i') or (action == 'c.d'):
             ui = True
             git_root = Toplevel()
+            self.make_tm(git_root)
             git_root.title(self.title_struct + 'Git window')
             title = Label(git_root, text='', font='arial 14 bold')
-            desc = Text(git_root)
+            git_text = Text(git_root)
 
+        if not(action == 'c.d') or not(action == 'clone'):
             # repo = simpledialog.askstring('Git', 'enter the repo link')
-            repo = self.text_name = filedialog.askopenfilename(title='Open repo')
-            repo = Repo(repo)
+            repo = filedialog.askopenfilename(title='Open repo')
+            if repo:
+                repo = Repo(repo)
+            else:
+                repo = False
+                messagebox.showerror('EgonTE', 'failed to open the selected repo')
 
-        if action == 'r.i':
-            title.configure(text='Respiratory information')
-            status = repo.git.status()
-            repo_description = repo.description
-            active_branch = repo.active_branch
+        # actions that need the repo variable
+        if repo:
+            if action == 'r.i':
+                title.configure(text='Respiratory information')
+                status = repo.git.status()
+                repo_description = repo.description
+                active_branch = repo.active_branch
 
-            desc.insert('1.0',
-                        f'Status:\n{status}\nDescription:\n{repo_description}\nActive branch:\n{active_branch}\nRemotes:\n')
+                git_text.insert('1.0',
+                            f'Status:\n{status}\nDescription:\n{repo_description}\nActive branch:\n{active_branch}\nRemotes:\n')
 
-            remote_dict = {}
-            for remote in repo.remotes:
-                remote_dict[remote] = remote.url
+                remote_dict = {}
+                for remote in repo.remotes:
+                    remote_dict[remote] = remote.url
 
-            for remote, url in remote_dict.items():
-                insert.insert('end', f'{remote} - {url}\n')
+                for remote, url in remote_dict.items():
+                    insert.insert('end', f'{remote} - {url}\n')
 
-            last_commit = str(repo.head.commit.hexsha)
+                last_commit = str(repo.head.commit.hexsha)
 
-            desc.insert('end', f'Last commit:\n{last_commit}')
+                git_text.insert('end', f'Last commit:\n{last_commit}')
 
-        elif action == 'clone':
+            elif action == 'excute':
+                command = simpledialog.askstring('Git', 'enter custom command')
+                repo.git.excute(command)  # used to excute git command on repo object
+
+            elif action == 'pull':
+                repo.git.pull()
+
+            elif action == 'add':
+                repo.git.add(all=True)
+
+            elif action == 'commit':
+                def commit_enter():
+                    try:
+                        message, author_ = message_entry.get(), author_entry.get()
+                        if message and author:
+                            repo.git.commit(m=message, author=author_)
+                        elif message or author_:
+                            if message:
+                                repo.git.commit(m=message)
+                            elif author_:
+                                repo.git.commit(author=author_)
+                        else:
+                            repo.git.commit()
+                        commit_window.destroy()
+                    except:
+                        messagebox.showerror(self.title_struct + 'git', 'an error has occurred')
+        # doesn't need repo
+        if action == 'clone':
             link = simpledialog.askstring('EgonTE', 'please enter the repo\'s link')
             file_location = filedialog.asksaveasfilename(title='Where do you want to save the repo?')
             git.Repo.clone_from(link, file_location)
-
         elif action == 'c.d':
             title.configure(text='Commit data')
             commit = str(commit.hexsha)
@@ -7263,38 +7643,11 @@ class Window(Tk):
             date_time = str(commit.authored_datetime)
             count_size = str(f'count: {commit.count()} and size: {commit.size}')
 
-            desc.insert('1.0',
+            git_text.insert('1.0',
                         f'Commit:\n{commit}\nSummery & author:\n{by}\nDate/time:\n{date_time}\nCount & size:\n{count_size}')
 
-
-        elif action == 'excute':
-            command = simpledialog.askstring('Git', 'enter custom command')
-            repo.git.excute(command)  # used to excute git command on repo object
-
-        elif action == 'pull':
-            repo.git.pull()
-
-        elif action == 'add':
-            repo.git.add(all=True)
-
-        elif action == 'commit':
-            def commit_enter():
-                try:
-                    message, author_ = message_entry.get(), author_entry.get()
-                    if message and author:
-                        repo.git.commit(m=message, author=author_)
-                    elif message or author_:
-                        if message:
-                            repo.git.commit(m=message)
-                        elif author_:
-                            repo.git.commit(author=author_)
-                    else:
-                        repo.git.commit()
-                    commit_window.destroy()
-                except:
-                    messagebox.showerror(self.title_struct + 'git', 'an error has occurred')
-
             commit_window = Toplevel()
+            self.make_tm(commit_window)
             commit_window.title(self.title_struct + 'Git commit window')
             message_title = Label(commit_window, text='Message:', font='arial 10 underline')
             message_entry = Entry(commit_window)
@@ -7310,40 +7663,241 @@ class Window(Tk):
 
         if ui:
             title.pack()
-            desc.pack(expand=True, fill=BOTH)
+            git_text.pack(expand=True, fill=BOTH)
 
     def call_settings(self):
+        '''
+        by calling the advance settings by another function we get the flexibility of clean code
+        and the ability to show the user their current settings window instead of opening another one if it already
+        opened
+        '''
         if not self.op_active:
             self.settings_object = self.advance_options
             Thread(target=self.settings_object).start()
         else:
-            opt_root.attributes('-topmost', True)
-            opt_root.attributes('-topmost', False)
+            self.opt_root.attributes('-topmost', True)
+            self.opt_root.attributes('-topmost', False)
+
+
+    def update_insert_image_list(self, event=False):
+        if self.in_images_list_n:
+            for image in self.in_images_list_n:
+                try:
+                    index = self.EgonTE.index(image)
+                except TclError:
+                    self.in_images_list_n.remove(image)
+
+            if self.in_images_open:
+                self.update_images_list()
+
+    def update_images_list(self, general=False):
+        update = False
+        if not general:
+            entry_content = self.image_entry.get().lower()
+            if entry_content:
+                update = True
+        else:
+            update = True
+            entry_content = ' '
+
+        print(update)
+
+        if update:
+            self.current_images_list.delete(0, END)
+            for image in self.in_images_list_n:
+                display_name = os.path.basename(image)
+                if (entry_content in display_name.lower()) or general:
+                    self.current_images_list.insert(END, display_name)
+
 
     def insert_image(self):
-        delete_mode = False
-        if self.image_name:
-            if messagebox.askyesno('EgonTE', 'it look like you have an image\ndo you want to remove it?'):
-                self.image_name = ''
-                image_index = self.EgonTE.index(f'bg{self.bg_count}')
+        '''
+        Insert images (beta):
+        insert multiple images, and mannage them,
+        remove some images / all images
+        add images
+        rename images
+        direcet yourself to thier index
+        '''
+
+        def add_image(sp_name=False, sp_image=False):
+            if not(sp_name):
+                self.image_name = filedialog.askopenfilename(title='Open file',
+                                                                 filetypes=(('PNG Files', '*.png'), ('JPG Files', '*.jpg'),
+                                                                            ('JPEG Files', '*.jpeg ')))
+                self.current_inserted_image = PhotoImage(self.image_name)
+            else:
+                self.image_name = sp_name
+                self.current_inserted_image = sp_image
+            if self.image_name:
+                self.EgonTE.image_create('current', image=self.current_inserted_image, name=f'{self.image_name} ')
+                self.bg_count += 1
+                self.in_images_list_n.append(self.image_name)
+                self.in_images_dict[self.image_name] = self.current_inserted_image
+                self.update_images_list(general=True)
+
+
+        def get_specific_image():
+            current_image = self.image_entry.get()
+
+            in_images_list_display = []
+            for image in self.in_images_list_n:
+                display_name = os.path.basename(image)
+                in_images_list_display.append(display_name)
+
+            found_image = False
+            if current_image:
+                if current_image in in_images_list_display:
+                    found_image = True
+
+            if not (found_image):
+                current_image = self.current_images_list.get(ACTIVE)
+                if current_image:
+                    if current_image in in_images_list_display:
+                        found_image = True
+
+            if found_image:
+                for count, path in enumerate(self.in_images_list_n):
+                    base_name = os.path.basename(path)
+                    if base_name == current_image:
+                        current_image = path
+                        break
+
+            return (current_image, found_image)
+
+
+        def remove_specific(sp_image=False):
+            if not sp_image:
+                current_image, found_image = get_specific_image()
+            else:
+                current_image, found_image = sp_image, True
+
+            if found_image:
+                image_index = self.EgonTE.index(f'{current_image} ')
                 self.EgonTE.delete(image_index)
-                delete_mode = True
+                self.bg_count -= 1
+                self.in_images_dict.pop(current_image)
+                self.in_images_list_n.remove(current_image)
+                self.update_images_list(general=True)
+            else:
+                messagebox.showerror('EgonTE', 'didn\'t found the image you wish to remove')
 
-        if not(self.image_name):
-            self.image_name = filedialog.askopenfilename(title='Open file',
-                                                            filetypes=(('PNG Files', '*.png'), ('JPG Files', '*.jpg'),
-                                                                       ('JPEG Files', '*.jpeg ')))
 
-        if not(delete_mode) and self.image_name:
-            self.bg_image = PhotoImage(self.image_name)
-            # self.EgonTE.configure(image=self.bg_image)
-            # self.EgonTE.image_create(END, image=self.bg_image)
-            # self.EgonTE.window_create(END, window=Label(self.EgonTE, image=self.bg_image))
-            self.EgonTE.image_create('current', image=self.bg_image, name=f'bg{self.bg_count}')
-            self.bg_count += 1
+        def remove_all():
+            for image in self.in_images_list_n:
+                image_index = self.EgonTE.index(f'{image} ')
+                self.EgonTE.delete(image_index)
+            self.bg_count = 1
+            self.image_name = ''
+            self.in_images_list_n = []
+            self.update_images_list(general=True)
+
+        def rename_image():
+            current_image, found_image = get_specific_image()
+            if found_image:
+                new_name = simpledialog.askstring('EgonTE', 'how would you like to call the image?')
+                if new_name:
+                    if not(new_name.lower().endswith(('.png', '.jpg', '.jpeg'))):
+                        new_name = f'{new_name}.png'
+                    # for count, image in enumerate(self.in_images_list_n):
+                    #     if image == current_image:
+                    #         self.in_images_list_n[count] == new_name
+                    #         break
+                            # self.in_images_list_n.replace(current_image, new_name)
+                    actual_image = self.in_images_dict[current_image]
+                    print(actual_image)
+                    if actual_image:
+                        self.image_entry.delete(0, END)
+                        remove_specific(current_image)
+                        add_image(sp_name=new_name, sp_image=actual_image)
+                        self.image_entry.insert(0, new_name)
+                    '''check this pretical tool'''
+                else:
+                    messagebox.showerror('EgonTE', 'New name cannot be blank')
+            # update_list(general=True)
+
+        def show_image():
+            pass
+
+        def point_image_index():
+            current_image, found_image = get_specific_image()
+            if found_image:
+                image_index = self.EgonTE.index(f'{current_image} ')
+                self.EgonTE.icursor(image_index)
+                self.EgonTE.insert(image_index, '')
+                self.EgonTE.focus_set()
+
+
+        def insert_entry(term):
+            self.image_entry.delete(0, END)
+            self.image_entry.insert(END, self.current_images_list.get(ACTIVE))
+
+        def keyrelease_events(events=False):
+            self.update_images_list()
+            # enter()
+
+
+        def close_insertim():
+            self.opened_windows.remove(image_root)
+            self.in_images_open = False
+            image_root.destroy()
+
+        image_root = Toplevel(bg=self.dynamic_overall)
+        image_root.title(self.title_struct + 'Insert images')
+        image_root.protocol('WM_DELETE_WINDOW', close_insertim)
+        image_root.attributes('-alpha', self.st_value)
+        self.opened_windows.append(image_root)
+        self.func_window[self.insert_image] = image_root
+        self.in_images_open = True
+        if self.limit_w_s.get():
+            image_root.resizable(False, False)
+        self.selected_in_image = StringVar()
+
+        title = Label(image_root, text='Insert images', font='arial 14 underline', bg=self.dynamic_bg, fg=self.dynamic_text)
+
+        self.image_entry = Entry(image_root)
+
+        list_frame = Frame(image_root, bg=self.dynamic_overall)
+        self.current_images_list = Listbox(list_frame, width=25, height=5, bg=self.dynamic_bg, fg=self.dynamic_text) # textvariable=self.selected_in_image)
+        image_scroll = ttk.Scrollbar(list_frame, command=self.current_images_list.yview)
+        self.current_images_list.configure(yscrollcommand=image_scroll.set)
+
+        buttons_frame = Frame(image_root, bg=self.dynamic_overall)
+        remove = Button(buttons_frame, text='Remove', command=remove_specific, bd=1, bg=self.dynamic_bg, fg=self.dynamic_text)
+        add = Button(buttons_frame, text='Add', command=add_image, bd=1, bg=self.dynamic_bg, fg=self.dynamic_text)
+        remove_all = Button(buttons_frame, text='Remove all', command=remove_all, bd=1, bg=self.dynamic_bg, fg=self.dynamic_text)
+        rename_image = Button(buttons_frame, text='Rename image', command=rename_image, bd=1, bg=self.dynamic_bg, fg=self.dynamic_text)
+        point_image = Button(buttons_frame, text='Point to image', command=point_image_index, bd=1, bg=self.dynamic_bg, fg=self.dynamic_text)
+        show_image = Button(buttons_frame, text='Show image', command=show_image, bd=1, bg=self.dynamic_bg, fg=self.dynamic_text)
+
+        self.current_images_list.bind('<<ListboxSelect>>', insert_entry)
+        self.image_entry.bind('<KeyRelease>', keyrelease_events)
+
+        title.grid(row=0, column=1, pady=5)
+        self.image_entry.grid(row=1, column=1, pady=2)
+        list_frame.grid(row=2, column=1, pady=2)
+        buttons_frame.grid(row=3, column=1, pady=5, padx=20)
+
+        image_scroll.pack(side=RIGHT, fill=Y, expand=True)
+        self.current_images_list.pack(fill=BOTH, expand=True)
+
+        remove.grid(row=0, column=0)
+        add.grid(row=0, column=1, pady=4)
+        remove_all.grid(row=0, column=2)
+        point_image.grid(row=1, column=0, padx=2)
+        rename_image.grid(row=1, column=2, padx=2)
+        # show_image.grid(row=1, column=2, padx=2)
+
+        self.in_im_commands = remove, add, remove_all, rename_image, point_image, show_image, self.current_images_list, title
+        self.in_im_bgs = image_root, buttons_frame, list_frame
 
 
     def change_file_ui(self):
+
+        '''
+        tool that allows the user to change their file extension to another textual file extension
+        '''
+
         self.change_text_var = StringVar()
 
         def change_file_extension():
@@ -7356,7 +7910,7 @@ class Window(Tk):
                         self.delete_file(custom=old_name)
                     self.file_name = path_object.with_suffix('.' + chosen_ext)
                     self.open_status_name = self.file_name
-                    print(self.file_name)
+                    print(f'New file\'s name: {self.file_name}')
                     self.save()
                     self.file_bar.configure(text=f'File extension changed to {chosen_ext}')
                 else:
@@ -7364,7 +7918,13 @@ class Window(Tk):
             else:
                 messagebox.showerror('EgonTE', 'Function can\'t be used without a file!')
 
+
         cfui = Toplevel()
+        cfui.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(cfui))
+        self.opened_windows.append(cfui)
+        self.func_window[self.change_file_ui] = cfui
+        cfui.attributes('-alpha', self.st_value)
+        self.make_tm(cfui)
         cfui.title(self.title_struct + 'Change file type')
         title = Label(cfui, text='Change text to:', font='arial 12 underline')
         cfui_combo = ttk.Combobox(cfui, width=10, textvariable=self.change_text_var)
@@ -7381,6 +7941,12 @@ class Window(Tk):
 
     def encryption(self):
 
+        '''
+        encryption / decryption tool with a sepeate window, that have 2 encryption methods:
+        1. symmetric
+        2. asymmetric
+        '''
+
         def get_method():
             self.enc_dec_method = False
             if self.enc_methods_var.get():
@@ -7389,7 +7955,7 @@ class Window(Tk):
                 elif self.enc_methods_var.get() == 'Asymmetric key':
                     self.enc_dec_method = 'asymmetric'
 
-        ''' overflow error'''
+        '''+ overflow error'''
         def configure_modes(event=False):
             global last_mode
             get_method()
@@ -7484,9 +8050,14 @@ class Window(Tk):
         self.private_key = ''
 
         enc_root = Toplevel()
+        enc_root.protocol('WM_DELETE_WINDOW', lambda:self.close_pop_ups(enc_root))
+        self.opened_windows.append(enc_root)
+        self.func_window[self.encryption] = enc_root
+        self.make_tm(enc_root)
         enc_root.title(self.title_struct + 'encryption')
-        enc_root.resizable(False, False)
-        enc_root.attributes('-alpha', '0.95')
+        if self.limit_w_s.get():
+            enc_root.resizable(False, False)
+        enc_root.attributes('-alpha', self.st_value)
         title = Label(enc_root, text='Encrypt and decrypt', font='arial 12 underline')
         box_frame = Frame(enc_root)
         input_title = Label(box_frame, text='Input text', font='arial 10 underline')
@@ -7530,6 +8101,9 @@ class Window(Tk):
         self.enc_methods.bind('<<ComboboxSelected>>', configure_modes)
 
     def determine_highlight(self):
+        '''
+        highlight color of text in text's finding / regex functions
+        '''
         if (self.night_mode.get()):
             if not (self.nm_palette.get() == 'blue'):
                 self._background = '#064663'
@@ -7541,19 +8115,25 @@ class Window(Tk):
             self._background = 'SystemButtonFace'
             self.tc = 'black'
 
-    def move_window(self, event):
-        self.geometry('+{0}+{1}'.format(event.x_root, event.y_root))
 
     def search_functions(self):
 
-        def match_function():
-            pass
+        '''
+        a tool that allows to run function by writing its name and clicking enter
+        have a interactive list that shows all the functions
+        the list have mods based on category of the functions
+        '''
+
+        def close_search():
+            self.search_active = True
+            self.opened_windows.remove(fn_root)
+            fn_root.destroy()
 
         def update_list():
             entry_content = self.find_function.get().lower()
             if entry_content:
                 self.functions_list.delete(0, END)
-                for term in self.ft_popular_content:
+                for term in self.functions_names:
                     if entry_content in term.lower():
                         self.functions_list.insert(END, term)
 
@@ -7572,14 +8152,16 @@ class Window(Tk):
                 insert_list.extend(file_functions.keys())
             elif self.fn_mode.get() == 'edit':
                 insert_list.extend(edit_functions.keys())
-            elif self.fn_mode.get() == 'tool':
+            elif self.fn_mode.get() == 'tools':
                 insert_list.extend(tool_functions.keys())
             elif self.fn_mode.get() == 'nlp':
                 insert_list.extend(nlp_functions.keys())
-            elif self.fn_mode.get() == 'color':
+            elif self.fn_mode.get() == 'colors':
                 insert_list.extend(color_functions.keys())
             elif self.fn_mode.get() == 'links':
                 insert_list.extend(links_functions.keys())
+            elif self.fn_mode.get() == 'others':
+                insert_list.extend(other_functions.keys())
             else:
                 insert_list.extend(self.functions_names)
             for ins in insert_list:
@@ -7612,7 +8194,7 @@ class Window(Tk):
                          'replace': self.replace, 'go to': self.goto, 'reverse characters': self.reverse_characters,
                           'reverse words': self.reverse_words, 'join words': self.join_words, 'upper/lower': self.lower_upper,
                           'sort by characters': self.sort_by_characters, 'sort by words': self.sort_by_words,
-                          'insert image': self.insert_image
+                          'insert images': self.insert_image
                           }
         tool_functions = {'translate': self.translate, 'current datetime': self.get_time,
                           'random numbers' : self.ins_random, 'random names': self.ins_random_name, 'url shorter' : self.url,
@@ -7667,44 +8249,139 @@ class Window(Tk):
 
         self.fn_mode = StringVar()
 
-        fn_root = Toplevel()
+        fn_root = Toplevel(bg=self.dynamic_bg)
+        self.search_active = True
+        fn_root.protocol('WM_DELETE_WINDOW', close_search)
+        self.opened_windows.append(fn_root)
+        self.make_tm(fn_root)
         fn_root.title(self.title_struct + 'functions')
-        fn_root.resizable(False, False)
-        fn_root.attributes('-alpha', '0.95')
+        if self.limit_w_s.get():
+            fn_root.resizable(False, False)
+        else:
+            fn_root.maxsize(700, int(fn_root.winfo_screenheight()))
+        fn_root.attributes('-alpha', self.st_value)
 
-        title = Label(fn_root, text='Search functions', font='arial 14 underline')
+        title = Label(fn_root, text='Search functions', font='arial 14 underline', fg=self.dynamic_text, bg=self.dynamic_bg)
         self.find_function = Entry(fn_root)
 
-        list_title = Label(fn_root, text='Functions list', font='arial 12 underline')
+        list_title = Label(fn_root, text='Functions list', font='arial 12 underline', fg=self.dynamic_text, bg=self.dynamic_bg)
         lists_frame = Frame(fn_root)
         self.functions_list = Listbox(lists_frame, width=25, height=8)
         list_scroll = ttk.Scrollbar(lists_frame, command=self.functions_list.yview)
         self.functions_list.configure(yscrollcommand=list_scroll.set)
 
-        title_modes = Label(fn_root, text='Search from', font='arial 12 underline')
+        title_modes = Label(fn_root, text='Search from', font='arial 12 underline', fg=self.dynamic_text, bg=self.dynamic_bg)
         modes_combobox = ttk.Combobox(fn_root, width=20, textvariable=self.fn_mode, state='readonly', style='TCombobox')
         modes_combobox['values'] = 'all', 'file', 'edit', 'tools', 'nlp', 'colors', 'others', 'links'
 
-        open_button = Button(fn_root, text='Run function', command=enter)
+        open_button = Button(fn_root, text='Run function', command=enter, fg=self.dynamic_text, bg=self.dynamic_button)
 
         # for function in self.functions_names.keys():
         #     self.functions_list.insert(END, function)
 
-        title.grid(row=0, column=1, padx=100)
-        self.find_function.grid(row=1, column=1)
-        title_modes.grid(row=2, column=1)
-        modes_combobox.grid(row=3, column=1)
-        list_title.grid(row=4, column=1)
-        lists_frame.grid(row=5, column=1)
-        open_button.grid(row=6, column=1)
+        # title.grid(row=0, column=1, padx=100)
+        # self.find_function.grid(row=1, column=1)
+        # title_modes.grid(row=2, column=1)
+        # modes_combobox.grid(row=3, column=1)
+        # list_title.grid(row=4, column=1)
+        # lists_frame.grid(row=5, column=1)
+        # open_button.grid(row=6, column=1)
 
-        list_scroll.pack(side=RIGHT, fill=Y)
+        title.pack(padx=100)
+        self.find_function.pack()
+        title_modes.pack()
+        modes_combobox.pack()
+        list_title.pack()
+        lists_frame.pack(fill=Y, expand=True)
+        open_button.pack()
+
+        list_scroll.pack(side=RIGHT, fill=Y, expand=True)
         self.functions_list.pack(fill=BOTH, expand=True)
 
         self.functions_list.bind('<<ListboxSelect>>', insert_entry)
         self.find_function.bind('<KeyRelease>', keyrelease_events)
         modes_combobox.bind('<<ComboboxSelected>>', configure_modes)
         configure_modes()
+
+        self.search_widgets = title, title_modes, list_title, open_button
+        self.search_bg = fn_root
+
+        fn_root.update_idletasks()
+        # self.fn_original_size =
+        self.limit_list.append([fn_root, [fn_root.winfo_width(), fn_root.winfo_height()]])
+
+
+    def make_tm(self, root=False):
+        if root:
+            root.attributes('-topmost', self.all_tm_v.get())
+        for win in self.opened_windows:
+            try:
+                win.attributes('-topmost', self.all_tm_v.get())
+            except Exception:
+                pass
+
+    def limit_sizes(self):
+        if self.limit_list:
+            for limited_root in self.limit_list:
+                # if len(self.limit_list) > 1:
+                window = limited_root[0]
+                sizes = limited_root[1]
+                # else:
+                #     window = self.limit_list[0]
+                #     sizes = self.limit_list[1]
+                if window in self.opened_windows:
+                    if self.limit_w_s.get():
+                        window.geometry(f'{sizes[0]}x{sizes[1]}')
+                        window.resizable(False, False)
+                    else:
+                        window.resizable(True, True)
+
+    def usage_report(self):
+
+        # gather information
+        current_time = self.get_time()
+        current_usage_time = self.ut
+        # current_date = datetime.now().strftime('%Y-%m-%d')
+
+
+        # put in this file / inside this folder
+        dir_name = 'EgonTE-time-report'
+        if not(Path(dir_name).is_dir()):
+            os.makedirs(dir_name)
+
+        name_time = str(current_time).replace(':', '-')
+        file_name = f'Report of {name_time}.txt'
+        line_1 = f'used EgonTE from {self.stt_time} to {current_time}.'
+        line_2 = f'it is an estimaited time of {current_usage_time} (S/M/H)'
+        line_3 = 'Here are some of the things you did (taken from record tool):'
+
+        start_info = [line_1, line_2, line_3]
+
+        final_line = ('Note: if this information conserns you, EgonTE is an open-sourced project and you can\n'
+                     'see that this information does not go anywhere')
+        with open(rf'{dir_name}\{file_name}', 'w') as f:
+            for info in start_info:
+                f.write(info + '\n')
+            for record in self.record_list:
+                f.write(record + '\n')
+            f.write(final_line)
+
+    def check_version(self):
+        try:
+            url = "https://raw.githubusercontent.com/Ariel4545/text_editor/main/version.txt"
+            response = requests.get(url=url)
+            updated_version = response.text
+            if updated_version != self.ver:
+                messagebox.showwarning('EgonTE', 'You are not using the latest version')
+        except:
+            pass
+
+    def other_transparency(self, event=False):
+        self.st_value = int(self.transparency_s.get()) / 100
+        for window in self.opened_windows:
+            window.attributes('-alpha', self.st_value)
+        self.record_list.append(f'> [{self.get_time()}] - Transparency of other windows changed to {self.st_value}')
+
 
     if RA:
         right_align_language_support()
