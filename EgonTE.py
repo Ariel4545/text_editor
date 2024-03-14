@@ -8370,7 +8370,8 @@ class Window(Tk):
         try:
             url = "https://raw.githubusercontent.com/Ariel4545/text_editor/main/version.txt"
             response = requests.get(url=url)
-            updated_version = response.text
+            updated_version = response.text.replace(' ', '').replace('\n', '')
+            print(updated_version, self.ver)
             if updated_version != self.ver:
                 messagebox.showwarning('EgonTE', 'You are not using the latest version')
         except:
