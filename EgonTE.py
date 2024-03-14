@@ -4538,7 +4538,7 @@ class Window(Tk):
                         return
                 # window creation
                 compare_root = Toplevel()
-                if self.limit_w_s.get()
+                if self.limit_w_s.get():
                     compare_root.resizable(False, False)
                 self.opened_windows.append(compare_root)
                 self.func_window[self.compare] = compare_root
