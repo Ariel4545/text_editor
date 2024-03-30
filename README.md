@@ -1,4 +1,4 @@
-### important message: after all this time, there is an update on the way (but because of difficulties in my life + a lot of dead time - the update might be smaller than usual)  
+**Important message: the next update will mostly focus on improved code quality: more readable and structured. and because this is a hard thing to do and it is very boring there is a slight chance that it will be delayed as well**  
 
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
 
@@ -20,7 +20,7 @@ Enjoy two unique night modes 🌙.
 __(footage taken from the early development of 1.12.1 version)__
 
 ## Personal goal 🌟
-My goal with this project is to learn the Python eco-system and tkinter while having fun,  
+My goal with this project is to learn the Python eco-system and tkinter while having fun  
 and to take tkinter to its limits by implementing many unique things within the process of building this long project.  
 In addition, after I shared this project I also wanted to create a good GitHub repository by making it organized and presenting the project well.  
 
