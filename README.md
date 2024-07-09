@@ -1,3 +1,5 @@
+![ETE1 12 7 poster (1)](https://github.com/Ariel4545/text_editor/assets/95249974/30e5da02-23f4-4bf2-b6ed-8203c5391ff4)  
+
 **Important message: the next update will mostly focus on improved code quality: more readable and structured. and because this is a hard thing to do and it is very boring there is a slight chance that it will be delayed as well**  
 
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
