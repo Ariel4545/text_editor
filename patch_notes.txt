@@ -1,7 +1,58 @@
 Version - name - release date
 
+[1.13 p1 - the clairty update p1 - 21/04/25 ]
+
+Added:
+added a new binding option to disable (and enable) - automatic (pressing any button mostly in the EgonTE text widget)
+added a new reset binding button
+added the option to choose text's font size values orientation - highest value at the top or the bottom of the combo-box
+added a "show characters" window for the text decorators tool
+added a message when closing a pop-up window in the record tool and added a thread stopper for some functions.
+added a universal window-creating function, that binds the window to all the window-related settings and events
+added a universal internet links opener
+added the option to choose both or none auto-saving method instead of one of them
+added a global "fill by click" function
+W.I.P draw to text tool - redo functionality and night mode
+W.I.P added a text formater to the output of the "speech to text" tool
+
+Changed \ improved:
+more specific libraries importing
+made some widget placing shorter with loops
+optimized many conditions with the usage of a dictionary
+added a ton of type and return hintings
+started to use @staticmethod, and in bulk
+optimized conditions with repetitive content
+matched some arguments with their parameters
+improved some functions, arguments, parameters, and variables names
+Flipped text's font sizes combo box
+made balloon-tips creation shorter
+made the ballon-tips library an optional feature, and returned the classic ballon-tips in case of not installing the library
+started to use less error-catching and more conditions to prevent errors
+shorten many lines with list comprehensions - making groups of variables, checking conditions, etc
+made the virtual keyboard code organization better
+improved the NLP's function conditions
+improved wiki-image images' size adjustment conditions
+merged the text's highlight color function with the general function that manages color-changing events
+improved a bit the text decorator function
+removed some useless comments
+organized variables creation in the init function
+made some widget creation consume less space
+merged some functions with the same usage but different options (for example: text alignment functions are now one)
+made more variables belong to the class to fix possible scope error
+optimized the "advance" section in the "random names" function
+made drawing in the draw-to-text tool more power-efficient
+
+Fixed:
+fixed the library installer's widget placement error
+fixed many misspellings
+fixed youtube-transcript window creation
+fixed font size wasn't applying to a newer text
+fixed a bug with the text decorator's text scroll
+fixed a condition and a method call in the git tool
+
 [1.12.6 - rise of windows - 9/3/24]
-Added
+
+Added:
 Added side windows advanced settings:
 1. open at the middle of the screen
 2. cancel the limitation of window sizes
