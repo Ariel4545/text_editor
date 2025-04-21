@@ -27,4 +27,3 @@ webbrowser
 wikipedia
 win32api
 numexpr
-tktooltip
