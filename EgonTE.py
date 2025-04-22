@@ -1,4 +1,5 @@
 # default libraries
+from large_variables import *
 from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
 from tkinter import *
 import tkinter.ttk as ttk
@@ -47,17 +48,10 @@ def library_installer():
 			global lib_index, dw_fails
 
 			end_msg.configure(text=f'Download in progress', fg='orange')
-			library_list = ['bs4', 'emoji', 'keyboard', 'matplotlib', 'names', 'pandas', 'PIL',
-							'pyaudio', 'pydub', 'ffmpeg-downloader', 'PyPDF2', 'nltk', 'PyDictionary',
-							'tkinter-tooltip',
-							'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
-							'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
-							'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr']
-
 			if opt_var.get():
-				library_list = library_list.extend(
+				library_list.extend(
 					['pytesseract', 'openai', 'python-polyglot', 'googletrans', 'cryptography', 'rsa'
-																								'GitPython', 'emoticon',
+					'GitPython', 'emoticon',
 					 'pytesseract', 'youtube-transcript-api',
 					 'email', 'pyshorteners'])
 
@@ -316,33 +310,10 @@ class Window(Tk):
 		# variables based on if windows are opened or not to prevent errors while using settings
 		self.info_page_active, self.vk_active, self.search_active, self.record_active = False, False, False, False
 		self.hw_active, self.op_active, self.ins_images_open, self.hw_bonus_root = False, False, False, None
-		# variables of various tools
-		self.morse_code_dict = {'A': '.-', 'B': '-...',
-						   'C': '-.-.', 'D': '-..', 'E': '.',
-						   'F': '..-.', 'G': '--.', 'H': '....',
-						   'I': '..', 'J': '.---', 'K': '-.-',
-						   'L': '.-..', 'M': '--', 'N': '-.',
-						   'O': '---', 'P': '.--.', 'Q': '--.-',
-						   'R': '.-.', 'S': '...', 'T': '-',
-						   'U': '..-', 'V': '...-', 'W': '.--',
-						   'X': '-..-', 'Y': '-.--', 'Z': '--..',
-						   '1': '.----', '2': '..---', '3': '...--',
-						   '4': '....-', '5': '.....', '6': '-....',
-						   '7': '--...', '8': '---..', '9': '----.',
-						   '0': '-----', ', ': '--..--', '.': '.-.-.-',
-						   '?': '..--..', '/': '-..-.', '-': '-....-',
-						   '(': '-.--.', ')': '-.--.-', ' ': '/'
-						   # ,'Á': '.--.-', 'Ä': '.-.-', 'É': '..-..', 'Ñ': '- - . - -',
-						   # 'Ö': '- - - .', 'Ü': '. . - -'
-						   }
 		# wiki and dictionary variables
 		self.wiki_var = IntVar()
 		self.wiki_var.set(1)
 		# speech to text variables
-		self.sr_supported_langs = {'English (US)': 'en-US', 'English (UK)': 'en-GB', 'Spanish (Spain)': 'es-ES',
-								   'French': 'fr-FR', 'Russian': 'ru', 'Arabic (Egypt)': 'ar-EG', 'Japanese': 'ja',
-								   'Italian': 'it-IT', 'Korean': 'ko', 'Indonesian': 'id', 'Hebrew': 'he'
-								   }
 		self.stt_chosen_lang = StringVar()
 		self.stt_chosen_lang.set('English (US)')
 		self.stt_lang_value = 'en-US'
@@ -403,7 +374,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13 p1'
+		self.ver = '1.13 p2'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -440,7 +411,6 @@ class Window(Tk):
 		# create toolbar frame
 		self.toolbar_frame = Frame(frame)
 		self.toolbar_frame.pack(fill=X, anchor=W, side=TOP)
-		self.img_extensions = (('PNG', '*.png'), ('JPG', '*.jpg'))
 		self.ex_tool = 'arial 9 bold'
 		self.record_list = [f'> [{self.get_time()}] - Program opened']
 
@@ -999,9 +969,7 @@ class Window(Tk):
 		'''
 		content = self.EgonTE.get('1.0', 'end')
 		if not (event == 'initial'):
-			self.text_name = filedialog.askopenfilename(title='Open file',
-														filetypes=(('Text Files', '*.txt'), ('HTML Files', '*.html'),
-																   ('Python Files', '*.py')))
+			self.text_name = filedialog.askopenfilename(title='Open file', filetypes=text_extensions)
 		else:
 			self.text_name = self.data['open_last_file']
 
@@ -1034,21 +1002,9 @@ class Window(Tk):
 				# adds functionality to compile python in EgonTE
 				elif self.file_name.endswith('.py'):
 					self.python_file = True
-
-					self.outputFrame = Frame(frame)
-					self.outputFrame.pack(fill=BOTH, expand=True)
-					self.output_scroll = ttk.Scrollbar(self.outputFrame)
-					self.output_scroll.pack(side=RIGHT, fill=Y)
-					self.output_box = Text(self.outputFrame, width=100, height=1, font=('arial', 12),
-										   selectbackground='blue',
-										   selectforeground='white',
-										   yscrollcommand=self.output_scroll.set, wrap=None,
-										   relief=self.predefined_relief,
-										   cursor=self.predefined_cursor)
-					self.output_box.pack(fill=BOTH, expand=True)
-					self.output_scroll.config(command=self.output_box.yview)
+					self.output_frame, self.output_box, self.output_scroll = self.make_rich_textbox(frame, size=[100, 1]
+								, selectbg='blue', wrap=None, font='arial 12', bd=2)
 					self.output_box.configure(state='disabled')
-
 				self.manage_menus(mode='python')
 
 				self.EgonTE.insert(END, stuff)
@@ -1072,8 +1028,7 @@ class Window(Tk):
 		'''
 		if event == None:
 			text_file = filedialog.asksaveasfilename(defaultextension='.*', initialdir='C:/EgonTE', title='Save File',
-													 filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-																('Python Files', '*.py')))
+													 filetypes=text_extensions)
 			if text_file:
 				self.file_name = text_file
 				self.file_name = self.file_name.replace('C:/EgonTE', '')
@@ -1298,13 +1253,32 @@ class Window(Tk):
 		self.record_list.append(f'> [{self.get_time()}] - {root_name} tool window opened')
 		return root
 
+	def make_rich_textbox(self, root, place='pack_top', wrap=WORD, font='arial 10', size=False, selectbg='dark cyan',
+						  bd=0, relief=''):
+		if not relief:
+			relief = self.predefined_relief
+		text_frame = Frame(root)
+		text_scroll = ttk.Scrollbar(text_frame)
+		rich_tbox = Text(text_frame, wrap=wrap, relief=relief, font=font, borderwidth=bd,
+						 cursor=self.predefined_cursor, yscrollcommand=text_scroll.set, undo=True,
+						 selectbackground=selectbg)
+		text_scroll.config(command=rich_tbox.yview)
+		if size:
+			rich_tbox.configure(width=size[0], height=size[1])
+		if place:
+			if 'pack' in place:
+				text_frame.pack(fill=BOTH, expand=True, side=place.split('_')[1])
+			elif isinstance(place, list):
+				text_frame.grid(row=place[0], column=place[1])
+			text_scroll.pack(side=RIGHT, fill=Y)
+			rich_tbox.pack(fill=BOTH, expand=True)
+		return (text_frame, rich_tbox, text_scroll)
+
 	def print_file(self, event=None):
 		'''
 		old function that aims to print your file
 		'''
-		file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file',
-											filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-													   ('Python Files', '*.py')))
+		file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file', filetypes=text_extensions)
 		if system().lower() == 'windows':
 			printer_name = GetDefaultPrinter()
 			if file2p:
@@ -1800,6 +1774,7 @@ class Window(Tk):
 				self.button_nothing_find = Button(self.nav_frame, text='Nothing',
 												  command=lambda: untag_all(starting_index, ending_index),
 												  width=5, relief=FLAT, state=DISABLED)
+				self.find_nav_buttons = self.button_up_find, self.button_down_find, self.button_all_find, self.button_nothing_find
 
 			if not occurs_label:
 				occurs_label = Label(self.nav_frame)
@@ -2346,24 +2321,7 @@ class Window(Tk):
 		auto_detect['values'] = 'Auto Detect'
 		auto_detect.current(0)
 
-		chosen_language['values'] = (
-			'Afrikaans', 'Albanian', 'Arabic', 'Armenian', ' Azerbaijani', 'Basque', 'Belarusian', 'Bengali', 'Bosnian',
-			'Bulgarian', ' Catalan', 'Cebuano', 'Chichewa', 'Chinese', 'Corsican', 'Croatian', ' Czech', 'Danish',
-			'Dutch',
-			'English', 'Esperanto', 'Estonian', 'Filipino', 'Finnish', 'French', 'Frisian', 'Galician', 'Georgian',
-			'German', 'Greek', 'Gujarati', 'Haitian Creole', 'Hausa', 'Hawaiian', 'Hebrew', 'Hindi', 'Hmong',
-			'Hungarian',
-			'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian', 'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer',
-			'Kinyarwanda', 'Korean', 'Kurdish', 'Kyrgyz', 'Lao', 'Latin', 'Latvian', 'Lithuanian', 'Luxembourgish',
-			'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Maori', 'Marathi', 'Mongolian', 'Myanmar',
-			'Nepali',
-			'Norwegian''Odia', 'Pashto', 'Persian', 'Polish', 'Portuguese', 'Punjabi', 'Romanian', 'Russian', 'Samoan',
-			'Scots Gaelic', 'Serbian', 'Sesotho', 'Shona', 'Sindhi', 'Sinhala', 'Slovak', 'Slovenian', 'Somali',
-			'Spanish',
-			'Sundanese', 'Swahili', 'Swedish', 'Tajik', 'Tamil', 'Tatar', 'Telugu', 'Thai', 'Turkish', 'Turkmen',
-			'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa''Yiddish', 'Yoruba', 'Zulu',
-		)
-
+		chosen_language['values'] = languages_list
 		if self.fun_n.get():
 			lng_length = len(chosen_language['values'])
 			lng_index = randint(0, lng_length - 1)
@@ -2568,10 +2526,10 @@ class Window(Tk):
 					preview_root = Toplevel()
 					self.make_tm(preview_root)
 					preview_root.title(self.title_struct + 'preview of G.S')
-					text = Text(preview_root)
+					text_frame, text, text_scroll = self.make_rich_textbox(preview_root)
 					text.insert(END, ''.join(sequence))
+					text.configure(state=DISABLED)
 					insert_button = Button(preview_root, text='Insert', command=insert_gs)
-					text.pack(expand=True)
 					insert_button.pack()
 				else:
 					self.EgonTE.insert(desired_pos, ''.join(sequence))
@@ -2643,13 +2601,13 @@ class Window(Tk):
 
 		if via == 'file':
 			special_file = filedialog.askopenfilename(title='open file',
-													  filetypes=(('excel', '*.xlsx'), ('csv', '*.csv'), ('pdf', '*.pdf')
-																 , ('json', '*.json'), ('xml', '*.xml'),
-																 ('all', '*.*')))
+													  filetypes=special_files)
 		else:
 			special_file = simpledialog.askstring('EgonTE', 'enter the link to the file')
 
 		try:
+
+			'''+ shorten'''
 			# identify file types
 			if special_file.endswith('.xml'):
 				content = pandas.read_xml(special_file).to_string()
@@ -2808,16 +2766,13 @@ class Window(Tk):
 					self.info_page_text.tag_add('highlight_all_result', starting_index, ending_index)
 					ending_index = starting_index
 
-		info_root_frame = Frame(info_root)
-		info_root_frame.pack()
-		title_frame = Frame(info_root_frame)
+		title_frame = Frame(info_root)
 		title_frame.pack(fill=X, expand=True)
-		help_text_scroll = ttk.Scrollbar(info_root_frame)
 		# labels
 		self.info_page_title = Label(title_frame, text='Help', font='arial 16 bold underline', justify='left',
 									 fg=self.dynamic_text, bg=self.dynamic_bg)
-		self.info_page_text = Text(info_root_frame, font='arial 10', borderwidth=3, bg=self.dynamic_bg, state='normal',
-								   yscrollcommand=help_text_scroll.set, relief=RIDGE, wrap=WORD, fg=self.dynamic_text)
+		info_root_frame, self.info_page_text, help_text_scroll = self.make_rich_textbox(info_root, font='arial 10',
+																						bd=3, relief=RIDGE)
 
 		if path == 'patch_notes':
 			self.info_page_title.configure(text='Patch notes')
@@ -2827,11 +2782,7 @@ class Window(Tk):
 		place_lines()
 		self.info_page_text.config(state='disabled')
 		# placing
-		info_root_frame.pack()
 		self.info_page_title.pack(fill=X, anchor=W, expand=True)
-		help_text_scroll.pack(side=RIGHT, fill=Y)
-		self.info_page_text.pack(fill=BOTH, expand=True)
-		help_text_scroll.config(command=self.info_page_text.yview)
 
 		self.oc_color = 'SystemButtonFace'
 		if self.night_mode.get():
@@ -2877,8 +2828,8 @@ class Window(Tk):
 	def right_align_language_support(self):
 		if self.EgonTE.get('1.0', 'end'):
 			lan = poly_text(self.EgonTE.get('1.0', 'end')).language.name
-			if lan == 'Arabic' or 'Hebrew' or 'Persian' or 'Pashto' or 'Urdu' or 'Kashmiri' or 'Sindhi':
-				self.align_right()
+			if lan in right_aligned_l:
+				self.align_text('right')
 
 	def search_www(self):
 		'''
@@ -3232,7 +3183,7 @@ class Window(Tk):
 				self.save_bg.set(False)
 
 		def stt_key(event=False):
-			self.stt_lang_value = self.sr_supported_langs[self.stt_chosen_lang.get()]
+			self.stt_lang_value = sr_supported_langs[self.stt_chosen_lang.get()]
 			self.record_list.append(
 				f'> [{self.get_time()}] - Speech to text language changed to: {self.stt_lang_value}')
 
@@ -3469,11 +3420,6 @@ class Window(Tk):
 
 		biggest_top.grid(row=0, column=0), biggest_bottom.grid(row=0, column=2)
 		self.usage_time.pack()
-
-		# placing all the widgets
-		opt_title.pack(pady=5)
-
-
 		# creating buttons list
 
 		self.opt_frames = styles_frame, functional_frame, self.opt_root, bindings_frame, pop_ups_frame, order_frame
@@ -3607,20 +3553,12 @@ class Window(Tk):
 		mode_ = 'ascending'
 		str_loop, end_loop = 1, 0
 		# UI components
-		sort_frame = Frame(sort_root)
-		sort_scroll = ttk.Scrollbar(sort_frame)
 		sort_text = Label(sort_root, text='Enter the numbers/characters you wish to sort:', font='arial 10 bold')
-		sort_input = Text(sort_frame, width=30, height=15, yscrollcommand=sort_scroll.set, wrap=WORD,
-						  cursor=self.predefined_cursor, relief=self.predefined_relief)
-
+		sort_frame, sort_input, sort_scroll = self.make_rich_textbox(sort_root, size=[30, 15])
 		sort_button = Button(sort_root, text='Sort', command=sort_)
 		mode_button = Button(sort_root, text='Mode: ascending', command=mode)
 		sort_insert = Button(sort_root, text='Insert', command=enter)
 		sort_text.pack(fill=X, anchor=W, padx=3)
-		sort_frame.pack(pady=3)
-		sort_scroll.pack(side=RIGHT, fill=Y)
-		sort_input.pack(fill=BOTH, expand=True)
-		sort_scroll.config(command=sort_input.yview)
 		sort_button.pack(pady=2)
 		mode_button.pack(pady=2)
 		sort_insert.pack(pady=2)
@@ -3899,16 +3837,7 @@ class Window(Tk):
 		self.vk_active = keyboard_root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(keyboard_root, 'vk'))
 		if not (self.vk_active) and keyboard_root in self.opened_windows:
 			self.vk_active = True
-		sym_n = ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-				 '+', '-', '*', '^', '=', '<', '>', '[', ']',
-				 '#', '!', '&', '?', ':', '/', '~')
-
-		syn_only = ('`', '_', '|', '$', '@', '£', '€', '¢', '¥', '§',
-					'%', '°', r'\\', ';', '"', '\'', '®', '¿', 'ƒ',
-					'√', '™', '©', '±', '≈', 'Ω', 'Φ')
-
-		### unused: '`' '_' '|' '$'
-
+		# self.func_window[self.virtual_keyboard] = keyboard_root
 		last_abc = 'upper'
 		exp = ' '  # global variable
 
@@ -3989,9 +3918,6 @@ class Window(Tk):
 		extras_frame.pack()
 
 		# creating buttons
-		characters_str = (
-		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Z',
-		'X', 'C', 'V', 'B', 'N', 'M')
 		b_width = 6
 		Q, W, E, R, T, Y, U, I, O, P, A, S, D, F, G, H, J, K, L, Z, X, C, V, B, N, M = \
 			[Button(btn_frame, text=button, width=b_width, command=lambda: press(button)) for button in characters_str]
@@ -4164,19 +4090,17 @@ class Window(Tk):
 		if mode == 'emojis':
 			ejc_list = emoji.get_emoji_unicode_dict('en')
 		elif mode == 'morse':
-			ejc_list = self.morse_code_dict
+			ejc_list = morse_code_dict
 		elif mode == 'roman':
-			ejc_list = (dict(islice(self.roman_dict.items(), 7)))
+			ejc_list = (dict(islice(roman_dict.items(), 7)))
 
 			extra = {}
-			for key, value in self.roman_dict.items():
+			for key, value in roman_dict.items():
 				if key not in ejc_list.keys():
 					extra[key] = value
 
 		e_root = self.make_pop_ups_window(self.e_list, f'{mode} list')
-		scroll = ttk.Scrollbar(e_root)
-		sym_text = Text(e_root, yscrollcommand=scroll.set, cursor=self.predefined_cursor,
-						 relief=self.predefined_relief)
+		text_frame, sym_text, scroll = self.make_rich_textbox(e_root)
 
 		for sym_, sym_code_ in ejc_list.items():
 			sym_text.insert('end', f'{sym_} - {sym_code_}\n')
@@ -4194,9 +4118,6 @@ class Window(Tk):
 				sym_text.insert('end', f'{sym_} - {sym_code_}\n')
 
 		sym_text.configure(state=DISABLED)
-		scroll.pack(side=RIGHT, fill=Y)
-		sym_text.pack(fill=BOTH, expand=True)
-		scroll.config(command=sym_text.yview)
 
 	def file_info(self):
 		'''
@@ -4209,9 +4130,7 @@ class Window(Tk):
 			file_info_name = self.file_name
 
 		else:
-			file_info_name = filedialog.askopenfilename(title='Open file to get info about',
-														filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-																   ('Python Files', '*.py')))
+			file_info_name = filedialog.askopenfilename(title='Open file to get info about', filetypes=text_extensions)
 
 		try:
 			if file_info_name:
@@ -4325,8 +4244,7 @@ class Window(Tk):
 			   '''
 		file_content = self.EgonTE.get('1.0', 'end').splitlines()
 		another_file = filedialog.askopenfilename(initialdir=os.getcwd(), title='Open file to compare',
-												  filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-															 ('Python Files', '*.py')))
+												  filetypes=text_extensions)
 		if another_file:
 			try:
 				another_file = open(another_file, 'r')
@@ -4348,12 +4266,8 @@ class Window(Tk):
 					c_difference_frame = Frame(main_frame)
 					c_difference_title = Label(main_frame, text='Content difference', font='arial 14 underline')
 					files_difference = ''.join(difference.compare(file_content, another_fc)).replace('  ', ' ')
-
-					cd_inner_frame = Frame(c_difference_frame)
-					cd_scroll = ttk.Scrollbar(cd_inner_frame)
-					content_difference = Text(cd_inner_frame, font='arial 12', wrap=WORD, yscrollcommand=cd_scroll.set)
-					cd_scroll.config(command=content_difference.yview)
-
+					cd_inner_frame,  content_difference, cd_scroll = self.make_rich_textbox(c_difference_frame,
+										   font='arial 12')
 					content_difference.insert(END, files_difference)
 					content_difference.configure(state=DISABLED)
 
@@ -4421,20 +4335,16 @@ class Window(Tk):
 
 			preview_root = self.make_pop_ups_window(preview_ui, 'Preview corrector changes')
 			title = Label(preview_root, text='Accept this text changes', font='arial 12 underline')
-			text_frame = Frame(preview_root)
-			preview_text_scroll = ttk.Scrollbar(text_frame)
-			changes_text_box = Text(text_frame, wrap=WORD, yscrollcommand=preview_text_scroll.set, relief=RIDGE)
-			preview_text_scroll.config(command=changes_text_box.yview)
+			title.pack()
+			text_frame, changes_text_box, text_scroll = self.make_rich_textbox(preview_root)
 			difference = Differ()
 			differ_content = ''.join(difference.compare(content, corrected_content))
 			changes_text_box.insert('1.0', differ_content)
 			decision_frame = Frame(preview_root)
 			accept_b = Button(decision_frame, text='Accept', command=lambda: res(True))
 			deny_b = Button(decision_frame, text='Deny', command=lambda: res(False))
-			title.pack()
-			text_frame.pack(expand=True, fill=BOTH)
-			preview_text_scroll.pack(fill=Y, side=RIGHT)
-			changes_text_box.pack(expand=True, fill=BOTH)
+
+			text_frame.pack()
 			decision_frame.pack()
 			accept_b.grid(row=0, column=0)
 			deny_b.grid(row=0, column=2)
@@ -5404,11 +5314,11 @@ class Window(Tk):
 	@staticmethod
 	def make_default_data():
 		return {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
-					 'style': 'clam',
-					 'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
-					 'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
-					 'night_type': 'black', 'preview_cc': False, 'fun_numbers': True, 'usage_report': False,
-					 'check_version': False, 'window_c_warning': True, 'allow_duplicate': False}
+				'style': 'clam',
+				'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
+				'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
+				'night_type': 'black', 'preview_cc': False, 'fun_numbers': True, 'usage_report': False,
+				'check_version': False, 'window_c_warning': True, 'allow_duplicate': False}
 
 	def match_saved_settings(self):
 
@@ -5450,187 +5360,10 @@ class Window(Tk):
 		result_box = ''
 
 		def enter():
-			if self.chosen_tdecorator == 'bash':
-				a = '..######..\n..#....#..\n..######..\n..#....#..\n..#....#..\n\n'
-				b = '..######..\n..#....#..\n..#####...\n..#....#..\n..######..\n\n'
-				c = '..######..\n..#.......\n..#.......\n..#.......\n..######..\n\n'
-				d = '..#####...\n..#....#..\n..#....#..\n..#....#..\n..#####...\n\n'
-				e = '..######..\n..#.......\n..#####...\n..#.......\n..######..\n\n'
-				f = '..######..\n..#.......\n..#####...\n..#.......\n..#.......\n\n'
-				g = '..######..\n..#.......\n..#####...\n..#....#..\n..#####...\n\n'
-				h = '..#....#..\n..#....#..\n..######..\n..#....#..\n..#....#..\n\n'
-				i = '..######..\n....##....\n....##....\n....##....\n..######..\n\n'
-				j = '..######..\n....##....\n....##....\n..#.##....\n..####....\n\n'
-				k = '..#...#...\n..#..#....\n..##......\n..#..#....\n..#...#...\n\n'
-				l = '..#.......\n..#.......\n..#.......\n..#.......\n..######..\n\n'
-				m = '..#....#..\n..##..##..\n..#.##.#..\n..#....#..\n..#....#..\n\n'
-				n = '..#....#..\n..##...#..\n..#.#..#..\n..#..#.#..\n..#...##..\n\n'
-				o = '..######..\n..#....#..\n..#....#..\n..#....#..\n..######..\n\n'
-				p = '..######..\n..#....#..\n..######..\n..#.......\n..#.......\n\n'
-				q = '..######..\n..#....#..\n..#.#..#..\n..#..#.#..\n..######..\n\n'
-				r = '..######..\n..#....#..\n..#.##....\n..#...#...\n..#....#..\n\n'
-				s = '..######..\n..#.......\n..######..\n.......#..\n..######..\n\n'
-				t = '..######..\n....##....\n....##....\n....##....\n....##....\n\n'
-				u = '..#....#..\n..#....#..\n..#....#..\n..#....#..\n..######..\n\n'
-				v = '..#....#..\n..#....#..\n..#....#..\n...#..#...\n....##....\n\n'
-				w = '..#....#..\n..#....#..\n..#.##.#..\n..##..##..\n..#....#..\n\n'
-				x = '..#....#..\n...#..#...\n....##....\n...#..#...\n..#....#..\n\n'
-				y = '..#....#..\n...#..#...\n....##....\n....##....\n....##....\n\n'
-				z = '..######..\n......#...\n.....#....\n....#.....\n..######..\n\n'
-				sp = '&&&&&&\n&&&&&&\n&&&&&&\n&&&&&&\n\n'
-				dot = '----..----\n\n'
-				self.ascii_alph = (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
-								   sp, dot)
-				self.ascii_dict = {'a': a, 'b': b, 'c': c, 'd': d, 'e': e, 'f': f, 'g': g, 'h': h, 'i': i, 'j': j,
-								   'k': k, 'l': l,
-								   'm': m, 'n': n, 'o': o, 'p': p, 'q': q, 'r': r, 's': s, 't': t, 'u': u, 'v': v,
-								   'w': w, 'x': x,
-								   'y': y, 'z': z, ' ': sp, '.': dot}
-
-				newline_n = 5
-
-			elif self.chosen_tdecorator == 'binary':
-				a = (
-					'000000000000\n000111111000\n011000000110\n011000000110\n011111111110\n011000000110\n011000000110\n011000000110\n\n')
-				b = (
-					'000000000000\n011111111000\n011000000110\n011000000110\n011111111000\n011000000110\n011000000110\n011111111000\n\n')
-				c = (
-					'000000000000\n000111111000\n011000000110\n011000000000\n011000000000\n011000000000\n011000000110\n000111111000\n\n')
-				d = (
-					'000000000000\n011111111000\n011000000110\n011000000110\n011000000110\n011000000110\n011000000110\n011111111000\n\n')
-				e = (
-					'000000000000\n011111111110\n011000000000\n011000000000\n011111111100\n011000000000\n011000000000\n011111111110\n\n')
-				f = (
-					'000000000000\n011111111110\n011000000000\n011000000000\n011111111100\n011000000000\n011000000000\n011000000000\n\n')
-				g = (
-					'000000000000\n000111111000\n011000000110\n011000000000\n011000000000\n011000011110\n011000000110\n000111111000\n\n')
-				h = (
-					'000000000000\n011000000110\n011000000110\n011000000110\n011111111110\n011000000110\n011000000110\n011000000110\n\n')
-				i = (
-					'000000000000\n000111111000\n000001100000\n000001100000\n000001100000\n000001100000\n000001100000\n000111111000\n\n')
-				j = (
-					'000000000000\n000001111110\n000000011000\n000000011000\n000000011000\n000000011000\n011000011000\n000111100000\n\n')
-				k = (
-					'000000000000\n011000000110\n011000011000\n011001100000\n011110000000\n011001100000\n011000011000\n011000000110\n\n')
-				l = (
-					'000000000000\n011000000000\n011000000000\n011000000000\n011000000000\n011000000000\n011000000000\n011111111110\n\n')
-				m = (
-					'000000000000\n011000000110\n011110011110\n011001100110\n011001100110\n011000000110\n011000000110\n011000000110\n\n')
-				n = (
-					'000000000000\n011000000110\n011000000110\n011110000110\n011001100110\n011000011110\n011000000110\n011000000110\n\n')
-				o = (
-					'000000000000\n000111111000\n011000000110\n011000000110\n011000000110\n011000000110\n011000000110\n000111111000\n\n')
-				p = (
-					'000000000000\n011111111000\n011000000110\n011000000110\n011111111000\n011000000000\n011000000000\n011000000000\n\n')
-				q = (
-					'000000000000\n000111111000\n011000000110\n011000000110\n011000000110\n011001100110\n011000011000\n000111100110\n\n')
-				r = (
-					'000000000000\n011111111000\n011000000110\n011000000110\n011111111000\n011001100000\n011000011000\n011000000110\n\n')
-				s = (
-					'000000000000\n000111111110\n011000000000\n011000000000\n000111111000\n000000000110\n000000000110\n011111111000\n\n')
-				t = (
-					'000000000000\n011111111110\n000001100000\n000001100000\n000001100000\n000001100000\n000001100000\n000001100000\n\n')
-				u = (
-					'000000000000\n011000000110\n011000000110\n011000000110\n011000000110\n011000000110\n011000000110\n000111111000\n\n')
-				v = (
-					'000000000000\n011000000110\n011000000110\n011000000110\n011000000110\n000110011000\n000110011000\n000001100000\n\n')
-				w = (
-					'000000000000\n011000000110\n011000000110\n011000000110\n011001100110\n011001100110\n011001100110\n000110011000\n\n')
-				x = (
-					'000000000000\n011000000110\n011000000110\n000110011000\n000001100000\n000110011000\n011000000110\n011000000110\n\n')
-				y = (
-					'000000000000\n011000000110\n011000000110\n000110011000\n000001100000\n000001100000\n000001100000\n000001100000\n\n')
-				z = (
-					'000000000000\n011111111110\n000000000110\n000000011000\n000001100000\n000110000000\n011000000000\n011111111110\n\n')
-				sp = (
-					'000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n\n')
-				n0 = (
-					'000000000000\n000111111000\n011000000110\n011000011110\n011001100110\n011110000110\n011000000110\n000111111000\n\n')
-				n1 = (
-					'000000000000\n000001100000\n000111100000\n000001100000\n000001100000\n000001100000\n000001100000\n000111111000\n\n')
-				n2 = (
-					'000000000000\n000111111000\n011000000110\n000000000110\n000000011000\n000001100000\n000110000000\n011111111110\n\n')
-				n3 = (
-					'000000000000\n011111111110\n000000011000\n000001100000\n000000011000\n000000000110\n011000000110\n000111111000\n\n')
-				n4 = (
-					'000000000000\n000000011000\n000001111000\n000110011000\n011000011000\n011111111110\n000000011000\n000000011000\n\n')
-				n5 = (
-					'000000000000\n011111111110\n011000000000\n011111111000\n000000000110\n000000000110\n011000000110\n000111111000\n\n')
-				n6 = (
-					'000000000000\n000001111000\n000110000000\n011000000000\n011111111000\n011000000110\n011000000110\n000111111000\n\n')
-				n7 = (
-					'000000000000\n011111111110\n000000000110\n000000011000\n000001100000\n000110000000\n000110000000\n000110000000\n\n')
-				n8 = (
-					'000000000000\n000111111000\n011000000110\n011000000110\n000111111000\n011000000110\n011000000110\n000111111000\n\n')
-				n9 = (
-					'000000000000\n000111111000\n011000000110\n011000000110\n000111111110\n000000000110\n000000011000\n000111100000\n\n')
-				s0 = (
-					'000000000000\n000111111000\n011000000110\n000000000110\n000000011000\n000001100000\n000000000000\n000001100000\n\n')
-				s1 = (
-					'000000000000\n000001100000\n000001100000\n000001100000\n000001100000\n000001100000\n000000000000\n000001100000\n\n')
-				s2 = (
-					'000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000001100000\n000001100000\n\n')
-				s3 = (
-					'000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000000000000\n000001100000\n\n')
-				s4 = (
-					'000000000000\n000000000000\n000000000000\n000000000000\n001111111100\n000000000000\n000000000000\n000000000000\n\n')
-				s5 = (
-					'000000000000\n000000000000\n000001100000\n000001100000\n011111111110\n000001100000\n000001100000\n000000000000\n\n')
-
-				self.ascii_alph = (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
-								   sp, n0, n1, n2, n3, n4, n5, n6, n7, n8, n9,
-								   s0, s1, s2, s3, s4, s5, s5)
-				# add
-				self.ascii_dict = {'a': a, 'b': b, 'c': c, 'd': d, 'e': e, 'f': f, 'g': g, 'h': h, 'i': i, 'j': j,
-								   'k': k, 'l': l, 'm': m, 'n': n, 'o': o, 'p': p, 'q': q, 'r': r, 's': s, 't': t,
-								   'u': u,
-								   'v': v, 'w': w, 'x': x, 'y': y, 'z': z, ' ': sp, '0': n0, '1': n1, '2': n2, '3': n3,
-								   '4': n4,
-								   '5': n5, '6': n6, '7': n7, '8': n8, '9': n9, '?': s0, '!': s1, ',': s2, '.': s3,
-								   '-': s4, '#': s5}
-
-				newline_n = 8
-
-
-			elif self.chosen_tdecorator == 'asterisk':
-				a = ('  ******  \n  *    *  \n  ******  \n  *    *  \n  *    *  \n\n')
-				b = ('  ******  \n  *     * \n  ******  \n  *     * \n  ******  \n\n')
-				c = ('  ******  \n  *       \n  *       \n  *       \n  ******  \n\n')
-				d = ('  *****   \n  *    *  \n  *    *  \n  *    *  \n  *****   \n\n')
-				e = ('  ******  \n  *       \n  *****   \n  *       \n  ******  \n\n')
-				f = ('  ******  \n  *       \n  *****   \n  *       \n  *       \n\n')
-				g = ('  *******  \n  *        \n  *   ***  \n  *      * \n  *******  \n\n')
-				h = ('  *     *  \n  *     *  \n  *******  \n  *     *  \n  *     *  \n\n')
-				i = ('  **   \n  **   \n  **   \n  **   \n  **   \n\n')
-				j = ('  ******  \n      **  \n      **  \n  **  **  \n  ******  \n\n')
-				k = ('  *   *  \n  *  *   \n  * *    \n  *  *   \n  *   *  \n\n')
-				l = ('  *     \n  *     \n  *     \n  *     \n  ******\n\n')
-				m = ('  *       *\n  **     **\n  *  *  * *\n  *   **  *\n  *       *\n\n')
-				n = ('  **   *  \n  **   *  \n  * *  *  \n  *  * *  \n  *   **  \n\n')
-				o = ('   *****   \n  *     *  \n  *     *  \n  *     *  \n   *****   \n\n')
-				p = ('  ******  \n  *     * \n  ******  \n  *       \n  *       \n\n')
-				q = ('   ******  \n  *      * \n   ******  \n        *  \n        *  \n\n')
-				r = ('  ******  \n  *     * \n  * ***   \n  *  *    \n  *    *  \n\n')
-				s = ('  ******  \n  *       \n  ******  \n       *  \n  ******  \n\n')
-				t = ('  ******\n    **  \n    **  \n    **  \n    **  \n\n')
-				u = ('  *     *  \n  *     *  \n  *     *  \n  *     *  \n   *****   \n\n')
-				v = ('  *    *  \n  *    *  \n  *    *  \n   *  *   \n    **    \n\n')
-				w = ('  *       *  \n  *  * *  *  \n  * *   * *  \n  **     **  \n  **     **  \n\n')
-				x = ('  *     *  \n   *   *   \n    * *    \n   *   *   \n  *     *  \n\n')
-				y = ('  *     * \n   *  *   \n    **    \n    **    \n    **    \n\n')
-				z = ('   ******\n       **\n    ***  \n  **     \n  ****** \n\n')
-				sp = ('..........\n..........\n..........\n..........\n\n')
-				dot = ('....\n....\n....\n.....\n\n')
-
-				self.ascii_alph = (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, sp,
-								   dot)
-				self.ascii_dict = {'a': a, 'b': b, 'c': c, 'd': d, 'e': e, 'f': f, 'g': g, 'h': h, 'i': i, 'j': j,
-								   'k': k, 'l': l,
-								   'm': m, 'n': n, 'o': o, 'p': p, 'q': q, 'r': r, 's': s, 't': t, 'u': u, 'v': v,
-								   'w': w, 'x': x,
-								   'y': y, 'z': z, ' ': sp, '.': dot}
-
-				newline_n = 5
+			self.ascii_dict, self.ascii_alph, newline_n = characters_dict[self.chosen_tdecorator]
+			# if self.chosen_tdecorator == 'bash':
+			#     sp = '&&&&&&\n&&&&&&\n&&&&&&\n&&&&&&\n\n'
+			#     dot = '----..----\n\n'
 
 			alphabet = 'abcdefghijklmnopqrstuvwxyz 0123456789?!,.-+'
 			decorator_input = text_box.get('1.0', END).lower()
@@ -5682,6 +5415,7 @@ class Window(Tk):
 
 
 					else:
+						dec = 'vertical'
 						res = ''
 						for char in decorator_input:
 							if alphabet.find(char) != -1:
@@ -5734,14 +5468,7 @@ class Window(Tk):
 			if self.ascii_dict:
 				available_characters = ', '.join(self.ascii_dict.keys())
 				sc_window = Toplevel()
-				sc_frame = Frame(sc_window)
-				sc_text = Text(sc_window)
-				sc_scroll = ttk.Scrollbar(sc_frame)
-				sc_frame.pack(fill=BOTH, expand=True)
-				sc_scroll.pack(side=RIGHT, fill=Y)
-				sc_text.pack(fill=BOTH, expand=True)
-				sc_scroll.config(command=self.sc_text.yview)
-				sc_text.configure(yscrollcommand=self.sc_scroll.set)
+				sc_frame, sc_text, sc_scroll = self.make_rich_textbox(sc_window)
 				sc_text.insert(1.0, available_characters)
 				sc_text.configure(state=DISABLED)
 
@@ -5818,10 +5545,7 @@ class Window(Tk):
 		def outport_data(where):
 			ask_op_root.destroy()
 			if where == 'new':
-				save_file_name = filedialog.asksaveasfilename(title='Save merged file',
-															  filetypes=(
-																  ('Text Files', '*.txt'), ('HTML FILES', '*.html'),
-																  ('Python Files', '*.py')))
+				save_file_name = filedialog.asksaveasfilename(title='Save merged file', filetypes=text_extensions)
 				if save_file_name:
 					with open(save_file_name, 'w') as fp:
 						fp.write(data)
@@ -6021,16 +5745,7 @@ class Window(Tk):
 				copy_button.pack(fill='none', expand=True)
 				paste_button.pack(fill='none', expand=True)
 
-		city_list = ['Agra', 'buenos aires', 'Amsterdam', 'los angeles', 'Antalya', 'Athens', 'Atlanta', 'Auckland',
-					 'Bali',
-					 'Bangkok', 'Barcelona', 'Beijing', 'Berlin', 'Bogota', 'Boston', 'Brussels', 'Bucharest',
-					 'Budapest', 'Cairo', 'hebron', 'mexico city', 'cape town', 'Chennai', 'Chicago',
-					 'Copenhagen', 'washington D.C.', 'Dallas', 'tokyo', 'Delhi', 'san diego', 'Dubai', 'Dublin',
-					 'Edinburgh', 'Edirne',
-					 'alexandria', 'Florence', 'san francisco', 'Guangzhou', 'Hong kong', 'Honolulu', 'Houston',
-					 'Istanbul', 'Jakarta', 'Janeiro', 'Jerusalem', 'Johannesburg', 'Kiev', 'hanoi', 'riyadh', 'mecca']
-
-		def copy_paste_weather(mode : str='copy'):
+		def copy_paste_weather(mode: str = 'copy'):
 			all_content = f'{loc_text}\n{temp_text}\n{time_text}\n{weather_desc}'
 			if mode == 'copy':
 				copy(all_content)
@@ -6073,14 +5788,7 @@ class Window(Tk):
 				button.configure(bg='SystemButtonFace')
 			email_button_dict[mode].configure(bg='light grey')
 			if mode == 'none':
-				email_c_frame = Frame(email_root)
-				email_scroll = ttk.Scrollbar(email_c_frame)
-				custom_box = Text(email_c_frame, wrap=WORD, relief=self.predefined_relief,
-								  cursor=self.predefined_cursor, yscrollcommand=email_scroll.set, undo=True)
-				email_scroll.pack(side=RIGHT, fill=Y)
-				custom_box.pack(fill=BOTH, expand=True)
-				email_scroll.config(command=custom_box.yview)
-				email_c_frame.grid(row=9, column=1)
+				email_c_frame, custom_box, email_scroll = self.make_rich_textbox(email_root, place=[9, 1])
 			else:
 				if self.custom_text:
 					email_c_frame.destroy()
@@ -6231,13 +5939,7 @@ class Window(Tk):
 					print(gpt_exception)
 
 		def active_ui():
-			gpt_root = Toplevel()
-			self.opened_windows.append(gpt_root)
-			self.func_window[active_ui] = gpt_root
-			gpt_root.attributes('-alpha', self.st_value)
-			gpt_root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(gpt_root))
-			self.make_tm(gpt_root)
-			gpt_root.title(self.title_struct + 'ChatGPT')
+			gpt_root = self.make_pop_ups_window(active_ui, 'ChatGPT API')
 			gpt_root.tk.call('wm', 'iconphoto', gpt_root._w, self.gpt_image)
 			BG_GRAY = '#ABB2B9'
 			BG_COLOR = '#444454'
@@ -6254,6 +5956,8 @@ class Window(Tk):
 
 			# title_gpt = Label(gpt_root, bg=BG_COLOR, fg=TEXT_COLOR, text='ChatGPT', font='Helvetica 13 bold',
 			#                  pady=10, width=20, height=1)
+			'''+ use text function'''
+			# text_frame, self.GPT_txt, scroll = self.make_rich_textbox(gpt_root, font=FONT, size=[60, 60])
 			self.GPT_txt = Text(text_frame, bg=BG_COLOR, fg=TEXT_COLOR, font=FONT, width=60, yscrollcommand=scroll.set,
 					   undo=True, wrap=WORD, cursor=self.predefined_cursor, state=DISABLED)
 			self.GPT_txt.pack(fill=BOTH, expand=True)
@@ -6507,16 +6211,11 @@ class Window(Tk):
 				for count, t in enumerate(tr):
 					tr_str += f'time: {t["start"]}, iteration: {count} | content: {t["text"]} \n'
 
-				text_frame = Frame(tr_root)
-				scroll = ttk.Scrollbar(text_frame)
-				tr_text = Text(text_frame, cursor=self.predefined_cursor, yscrollcommand=scroll.set)
+
+				text_frame, tr_text, scroll = self.make_rich_textbox(tr_root)
 				tr_text.insert('1.0', tr_str)
 				tr_text.configure(state=DISABLED)
-				scroll.config(command=tr_text.yview)
 				copy_button = Button(tr_root, text='Copy', command=lambda: copy(tr_str))
-				text_frame.pack(expand=True, fill=BOTH)
-				scroll.pack(side=RIGHT, fill=Y)
-				tr_text.pack(expand=True, fill=BOTH)
 				copy_button.pack()
 
 		def file_trans():
@@ -6805,10 +6504,7 @@ class Window(Tk):
 		self.log_root.protocol('WM_DELETE_WINDOW', close_record)
 		self.log_root.attributes('-alpha', self.st_value)
 		self.opened_windows.append(self.log_root)
-
-		rc_scrollbar = ttk.Scrollbar(self.log_root)
-		record_tb = Text(self.log_root, cursor=self.predefined_cursor, relief=self.predefined_relief,
-						 yscrollcommand=rc_scrollbar.set, bg=self.dynamic_bg, fg=self.dynamic_text)
+		text_frame, record_tb, rc_scrollbar = self.make_rich_textbox(self.log_root)
 
 		# menu for functions
 		record_menu = Menu(self.log_root)
@@ -6822,9 +6518,6 @@ class Window(Tk):
 		for record in self.record_list:
 			record_tb.insert('end', record + '\n')
 
-		rc_scrollbar.pack(side=RIGHT, fill=Y)
-		record_tb.pack(fill=BOTH, expand=True)
-		rc_scrollbar.configure(command=record_tb.yview)
 		record_tb.configure(state=DISABLED)
 
 		Thread(target=update_content).start()
@@ -6918,24 +6611,6 @@ class Window(Tk):
 		'''
 		this function gets the keyboard language in use by the current active window process.
 		'''
-
-		languages = {
-			'0x409': ['English - United States', 'en'], '0x809': ['English - United Kingdom', 'en'],
-			'0x0c09': ['English - Australia', 'en'], '0x2809': ['English - Belize', 'en'],
-			'0x1009': ['English - Canada', 'en'], '0x2409': ['English - Caribbean', 'en'],
-			'0x3c09': ['English - Hong Kong SAR', 'en'],
-			'0x4009': ['English - India', 'en'], '0x3809': ['English - Indonesia', 'en'],
-			'0x1809': ['English - Ireland', 'en'], '0x2009': ['English - Jamaica', 'en'],
-			'0x4409': ['English - Malaysia', 'en'],
-			'0x040c': ['French - France', 'fr'], '0x080c': ['French - Belgium', 'fr'],
-			'0x407': ['German - Germany', 'de'], '0x0c07': ['German - Austria', 'de'],
-			'0x1407': ['German - Liechtenstein', 'de'],
-			'0x1007': ['German - Luxembourg', 'de'], '0x807': ['German - Switzerland', 'de'],
-			'0x410': ['Italian - Italy', 'it'], '0x810': ['Italian - Switzerland', 'it'],
-			'0x816': ['Portuguese - Portugal', 'pt'], '0x429': ['Farsi', 'fa'],
-			'0x0c0a': ['Spanish - Spain (Modern Sort)', 'es'], '0x040a': ['Spanish - Spain (Traditional Sort)', 'es'],
-		}
-
 		user32 = WinDLL('user32', use_last_error=True)
 
 		# Get the current active window handle
@@ -6980,15 +6655,10 @@ class Window(Tk):
 		'''
 		self.spc_mode = 'emojis'
 
-		self.roman_dict = {
-			'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000,
-			'IV': 4, 'IX': 9, 'XL': 40, 'XC': 90, 'CD': 400, 'CM': 900}
-
-		def change_mode(b='j'):
-			def change_mode(b: str = 'emojis'):
-				self.spc_mode = b
-				for button in b_mode_dict.values():
-					button.configure(background='SystemButtonFace')
+		def change_mode(b: str = 'emojis'):
+			self.spc_mode = b
+			for button in b_mode_dict.values():
+				button.configure(background='SystemButtonFace')
 			b_mode_dict[b].configure(bg='light grey')
 			list_of.configure(text=f'List of {self.spc_mode}')
 			transform.configure(text=f'Transform to {self.spc_mode}')
@@ -7039,7 +6709,7 @@ class Window(Tk):
 		b_mode_dict = {'emojis': emojis, 'emoticons': emoticons, 'morse': morse_c, 'roman': roman_numbers}
 		b_func_list = transform, list_of, random_e
 		ejc_list = emoji.get_emoji_unicode_dict('en')
-		self.ejc_values = {'emojis': ejc_list.values(), 'morse': self.morse_code_dict.values(), 'roman': self.roman_dict.keys()}
+		self.ejc_values = {'emojis': ejc_list.values(), 'morse': morse_code_dict.values(), 'roman': roman_dict.keys()}
 		change_mode()
 
 	# according to the morse code chart
@@ -7057,7 +6727,7 @@ class Window(Tk):
 		new_word = ''
 		if reverse:
 			reverse_morse_dict = {}
-			for key, value in self.morse_code_dict.items():
+			for key, value in morse_code_dict.items():
 				reverse_morse_dict[value] = key
 			reverse_morse_dict[''] = ' '
 
@@ -7069,17 +6739,17 @@ class Window(Tk):
 
 			if not reverse:
 				for character in word:
-					if character.upper() in self.morse_code_dict.keys():
-						if self.morse_code_dict[character.upper()] == '/' or word == content[-1]:
+					if character.upper() in morse_code_dict.keys():
+						if morse_code_dict[character.upper()] == '/' or word == content[-1]:
 							spc = ''
 						else:
 							spc = ' '
-						new_word += self.morse_code_dict[character.upper()] + spc
+						new_word += morse_code_dict[character.upper()] + spc
 
 
 			else:
 
-				if word in self.morse_code_dict.values() or word == '':
+				if word in morse_code_dict.values() or word == '':
 					# accessing the keys using their values (reverse of encryption)
 					new_word += reverse_morse_dict[word]
 
@@ -7113,8 +6783,8 @@ class Window(Tk):
 					if len(roman_value) > 1:
 						for separated_roman_value in roman_value:
 							print(separated_roman_value)
-							if separated_roman_value.upper() in self.roman_dict.keys():
-								word_value += self.roman_dict[separated_roman_value.upper()]
+							if separated_roman_value.upper() in roman_dict.keys():
+								word_value += roman_dict[separated_roman_value.upper()]
 							else:
 								new_content.append(roman_value)
 
@@ -7122,8 +6792,8 @@ class Window(Tk):
 						new_content.append(str(word_value))
 
 					else:
-						if roman_value.upper() in self.roman_dict.keys():
-							new_content.append(str(self.roman_dict[roman_value.upper()]))
+						if roman_value.upper() in roman_dict.keys():
+							new_content.append(str(roman_dict[roman_value.upper()]))
 						else:
 							new_content.append(roman_value)
 
@@ -7134,7 +6804,7 @@ class Window(Tk):
 			# works on a really limited list of numbers !!
 			print('arabic to roman')
 			rev_roman_dict = {}
-			for key, value in self.roman_dict.items():
+			for key, value in roman_dict.items():
 				rev_roman_dict[value] = key
 
 			content = reSplit('; |, |\*|\n', content)  # reSplit('; |, |\*|\n', content)
@@ -7213,7 +6883,7 @@ class Window(Tk):
 			self.make_tm(git_root)
 			git_root.title(self.title_struct + 'Git window')
 			title = Label(git_root, text='', font='arial 14 bold')
-			git_text = Text(git_root)
+			(text_frame, git_text, text_scroll) = self.make_rich_textbox(git_root, place=False)
 
 		if not (action == 'c.d' and action == 'clone'):
 			# repo = simpledialog.askstring('Git', 'enter the repo link')
@@ -7285,7 +6955,7 @@ class Window(Tk):
 			date_time = str(commit.authored_datetime)
 
 
-			'''+ count parameter investegation'''
+			'''+ count parameter investigation'''
 			count_size = str(f'count: {commit.count()} and size: {commit.size}')
 
 			git_text.insert('1.0',
@@ -7306,6 +6976,8 @@ class Window(Tk):
 
 		if git_ui:
 			title.pack()
+			text_frame.pack(fill=BOTH, expand=True)
+			text_scroll.pack(side=RIGHT, fill=Y)
 			git_text.pack(fill=BOTH, expand=True)
 
 	def call_settings(self):
@@ -7363,9 +7035,7 @@ class Window(Tk):
 
 		def add_image(sp_name: str = '', sp_image: str = ''):
 			if not (sp_name):
-				self.image_name = filedialog.askopenfilename(title='Open file',
-															 filetypes=(('PNG Files', '*.png'), ('JPG Files', '*.jpg'),
-																		('JPEG Files', '*.jpeg ')))
+				self.image_name = filedialog.askopenfilename(title='Open file', filetypes=img_extensions)
 				self.current_inserted_image = PhotoImage(self.image_name)
 			else:
 				self.image_name = sp_name
@@ -7793,8 +7463,6 @@ class Window(Tk):
 					self.combined_func_dict[key] = value
 
 		# all vs file vs edit vs tool , etc.
-
-
 		make_c_dict(self.file_functions, self.edit_functions, self.tool_functions, self.nlp_functions,
 					self.color_functions
 					, self.links_functions, {'options': self.call_settings},
