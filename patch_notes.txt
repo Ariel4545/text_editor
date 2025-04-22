@@ -1,6 +1,15 @@
 Version - name - release date
 
-[1.13 p1 - the clairty update p1 - 21/04/25 ]
+[ 1.13 p2 - the clarity update p2 - 22/04/25 ]
+
+Added:
+Added a new file "large_variables.py", this file is used for storing large variables that do not have any dependencies - and saves 300 lines!
+Added a new function that creates the "complex" text widget (with frame and scroll bar) - this function shortens repetitive content and allows to expand upon these improved text widgets for other tools
+
+Changed/improved:
+Changed GPT-API tool window creation to "make_pop_ups_window" function
+
+[ 1.13 p1 - the clarity update p1 - 21/04/25 ]
 
 Added:
 added a new binding option to disable (and enable) - automatic (pressing any button mostly in the EgonTE text widget)
