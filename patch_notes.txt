@@ -1,5 +1,30 @@
 Version - name - release date
 
+[ 1.13 p3 - the clarity update p3 - 26/04/25 ]
+
+Added:
+Added a new binding (function to widgets) algorithm, that uses dictionaries to make it less repetitive and more structured to the initial and the advanced options functions.
+Completed the making of the redo functionality in the handwriting tool.
+Added a function that checks if you saved the previous file before opening an existing/blank file.
+Added a record tool message to make a new blank file.
+
+Changed/Improved:
+Made many handwriting tool variables be at the init level, causing many options not to reset every time you open the tool
+Optimized error handling at the open (existing) file function
+Optimized typefaces function
+Optimized some of the paint's function (handwriting) events
+Used list comprehensions to make separators widgets more efficiently
+
+Fixed:
+Fixed handwriting tool's night mode
+Added an error-catching statement to the undo function, to prevent an error if there's nothing to undo
+Fixed "underline" and "italic" typefaces not working
+Fixed some variables names errors caused by the new "large_variables" file
+Fixed "biggest top/bottom" font size options not automatically made with the current color palate
+Fixed the virtual keyboard's window management bugs
+Fixed draw mode being not mainly accessible in the handwriting tool
+
+
 [ 1.13 p2 - the clarity update p2 - 22/04/25 ]
 
 Added:
