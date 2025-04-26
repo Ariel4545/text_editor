@@ -132,7 +132,7 @@ try:
 	import emoji
 	from wikipedia import summary, exceptions, page
 	from wikipedia import search as wiki_search
-	from difflib import Differ
+	from difflib import Differ, SequenceMatcher
 	from textblob import TextBlob
 	from PyPDF2 import PdfReader
 	from bs4 import BeautifulSoup
@@ -329,8 +329,21 @@ class Window(Tk):
 		self.fs_value, self.tm_value, self.st_value = False, False, 0.95
 		self.opened_windows, self.limit_list, self.func_window = [], [], {}
 		# draw to text variables
-		self.line_group, self.line_groups, self.last_items, self.line = [], [], [], ''
+		self.line_group, self.line_groups, self.last_items, self.line, self.lgs_dict, self.lg_dict = [], [], [], '', {}, {}
 		self.move_dict = {'right': [10, 0], 'left': [-10, 0], 'up': [0, -10], 'down': [0, 10]}
+		self.mw_shortcut, self.draw_tool_cords = BooleanVar(), BooleanVar()
+		self.mw_shortcut.set(True)
+		# shortcuts vars
+		self.bindings_dict = {'filea': filea_list, 'typea': typef_list, 'editf': editf_list, 'textt': textt_list,
+							  'windf': win_list, 'autof': autof_list, 'autol': self.aul_var}
+		self.file_actions_v, self.typefaces_actions_v, self.edit_functions_v, self.texttwisters_functions_v, self.win_actions_v, self.auto_functions, \
+			self.aul = [BooleanVar() for x in range(7)]
+		self.file_actions_v.set(True), self.typefaces_actions_v.set(True), self.edit_functions_v.set(True)
+		self.texttwisters_functions_v.set(True), self.win_actions_v.set(True), self.auto_functions.set(True)
+		self.binding_work = {'textt': self.texttwisters_functions_v, 'filea': self.file_actions_v,
+							 'typea': self.typefaces_actions_v,
+							 'editf': self.edit_functions_v, 'windf': self.win_actions_v, 'autof': self.auto_functions,
+							 'autol': self.aul}
 		# other tools
 		self.dfpe = BooleanVar()
 		self.chosen_tdecorator = 'bash'
@@ -822,69 +835,62 @@ class Window(Tk):
 		binding shortcuts,
 		made in a separate function to control some unbinding(s) via the advance settings
 		'''
+		initial_dict = {'Modified': self.status, 'Cut': lambda event: self.cut(True), 'Copy': self.copy(True),
+						'Control-Key-a': self.select_all,
+						'Control-Key-l': lambda e: self.align_text(), 'Control-Key-e': lambda e: self.align_text('center'),
+						'Control-Key-r': lambda e: self.align_text('right'),
+						'Alt-Key-c': self.clear, 'Alt-F4': self.exit_app,
+						'Control-Key-plus': self.sizes_shortcuts,
+						'Control-Key-minus': lambda: self.sizes_shortcuts(-1), 'F5': self.dt,
+						'Alt-Key-r': lambda e: self.exit_app(event='r')}
+		auto_dict, autol_dict = {'KeyPress': self.emoji_detection, 'KeyRelease': self.update_insert_image_list}, {
+			'KeyRelease': self.aul_var}
+		typef_dict = {'Control-Key-b': lambda e: self.typefaces(tf='weight-bold'),
+					  'Control-Key-i': lambda e: self.typefaces(tf='slant-italic'),
+					  'Control-Key-u': lambda e: self.typefaces(tf='underline')}
+		editf_dict = {'Control-Key-f': self.find_text, 'Control-Key-h': self.replace, 'Control-Key-g': self.goto}
+		filea_dict = {'Control-Key-p': self.print_file, 'Control-Key-n': self.new_file,
+					  'Alt-Key-d': self.copy_file_path,
+					  'Control-o': self.open_file, 'Control-Key-s': self.save}
+		textt_dict = {'Control-Shift-Key-j': self.join_words, 'Control-Shift-Key-u': self.lower_upper,
+					  'Control-Shift-Key-r': self.reverse_characters,
+					  'Control-Shift-Key-c': self.reverse_words}
+		win_dict = {'F11': self.full_screen, 'Control-Key-t': self.topmost}
+		bind_dict = {'initial': initial_dict, 'autof': auto_dict, 'typef': typef_dict, 'editf': editf_dict,
+					 'filea': filea_dict, 'textt': textt_dict, 'windf': win_dict, 'autol': autol_dict}
+
+		if not (mode == 'initial' or mode == 'reset'):
+			chosen_dict = bind_dict[mode]
+		else:
+			chosen_dict = {}
+			for subdict in bind_dict.values():
+				for key, value in subdict.items():
+					chosen_dict[key] = value
 
 		# conventional shortcuts for functions
-		if mode == 'initial':
-			self.EgonTE.bind('<KeyPress>', self.emoji_detection)
-			self.EgonTE.bind('<KeyRelease>', self.update_insert_image_list)
-			# special events
-			self.font_size.bind('<<ComboboxSelected>>', self.change_font_size)
-			self.font_ui.bind('<<ComboboxSelected>>', self.change_font)
-			self.bind('<<Modified>>', self.status)
-			self.bind('<<Cut>>', lambda event: self.cut(True))
-			self.bind('<<Copy>>', lambda event: self.copy(True))
-			self.bind('<Control-Key-a>', self.select_all)
-			self.bind('<Control-Key-A>', self.select_all)
-			self.bind('<Control-Key-l>', lambda e:self.align_text('left'))
-			self.bind('<Control-Key-L>', lambda e:self.align_text('left'))
-			self.bind('<Control-Key-e>', lambda e:self.align_text('center'))
-			self.bind('<Control-Key-E>', lambda e:self.align_text('center'))
-			self.bind('<Control-Key-r>', lambda e:self.align_text('right'))
-			self.bind('<Control-Key-R>', lambda e:self.align_text('right'))
-			self.bind('<Control-Key-Delete>', self.clear)
-			self.bind('<Alt-F4>', self.exit_app)
-			self.bind('<Control-Key-plus>', self.sizes_shortcuts)
-			self.bind('<Control-Key-=>', lambda e: self.sizes_shortcuts())
-			self.bind('<Control-Key-minus>', lambda e:self.sizes_shortcuts(value=1))
-			self.bind('<F5>', self.dt)
-		if mode == 'initial' or mode == 'typef':
-			self.bind('<Control-Key-b>', lambda e: self.typefaces(tf='bold'))
-			self.bind('<Control-Key-B>', lambda e: self.typefaces(tf='bold'))
-			self.bind('<Control-Key-i>', lambda e: self.typefaces(tf='italics'))
-			self.bind('<Control-Key-I>', lambda e: self.typefaces(tf='italics'))
-			self.bind('<Control-Key-u>', lambda e: self.typefaces(tf='underline'))
-			self.bind('<Control-Key-U>', lambda e: self.typefaces(tf='underline'))
-		if mode == 'initial' or mode == 'editf':
-			self.bind('<Control-Key-f>', self.find_text)
-			self.bind('<Control-Key-F>', self.find_text)
-			self.bind('<Control-Key-h>', self.replace)
-			self.bind('<Control-Key-H>', self.replace)
-			self.bind('<Control-Key-g>', self.goto)
-			self.bind('<Control-Key-G>', self.goto)
-		if mode == 'initial' or mode == 'filea':
-			self.bind('<Control-Key-p>', self.print_file)
-			self.bind('<Control-Key-P>', self.print_file)
-			self.bind('<Control-Key-n>', self.new_file)
-			self.bind('<Control-Key-N>', self.new_file)
-			self.bind('<Alt-Key-d>', self.copy_file_path)
-			self.bind('<Alt-Key-D>', self.copy_file_path)
-			self.bind('<Control-o>', self.open_file)
-			self.bind('<Control-O>', self.open_file)
-			self.bind('<Control-Key-s>', self.save)
-			self.bind('<Control-Key-S>', self.save)
-		if mode == 'initial' or mode == 'textt':
-			self.bind('<Control-Shift-Key-j>', self.join_words)
-			self.bind('<Control-Shift-Key-J>', self.join_words)
-			self.bind('<Control-Shift-Key-u>', self.lower_upper)
-			self.bind('<Control-Shift-Key-U>', self.lower_upper)
-			self.bind('<Control-Shift-Key-r>', self.reverse_characters)
-			self.bind('<Control-Shift-Key-R>', self.reverse_characters)
-			self.bind('<Control-Shift-Key-c>', self.reverse_words)
-			self.bind('<Control-Shift-Key-C>', self.reverse_words)
-		if mode == 'initial' or mode == 'win':
-			self.bind('<F11>', self.full_screen)
-			self.bind('<Control-Key-t>', self.topmost)
-			self.bind('<Control-Key-T>', self.topmost)
+		for index, bond in enumerate(chosen_dict.items()):
+			command, function = f'<{bond[0]}>', bond[1]
+
+			# if isinstance(function, tuple):
+			#     pass
+			bind_to = self
+			if mode == 'auto':
+				bind_to = self.EgonTE
+			elif command == '<ComboboxSelected>':
+				bind_to = self.font_size
+				if index > 0:
+					bind_to = self.font_ui
+
+			default_bind = True
+			if command[-3] == '-' and command[-2].upper() in characters_str:
+				bind_to.bind(f'{command[:-2]}{command[-2].upper()}{command[-1]}', function)
+			else:
+				if not (command[-2].isdigit()):
+					bind_to.bind(f'<{command}>', function)
+					default_bind = False
+
+			if default_bind:
+				bind_to.bind(command, function)
 
 	def open_windows_control(self, func):
 		'''+ beta tool
@@ -951,75 +957,105 @@ class Window(Tk):
 		webbrowser.open(link)
 
 	def undo(self):
-		return self.EgonTE.edit_undo()
+		try:
+			return self.EgonTE.edit_undo()
+		except TclError:
+			pass
+
+
+	def check_file_changes(self):
+		'''+ beta function - need to be tested'''
+		proceed = False
+		if self.file_name:
+			content = self.EgonTE.get('1.0', 'end')
+			with open(self.file_name, 'r', encoding='utf-8') as fp:
+				file_content = fp.read() + '\n' # tkinter most often has an newline at the end
+
+			# cheking the precetage of ideticality, we would consider 95% precent and above equal
+			matcher = SequenceMatcher(None, file_content, content)
+			similarity = matcher.ratio()
+			if similarity >= 0.95:
+				proceed = True
+			else:
+				if messagebox.askyesno('EgonTE', 'its seems that the current file is not saved\ndo you wish to proceed?'):
+					proceed = True
+
+		else:
+			proceed = True
+		return proceed
 
 	def new_file(self, event=None):
 		'''
 		creates blank workspace (without file)
 		'''
-		self.file_name = ''
-		self.file_bar.config(text='New file')
-		self.EgonTE.delete('1.0', END)
-
-		self.open_status_name = ''
+		if self.check_file_changes():
+			self.file_name = ''
+			self.file_bar.config(text='New file')
+			self.EgonTE.delete('1.0', END)
+			self.open_status_name = ''
+			self.record_list.append(f'> [{self.get_time()}] - New black file opened')
 
 	def open_file(self, event=None):
 		'''
 		opens file, have special support also for html and python files
 		'''
+
+
 		content = self.EgonTE.get('1.0', 'end')
-		if not (event == 'initial'):
-			self.text_name = filedialog.askopenfilename(title='Open file', filetypes=text_extensions)
-		else:
+		if event == 'initial':
 			self.text_name = self.data['open_last_file']
 
-		self.EgonTE.delete('1.0', END)
-		if self.text_name:
-			try:
-				self.open_status_name = self.text_name
-				self.file_name = self.text_name
-				self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
-				self.file_name.replace('C:/EgonTE/', '')
-				self.file_name.replace('C:/users', '')
-				text_file = open(self.text_name, 'r')
-				stuff = text_file.read()
-				# disable python IDE if python functionalities are on
-				if self.python_file:
-					self.python_file = ''
-					self.outputFrame.destroy()
-					self.app_menu.delete('Run')
-					self.app_menu.delete('Clear console')
-					self.options_menu.delete('Auto clear console')
-					self.options_menu.delete('Save by running')
-					if self.dm.get():
-						self.options_menu.delete(15)
-					else:
-						self.options_menu.delete(14)
-				# make the html files formatted when opened
-				if self.file_name.endswith('.html'):
-					self.soup = BeautifulSoup(stuff, 'html')
-					stuff = self.soup.prettify()
-				# adds functionality to compile python in EgonTE
-				elif self.file_name.endswith('.py'):
-					self.python_file = True
-					self.output_frame, self.output_box, self.output_scroll = self.make_rich_textbox(frame, size=[100, 1]
-								, selectbg='blue', wrap=None, font='arial 12', bd=2)
-					self.output_box.configure(state='disabled')
-				self.manage_menus(mode='python')
-
-				self.EgonTE.insert(END, stuff)
-				text_file.close()
-
-				if self.data['open_last_file']:
-					self.save_last_file()
-
-				self.record_list.append(f'> [{self.get_time()}] - Opened {self.file_name}')
-
-			except UnicodeDecodeError:
-				messagebox.showerror(self.title_struct + 'error', 'File contains not supported characters')
 		else:
-			messagebox.showerror(self.title_struct + 'error', 'File not found / selected')
-			self.EgonTE.insert('1.0', content)
+			self.text_name = filedialog.askopenfilename(title='Open file', filetypes=text_extensions)
+
+		if self.check_file_changes():
+			if self.text_name:
+				try:
+					self.EgonTE.delete('1.0', END)
+					self.open_status_name = self.text_name
+					self.file_name = self.text_name
+					self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
+					'''+ need to probably switch the arguments pos'''
+					self.file_name.replace('C:/EgonTE/', '')
+					text_file = open(self.text_name, 'r')
+					stuff = text_file.read()
+					# disable python IDE if python functionalities are on
+					if self.python_file:
+						self.python_file = ''
+						self.outputFrame.destroy()
+						self.app_menu.delete('Run')
+						self.app_menu.delete('Clear console')
+						self.options_menu.delete('Auto clear console')
+						self.options_menu.delete('Save by running')
+						if self.dm.get():
+							self.options_menu.delete(15)
+						else:
+							self.options_menu.delete(14)
+					# make the html files formatted when opened
+					if self.file_name.endswith('.html'):
+						self.soup = BeautifulSoup(stuff, 'html')
+						stuff = self.soup.prettify()
+					# adds functionality to compile python in EgonTE
+					elif self.file_name.endswith('.py'):
+						self.python_file = True
+						self.output_frame, self.output_box, self.output_scroll = self.make_rich_textbox(frame, size=[100, 1]
+									, selectbg='blue', wrap=None, font='arial 12', bd=2)
+						self.output_box.configure(state='disabled')
+					self.manage_menus(mode='python')
+
+					self.EgonTE.insert(END, stuff)
+					text_file.close()
+
+					if self.data['open_last_file']:
+						self.save_last_file()
+
+					self.record_list.append(f'> [{self.get_time()}] - Opened {self.file_name}')
+
+				except UnicodeDecodeError:
+					messagebox.showerror(self.title_struct + 'error', 'File contains not supported characters')
+					self.EgonTE.insert('1.0', content) # kind of revert mechanism
+			else:
+				messagebox.showerror(self.title_struct + 'error', 'File not found / selected')
 
 	# save file as function
 	def save_as(self, event=None):
@@ -1087,25 +1123,26 @@ class Window(Tk):
 			pass
 
 	def typefaces(self, tf: str):
-		'''+W.I.P   '''
+		'''+W.I.P
 
+		 italic cuases many spaces
+		 selected font with tag is different from the same one with the text widget selection
+		 '''
+		underline = False
 		tf_font = font.Font(self.EgonTE, self.EgonTE.cget('font'))
-		type, option = tf.split('-')
-		tf_font[type] = option
+		if '-' in tf:
+			type, option = tf.split('-')
+			tf_font[type] = option
+		elif tf == 'underline':
+			underline = True
 
-		self.EgonTE.tag_configure(tf, font=tf_font)
+		self.EgonTE.tag_configure(tf, font=tf_font, underline=underline)
 		current_tags = self.EgonTE.tag_names('1.0')
-
+		first, last = self.get_indexes()
 		if tf in current_tags:
-			if self.is_marked():
-				self.EgonTE.tag_remove(tf, 'sel.first', 'sel.last')
-			else:
-				self.EgonTE.tag_remove(tf, '1.0', 'end')
+			self.EgonTE.tag_remove(tf, first, last)
 		else:
-			if self.is_marked():
-				self.EgonTE.tag_add(tf, 'sel.first', 'sel.last')
-			else:
-				self.EgonTE.tag_add(tf, '1.0', 'end')
+			self.EgonTE.tag_add(tf, first, last)
 
 	def text_color(self):
 		'''
@@ -1139,6 +1176,15 @@ class Window(Tk):
 		if self.night_mode.get():
 			if not (messagebox.askyesno('EgonTE', 'Night mode is on, still want to proceed?')):
 				return
+
+		'''+ wip, semi automatic color picking
+		if components in singular_colors:
+			selected_color = colorchooser.askcolor(title=f'{components} color')[1]
+			if selected_color:
+				self.record_list.append(f'> [{self.get_time()}] - {components} changed to {selected_color}')
+				# index 0 for widget, index 1 for setting
+				(colors_dict[components[0]])[1] = selected_color
+		'''
 		if components == 'buttons':
 			selected_color = colorchooser.askcolor(title='Buttons background color')[1]
 			if selected_color:
@@ -1510,6 +1556,8 @@ class Window(Tk):
 		'''
 		function that takes user input to change some terms with the thing that you will write
 		'''
+
+		'''+ update, fuse with another tool or improve features'''
 
 		# replacing functionality
 		def rep_button():
@@ -2054,6 +2102,10 @@ class Window(Tk):
 			if column_ == 3: row_, column_ = 1 + row_, 0
 
 	def dt(self, event=None):
+
+
+		'''+ add text formater regex'''
+
 		'''
 		insert the current date/time to where the pointer of your text are
 		'''
@@ -2380,6 +2432,7 @@ class Window(Tk):
 
 		if self.is_marked():
 			url_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
+
 	def get_indexes(self):
 		'''
 		if text is marked will return the selected indexes, and if not return the whole index of the text box
@@ -2391,6 +2444,7 @@ class Window(Tk):
 			self.text_index = 'sel.first', 'sel.last'
 			self.first_index, self.last_index = self.EgonTE.index(self.text_index[0]), self.EgonTE.index(
 				self.text_index[1])
+		return self.text_index
 
 	def reverse_characters(self, event=None):
 		self.get_indexes()
@@ -2436,6 +2490,9 @@ class Window(Tk):
 		self.EgonTE.insert(self.first_index, joined_words)
 
 	def lower_upper(self, event=None):
+
+		'''+ newline after usage bug'''
+
 		self.get_indexes()
 		content = self.EgonTE.get(*self.text_index)
 
@@ -2607,7 +2664,7 @@ class Window(Tk):
 
 		try:
 
-			'''+ shorten'''
+			'''+ shorten, dict?'''
 			# identify file types
 			if special_file.endswith('.xml'):
 				content = pandas.read_xml(special_file).to_string()
@@ -2961,63 +3018,18 @@ class Window(Tk):
 		6. view text corrector changes before applying them
 		'''
 
-		def custom_binding(m):
-			if m == 'f':
-				if self.file_actions_v.get():
-					self.binds(mode='filea')
+		def custom_binding(mode):
+			'''+ check id all the binding here go by the window (and not EgonTE and stuff like that) + test'''
+			b_values = self.bindings_dict[mode]
+			if self.binding_work[mode].get():
+				self.binds(mode=mode)
+			else:
+				# for auto list - singular item!
+				if isinstance(b_values, list) or isinstance(b_values, tuple):
+					for bind in b_values:
+						self.unbind(bind)
 				else:
-					self.unbind('<Control-o>')
-					self.unbind('<Control-O>')
-					self.unbind('<Control-Key-s>')
-					self.unbind('<Control-Key-S>')
-					self.unbind('<Control-Key-n>')
-					self.unbind('<Control-Key-N>')
-					self.unbind('<Control-Key-p>')
-					self.unbind('<Control-Key-P>')
-					self.unbind('<Alt-Key-d>')
-					self.unbind('<Alt-Key-D>')
-
-			elif m == 'e':
-				if self.edit_functions_v.get():
-					self.binds(mode='editf')
-				else:
-					self.unbind('<Control-Key-f>')
-					self.unbind('<Control-Key-F>')
-					self.unbind('<Control-Key-h>')
-					self.unbind('<Control-Key-H>')
-					self.unbind('<Control-Key-g>')
-					self.unbind('<Control-Key-G>')
-
-			elif m == 'tf':
-				if self.typefaces_actions_v.get():
-					self.binds(mode='typef')
-				else:
-					self.unbind('<Control-Key-B>')
-					self.unbind('<Control-Key-b>')
-					self.unbind('<Control-Key-i>')
-					self.unbind('<Control-Key-I>')
-					self.unbind('<Control-Key-u>')
-					self.unbind('<Control-Key-U>')
-			elif m == 'tt':
-				if self.texttwisters_functions_v.get():
-					self.binds(mode='textt')
-				else:
-					self.unbind('<Control-Shift-Key-j>')
-					self.unbind('<Control-Shift-Key-J>')
-					self.unbind('<Control-Shift-Key-u>')
-					self.unbind('<Control-Shift-Key-U>')
-					self.unbind('<Control-Shift-Key-r>')
-					self.unbind('<Control-Shift-Key-R>')
-					self.unbind('<Control-Shift-Key-c>')
-					self.unbind('<Control-Shift-Key-C>')
-
-			elif m == 'w':
-				if self.win_actions_v.get():
-					self.binds(mode='win')
-				else:
-					self.unbind('<F11>')
-					self.unbind('<Control-Key-t>')
-					self.unbind('<Control-Key-T>')
+					self.unbind(b_values)
 
 		def reset_binds():
 			for bind_group in self.bindings_dict.values():
@@ -3272,7 +3284,7 @@ class Window(Tk):
 						  fg=self.dynamic_text)
 		stt_lang = ttk.Combobox(functional_frame, width=15, textvariable=self.stt_chosen_lang, state='readonly',
 								style='TCombobox')
-		stt_lang['values'] = list(self.sr_supported_langs.keys())
+		stt_lang['values'] = list(sr_supported_langs.keys())
 
 		# lf_frame = Frame(functional_frame)
 		file_opt_title = Label(functional_frame, text='Files', font=font_, bg=self.dynamic_overall,
@@ -3325,8 +3337,10 @@ class Window(Tk):
 		order_title = Label(bindings_frame, text='Order (of font sizes)', font=font_, bg=self.dynamic_overall,
 							fg=self.dynamic_text)
 		order_frame = Frame(bindings_frame)
-		biggest_top = Radiobutton(order_frame, text='Biggest top', value=0, variable=self.fnt_sz_var, command=lambda: self.size_order(True))
-		biggest_bottom = Radiobutton(order_frame, text='Biggest Bottom', value=1, variable=self.fnt_sz_var, command=lambda: self.size_order(True))
+		biggest_top = Radiobutton(order_frame, text='Biggest top', value=0, variable=self.fnt_sz_var, command=lambda: self.size_order(True), bg=self.dynamic_overall,
+							fg=self.dynamic_text)
+		biggest_bottom = Radiobutton(order_frame, text='Biggest Bottom', value=1, variable=self.fnt_sz_var, command=lambda: self.size_order(True), bg=self.dynamic_overall,
+							fg=self.dynamic_text)
 		reset_binds_button = Button(bindings_frame, text='Reset to default', command=reset_binds, bg=self.dynamic_bg,
 									fg=self.dynamic_text, bd=1)
 
@@ -3832,12 +3846,8 @@ class Window(Tk):
 		keyboard_root.configure(bg='black')
 		keyboard_root.protocol('WM_DELETE_WINDOW', close_vk)
 		self.opened_windows.append(keyboard_root)
-		# self.func_window[self.virtual_keyboard] = keyboard_root
-		'''+ very weird lines'''
-		self.vk_active = keyboard_root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(keyboard_root, 'vk'))
 		if not (self.vk_active) and keyboard_root in self.opened_windows:
 			self.vk_active = True
-		# self.func_window[self.virtual_keyboard] = keyboard_root
 		last_abc = 'upper'
 		exp = ' '  # global variable
 
@@ -4733,15 +4743,14 @@ class Window(Tk):
 
 	def handwriting(self):
 
-		'''+ night mode
-		draw app upgrades - move_paint function with settings
+		'''+
+		draw app upgrades - move_paint function with settings, maybe
 		'''
 
 		'''
 		the handwriting tool allows you to draw on a pretty rich canvas (with most basic canvas option except shapes
 		and colors), and allows you to convert to text, upload and save the thing that you draw
 		'''
-		global current_tool
 		global previous_point, current_point
 		previous_point = [0, 0]
 		current_point = [0, 0]
@@ -4759,11 +4768,9 @@ class Window(Tk):
 		self.pnc_width, self.ers_width = IntVar(), IntVar()  # values
 		self.pnc_width.set(2)
 		self.ers_width.set(5)
-		current_tool = 'pencil'
+		self.current_tool = 'pencil'
 		self.ers_current, self.pnc_current = 1, 1  # index
-		tool_c = BooleanVar()
-		mw_shortcut = BooleanVar()
-		mw_shortcut.set(True)
+
 
 		def quit_hw():
 			self.opened_windows.remove(hw_root)
@@ -4783,32 +4790,41 @@ class Window(Tk):
 													self.draw_y,
 													fill=color.get(), width=width.get())
 				lines_list.append(self.line)
-				if event.type == EventType.ButtonRelease:
+				self.line_group.append(self.line)
+				self.lg_dict[self.line] = (self.draw_canvas.coords(self.line), self.draw_canvas.itemcget(self.line, 'width'))
+				if event.type == EventType.ButtonRelease and self.current_tool == 'pencil':
 					self.line_groups.append(self.line_group)
-				else:
-					self.line_group.append(self.line)
-
+					self.lgs_dict[self.line_groups.index(self.line_group)] = self.lg_dict
 
 			previous_point = [self.draw_x, self.draw_y]
 			self.line = ''
+			if event.type == EventType.ButtonRelease:
+				self.line_group, self.lg_dict = [], {}
 			if event.type == '5':
 				previous_point = [0, 0]
 
 
 		def undo_line(event=None):
-			'''+ fix connecting lines and indexes'''
 			items = self.draw_canvas.find_all()
 			if items:
 				last_group = []
-				if self.line_groups:
-					line_group = self.line_groups[-1]
-					for line in range(len(line_group)):
+				item_type = self.draw_canvas.type(items[-1])
+				line_group = self.line_groups[-1]
+				if items[-1] in line_group:
+					loop_range = len(line_group)
+					for line in range(1, loop_range + 1):
 						ind = line * -1
 						last_group.append(items[ind])
+						'''+ after spamming IndexError: tuple index out of range'''
 						self.draw_canvas.delete(items[ind])
+					# self.canvas.itemconfig(items[ind], state='hidden')
+
+					last_item_group = (self.lgs_dict[self.line_groups.index(self.line_groups[-1])])
+					last_item_value = last_item_group.values()
+					self.last_items.append([list(last_item_group)] + [list(last_item_value)])
+
+					del self.lgs_dict[self.line_groups.index(self.line_groups[-1])]
 					del self.line_groups[-1]
-					self.last_items.append(last_group)
-				# self.redo_button.configure(state=tk.ACTIVE)
 
 
 		def move(key : str, event=None):
@@ -4840,24 +4856,23 @@ class Window(Tk):
 			self.convert_image = self.save_images(self.draw_canvas, hw_root, buttons_frame)
 			self.cimage_from = 'save'
 
-		def draw_erase(mode='draw'):
-			global current_tool
+		def draw_erase(mode='pencil'):
 			self.determine_highlight()
-			if mode == 'draw':
+			if mode == 'pencil':
 				self.draw_canvas.configure(cursor='pencil')
 				color.set('black')
 				pencil.configure(bg=self._background), eraser.configure(bg=self.dynamic_button)
 			else:
 				self.draw_canvas.configure(cursor=DOTBOX)
-				color.set(self._background)
+				color.set(self.dynamic_bg)
 				pencil.configure(bg=self.dynamic_button), eraser.configure(bg=self._background)
 
-			current_tool = mode
+			self.current_tool = mode
 			update_sizes()
 
 
 		def update_sizes(scrollwheel_event=False):
-			if current_tool == 'pencil':
+			if self.current_tool == 'pencil':
 				size = self.pnc_width.get()
 				pencil_list = list(map(int, list(self.pencil_size['values'])))
 				self.pnc_current = pencil_list.index(size)
@@ -4882,7 +4897,7 @@ class Window(Tk):
 
 			try:
 
-				if current_tool == 'pencil':
+				if self.current_tool == 'pencil':
 					self.pencil_size.current(self.pnc_current + value)
 					self.pnc_current += value
 
@@ -4895,7 +4910,7 @@ class Window(Tk):
 				print(e)
 
 		def custom_size(event=False):
-			if current_tool == 'pencil':
+			if self.current_tool == 'pencil':
 				if isinstance(self.pnc_width.get(), int):
 					self.pnc_width.set(self.pencil_size.get())
 
@@ -4938,11 +4953,11 @@ class Window(Tk):
 		def cord_opt():
 
 			def lt_cords(event):
-				if tool_c.get():
+				if self.draw_tool_cords.get():
 					pos_x, pos_y = self.draw_x, self.draw_y
-					tool_lc.configure(text=f'{current_tool} coordinates:{pos_x} | {current_tool} coordinates:{pos_y}')
+					tool_lc.configure(text=f'{self.current_tool} coordinates:{pos_x} | {self.current_tool} coordinates:{pos_y}')
 
-			if tool_c.get():
+			if self.draw_tool_cords.get():
 				cords_label.pack_forget()
 				cords_label.grid(row=1, column=0)
 				tool_lc.grid(row=1, column=2)
@@ -4993,8 +5008,8 @@ class Window(Tk):
 
 			settings_label = Label(self.hw_bonus_root, text='Settings', font=self.titles_font)
 			check_frame = Frame(self.hw_bonus_root)
-			last_tool_cords = Checkbutton(check_frame, text='Tool cords', variable=tool_c, command=cord_opt)
-			spin_shortcut = Checkbutton(check_frame, text='Mouse wheel\nshortcut', variable=mw_shortcut,
+			last_tool_cords = Checkbutton(check_frame, text='Tool cords', variable=self.draw_tool_cords, command=cord_opt)
+			spin_shortcut = Checkbutton(check_frame, text='Mouse wheel\nshortcut', variable=self.mw_shortcut,
 										command=switch_sc)
 
 			settings_label.grid(row=6, column=1)
@@ -5003,7 +5018,7 @@ class Window(Tk):
 			spin_shortcut.grid(row=1, column=2)
 
 		def switch_sc():
-			if mw_shortcut.get():
+			if self.mw_shortcut.get():
 				self.draw_canvas.bind('<MouseWheel>', sizes_shortcuts_hw)
 				self.draw_canvas.unbind('<Control-Key-.>')
 				self.draw_canvas.unbind('<Control-Key-,>')
@@ -5032,10 +5047,7 @@ class Window(Tk):
 									borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)  # convert)
 		erase_all = Button(buttons_frame, text='Erase all', command=lambda: self.draw_canvas.delete('all'),
 						   borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
-		'''+'''
-		seperator = (Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text))
-		seperator_2 = (Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text))
-		seperator_3 = (Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text))
+		seperator, seperator_2, seperator_3 = [Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text) for l in range(3)]
 		info_button = Button(buttons_frame, text='i', command=information, bg=self.dynamic_button, fg=self.dynamic_text)
 
 		self.pencil_size = ttk.Combobox(buttons_frame, width=10, textvariable=self.pnc_width, state='normal')
@@ -5076,7 +5088,7 @@ class Window(Tk):
 		hw_root.bind('<Down>', lambda e: move(key='down'))
 		hw_root.bind('<Motion>', cords)
 		hw_root.bind('<B2-Motion>', move_image)
-		hw_root.bind('<Control-Key-z>', self.undo)
+		hw_root.bind('<Control-Key-z>', lambda e: self.undo())
 		self.pencil_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
 		self.eraser_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
 		self.draw_canvas.bind('<MouseWheel>', sizes_shortcuts_hw)
