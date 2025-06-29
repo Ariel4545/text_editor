@@ -302,3 +302,6 @@ data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xt
 special_files = (('excel', '*.xlsx'), ('csv', '*.csv'), ('pdf', '*.pdf')
 																 , ('json', '*.json'), ('xml', '*.xml'),
 																 ('all', '*.*'))
+
+night_mode_colors = {'black' : ['#110022', '#373737', '#27374D', 'green'], 'blue' : ['#041C32', '#04293A', '#064663', '#ECB365']
+    , 'default' : ['SystemButtonFace', 'SystemButtonFace', 'SystemButtonFace', 'black']}
