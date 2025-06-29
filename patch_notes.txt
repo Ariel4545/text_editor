@@ -1,5 +1,48 @@
 Version - name - release date
 
+[ 1.13 p4 - New dawn - 29/06/25 ]
+Added:
+Added a new file for the global/static methods.
+Added an algorithm that organizes most of the different UI widgets' color options into one system for the "custom_ui_colors" method.
+Added a Tab (virtual keyboard) indent method selection, in the advanced options method.
+
+Changed/Improved:
+Replaced the exit app function text compare conditions with the new "check text difference" (comparing the text’s editor text to its file) function.
+Improved the options of the "find_text" method, both with code efficiency and UI management.
+Improved the placement of the widgets in the "find_text" method.
+Made the "popular terms" listbox only appear if useful enough and made the content always synchronized with the text editor.
+Made a Label widget that informs about the text changes in the "replace" method.
+Made the "text formatter" method deal with the content before and after the newly added text position, contrary to only adding punctuation.
+Improved the navigation of the results in the "find_text" method by preventing many errors and looping through the results again when reaching the tip of the values.
+Made that if the DateTime method content is about to be inserted into joined content it will put a space to separate the content.
+Made the option to drag with the mouse the "handwriting" drawings.
+
+Fixed:
+Fixed a variable error with the "popular terms" "list-box" in the "find_text" function.
+Fixed the "tag_all" and "untag_all" function's parameters in the "find_text" method.
+Removed expressions that don't include existing references in different methods.
+Fixed "bold" and "italic" typefaces not working.
+Fixed a widget error in the "git" method.
+Fixed a count error in the "git" method "commit data" function.
+Fixed lower/upper case words method's marking system.
+
+Code:
+Merged the two navigation functions at the "find_text" method into one more efficient function.
+Shortened/improved some more widgets creation, by making a loop make the buttons for the virtual keyboard and calculator tools.
+Optimized the options' menu labels parameters.
+Optimized some of the night's mode color variables.
+Moved the "large_variables" and the new "universal_functions" files to a new directory called "dependencies".
+Switched many global variables to class variables for better and more efficient management.
+Removed unused function in the "handwriting" method.
+Changed the names of many variables to make their purpose more clear without searching for the reference in the code.
+Changed the way that the "check_file_changes" is getting the desired content via parameters instead of defining them inside the method.
+
+W.I.P:
+Added a new method for retrieving the text files.
+Mixed the "replace text" and "find text" functions into one.
+"Egon" directory option in the "open_file" function.
+
+
 [ 1.13 p3 - the clarity update p3 - 26/04/25 ]
 
 Added:
