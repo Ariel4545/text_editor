@@ -1,5 +1,6 @@
 # default libraries
-from large_variables import *
+from dependencies.large_variables import *
+from dependencies.universal_functions import *
 from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
 from tkinter import *
 import tkinter.ttk as ttk
@@ -18,7 +19,7 @@ from re import search as reSearch
 from re import split as reSplit
 from json import dump, load, loads
 from platform import system
-from ctypes import WinDLL, windll, c_int, byref, sizeof
+from ctypes import windll, c_int, byref, sizeof
 from heapq import nlargest
 from threading import Thread
 from string import ascii_letters, digits, ascii_lowercase, ascii_uppercase, printable, punctuation
@@ -69,7 +70,7 @@ def library_installer():
 					print(f'Installed {lib}')
 					end_msg.configure(text=f'Download {lib}', fg='orange')
 				# installed_packages = [r.decode().split('==')[0] for r in reqs.split()]
-				# print(installed this librarirs:\n{installed_packages}')
+				# print(installed this libraries:\n{installed_packages}')
 
 			except (ImportError, NameError, ModuleNotFoundError, subprocess.CalledProcessError) as e:
 				print(e)
@@ -260,10 +261,10 @@ class Window(Tk):
 		self.bars_active = BooleanVar()
 		self.show_statusbar, self.show_toolbar = BooleanVar(), BooleanVar()
 		self.night_mode = BooleanVar()
-		self.cc = StringVar()
+		self.custom_cursor_v = StringVar()
 		self.cs = StringVar()
-		self.ww = BooleanVar()
-		self.rm = BooleanVar()
+		self.word_wrap = BooleanVar()
+		self.reader_mode_v = BooleanVar()
 		self.aus = BooleanVar()
 		self.ccc = BooleanVar()
 		self.us_rp = BooleanVar()
@@ -272,8 +273,8 @@ class Window(Tk):
 		self.awc = BooleanVar()
 		self.awc.set(True)
 		self.adw = BooleanVar()
-		self.fun_n = BooleanVar()
-		self.fun_n.set(True)
+		self.fun_numbers = BooleanVar()
+		self.fun_numbers.set(True)
 		self.all_tm_v = BooleanVar()
 		self.status_ = True
 		self.file_ = True
@@ -297,6 +298,7 @@ class Window(Tk):
 		# basic file variables
 		self.file_name, self.open_status_name = '', ''
 		self.text_changed = False
+		self.egon_dir = BooleanVar()
 		# OpenAI's tools variables (mainly GPT but also dall-e)
 		self.openai_code, self.gpt_model, self.key = False, 'gpt-3.5-turbo', ''
 		# handwriting
@@ -345,34 +347,40 @@ class Window(Tk):
 							 'editf': self.edit_functions_v, 'windf': self.win_actions_v, 'autof': self.auto_functions,
 							 'autol': self.aul}
 		# other tools
-		self.dfpe = BooleanVar()
-		self.chosen_tdecorator = 'bash'
+		self.del_previous_file = BooleanVar()
+		self.chosen_text_decorator = 'bash'
 		self.fnt_sz_var = IntVar()
 		self.aul = False
+		self.tab_type = 'spaces'
+		self.capital_opt, self.by_characters = BooleanVar(), BooleanVar()
+		self.capital_opt.set(True), self.by_characters.set(True)
+		self.indent_method = StringVar()
+		self.indent_method.set('tab')
+		self.find_tool_searched = BooleanVar()
 		# opening the saved settings early can make us create some widgets with the settings initially
 		try:
 			self.default_needed = self.saved_settings()
-			ss_work = True
+			saved_settings_viable = True
 		except KeyError:
-			ss_work = False
+			saved_settings_viable = False
 			if messagebox.askyesno('EgonTE',
 								   'There is key-error with the saved settings\ndo you wish to reset the file?'):
 				if os.path.exists('EgonTE_settings.json'):
 					os.remove('EgonTE_settings.json')
 					print('Corrupted file has been reset - program needed to be closed for that')
 					self.exit_app()
-		if ss_work:
+		if saved_settings_viable:
 			if self.default_needed:
 				self.bars_active.set(True), self.show_statusbar.set(True), self.show_toolbar.set(True)
-				self.cc.set('xterm'), self.cs.set('clam')
-				self.ww.set(True)
+				self.custom_cursor_v.set('xterm'), self.cs.set('clam')
+				self.word_wrap.set(True)
 				self.aus.set(True)
 				self.nm_palette.set('black')
 				# pre-defined variables for the options of the program
 				self.predefined_cursor, self.predefined_style, self.predefined_relief = 'xterm', 'clam', 'ridge'
 
-		self.last_c = 'cursors', self.cc.get()
-		self.last_s = 'styles', self.cs.get()
+		self.last_cursor = 'cursors', self.custom_cursor_v.get()
+		self.last_style = 'styles', self.cs.get()
 		self.last_r = 'relief', self.predefined_relief
 
 		# default resolution & placement of the window
@@ -387,7 +395,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13 p3'
+		self.ver = '1.13 p4'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -425,7 +433,7 @@ class Window(Tk):
 		self.toolbar_frame = Frame(frame)
 		self.toolbar_frame.pack(fill=X, anchor=W, side=TOP)
 		self.ex_tool = 'arial 9 bold'
-		self.record_list = [f'> [{self.get_time()}] - Program opened']
+		self.record_list = [f'> [{get_time()}] - Program opened']
 
 		# font UI (combo box) and it's values
 		font_tuple = font.families()
@@ -489,8 +497,8 @@ class Window(Tk):
 		'''
 
 		# buttons creation and placement
-		buttons_list = ((self.BOLD_IMAGE, lambda: self.typefaces(tf='bold')),
-						(self.ITALICS_IMAGE, lambda: self.typefaces(tf='italics')),
+		buttons_list = ((self.BOLD_IMAGE, lambda: self.typefaces(tf='weight-bold')),
+						(self.ITALICS_IMAGE, lambda: self.typefaces(tf='slant-italic')),
 						(self.UNDERLINE_IMAGE, lambda: self.typefaces(tf='underline')),
 						(self.COLORS_IMAGE, self.text_color),
 						(self.ALIGN_LEFT_IMAGE, self.align_text),
@@ -507,12 +515,12 @@ class Window(Tk):
 			Button(self.toolbar_frame, image=b_image, command=b_command, relief=FLAT)
 			for b_image, b_command in buttons_list]
 		# ui tuples (and list) to make management of some UI events (like night mode) easier
-		self.toolbar_components = (
+		self.toolbar_components = [
 			self.bold_button, self.italics_button, self.underline_button, self.color_button, self.font_ui,
 			self.font_size,
 			self.align_left_button, self.align_center_button, self.align_right_button, self.tts_button,
 			self.talk_button,
-			self.v_keyboard_button, self.dtt_button, self.calc_button)
+			self.v_keyboard_button, self.dtt_button, self.calc_button]
 		pdx, r = 5, 0
 		for index, button in enumerate(self.toolbar_components):
 			padx, sticky = 2, W
@@ -558,9 +566,12 @@ class Window(Tk):
 
 		self.place_toolt()
 		self.binds(mode='initial')
-		self.stt_time = self.get_time()
+		self.stt_time = get_time()
 		# Thread(target=self.record_logs, daemon=False).start()
 		# self.record_logs()
+		self.singular_colors_d = {'background': [self.EgonTE, 'bg'], 'text': [self.EgonTE, 'fg'],
+								  'menus': [self.menus_components, 'bg-fg'],
+								  'buttons': [self.toolbar_components, 'bg'], 'highlight': [self.EgonTE, 'selectbackground']}
 		if self.check_v.get():
 			Thread(target=self.check_version, daemon=True).start()
 		if RA:
@@ -765,29 +776,20 @@ class Window(Tk):
 		self.options_menu = Menu(self.app_menu, tearoff=False)
 		self.app_menu.add_cascade(label='Options', menu=self.options_menu)
 		# check marks
-		self.options_menu.add_checkbutton(label='Night mode', onvalue=True, offvalue=False,
-										  compound=LEFT, command=self.night, variable=self.night_mode)
-		self.options_menu.add_checkbutton(label='Status Bars', onvalue=True, offvalue=False,
-										  variable=self.show_statusbar, compound=LEFT, command=self.hide_statusbars)
-		self.options_menu.add_checkbutton(label='Tool Bar', onvalue=True, offvalue=False,
-										  variable=self.show_toolbar, compound=LEFT, command=self.hide_toolbar)
-		self.options_menu.add_checkbutton(label='Custom cursor', onvalue='tcross', offvalue='xterm',
-										  compound=LEFT, command=self.custom_cursor)
-		self.options_menu.add_checkbutton(label='Custom style', onvalue='vista', offvalue='clam',
-										  compound=LEFT, command=self.custom_style)
-		self.options_menu.add_checkbutton(label='Word wrap', onvalue=True, offvalue=False,
-										  compound=LEFT, command=self.word_wrap, variable=self.ww)
-		self.options_menu.add_checkbutton(label='Reader mode', onvalue=True, offvalue=False,
-										  compound=LEFT, command=self.reader_mode)
-		self.options_menu.add_checkbutton(label='Auto save', onvalue=True, offvalue=False,
-										  compound=LEFT, variable=self.aus, command=self.save_outvariables)
-		self.options_menu.add_checkbutton(label='Top most', onvalue=True, offvalue=False,
-										  compound=LEFT, command=self.topmost)
+		self.options_menu.add_checkbutton(label='Night mode', compound=LEFT, command=self.night, variable=self.night_mode)
+		self.options_menu.add_checkbutton(label='Status Bars', variable=self.show_statusbar, compound=LEFT, command=self.hide_statusbars)
+		self.options_menu.add_checkbutton(label='Tool Bar', variable=self.show_toolbar, compound=LEFT, command=self.hide_toolbar)
+		self.options_menu.add_checkbutton(label='Custom cursor', onvalue='tcross', offvalue='xterm', compound=LEFT, command=self.custom_cursor)
+		self.options_menu.add_checkbutton(label='Custom style', onvalue='vista', offvalue='clam', compound=LEFT, command=self.custom_style)
+		self.options_menu.add_checkbutton(label='Word wrap', compound=LEFT, command=self.word_wrap, variable=self.word_wrap)
+		self.options_menu.add_checkbutton(label='Reader mode', compound=LEFT, command=self.reader_mode)
+		self.options_menu.add_checkbutton(label='Auto save', compound=LEFT, variable=self.aus, command=self.save_outvariables)
+		self.options_menu.add_checkbutton(label='Top most', compound=LEFT, command=self.topmost)
 		self.options_menu.add_checkbutton(label='Automatic Emoji detection', compound=LEFT, variable=self.aed)
 		self.options_menu.add_checkbutton(label='Dev Mode', command=lambda: self.manage_menus(mode='dev'))
 		self.options_menu.add_checkbutton(label='Special tools', command=lambda: self.manage_menus(mode='tools'),
 										  variable=self.sta)
-		self.options_menu.add_checkbutton(label='Fun numbers', variable=self.fun_n, command=self.save_outvariables)
+		self.options_menu.add_checkbutton(label='Fun numbers', variable=self.fun_numbers, command=self.save_outvariables)
 		self.options_menu.add_separator()
 		self.options_menu.add_command(label='Advance options', command=self.call_settings)
 		# help page
@@ -801,9 +803,9 @@ class Window(Tk):
 		# external links menu
 		self.links_menu = Menu(self.app_menu, tearoff=False)
 		self.app_menu.add_cascade(label='External links', menu=self.links_menu)
-		self.links_menu.add_command(label='GitHub', command=lambda: self.ex_links('g'))
-		self.links_menu.add_command(label='Discord', command=lambda: self.ex_links('d'))
-		self.links_menu.add_command(label='MS store', command=lambda: self.ex_links('m'), state=DISABLED)
+		self.links_menu.add_command(label='GitHub', command=lambda: ex_links('g'))
+		self.links_menu.add_command(label='Discord', command=lambda: ex_links('d'))
+		self.links_menu.add_command(label='MS store', command=lambda: ex_links('m'), state=DISABLED)
 
 	def place_toolt(self):
 		'''
@@ -930,12 +932,6 @@ class Window(Tk):
 			if open_window:
 				func()
 
-	@staticmethod
-	def get_time() -> str:
-		'''
-		returns current time formated
-		'''
-		return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 	def get_pos(self) -> str:
 		'''
@@ -943,18 +939,6 @@ class Window(Tk):
 		'''
 		return self.EgonTE.index(INSERT)
 
-	@staticmethod
-	def ex_links(mode: str = '', link : str = ''):
-		'''
-		opens the GitHub \ discord \ microsoft store pages on your browser
-		'''
-		if not link:
-			if mode == 'g':
-				link = 'https://github.com/Ariel4545/text_editor'
-			elif mode == 'd':
-				link = 'https://discord.gg/nnF3GvF42G'
-
-		webbrowser.open(link)
 
 	def undo(self):
 		try:
@@ -963,37 +947,29 @@ class Window(Tk):
 			pass
 
 
-	def check_file_changes(self):
-		'''+ beta function - need to be tested'''
-		proceed = False
-		if self.file_name:
-			content = self.EgonTE.get('1.0', 'end')
-			with open(self.file_name, 'r', encoding='utf-8') as fp:
-				file_content = fp.read() + '\n' # tkinter most often has an newline at the end
+	def get_file(self, mode='open', message=''):
+		'''+ global filedialog function that use return
 
-			# cheking the precetage of ideticality, we would consider 95% precent and above equal
-			matcher = SequenceMatcher(None, file_content, content)
-			similarity = matcher.ratio()
-			if similarity >= 0.95:
-				proceed = True
-			else:
-				if messagebox.askyesno('EgonTE', 'its seems that the current file is not saved\ndo you wish to proceed?'):
-					proceed = True
+		not used for now
+		'''
+		if mode == 'open':
+			file = filedialog.askopenfilename(title=f'{mode} {message} file', filetypes=text_extensions)
+		elif mode == 'new':
+			file = filedialog.asksaveasfilename(defaultextension='.*', initialdir='C:/EgonTE', title='Save File',
+													 filetypes=text_extensions)
+		return file
 
-		else:
-			proceed = True
-		return proceed
 
 	def new_file(self, event=None):
 		'''
 		creates blank workspace (without file)
 		'''
-		if self.check_file_changes():
+		if check_file_changes(self.file_name, self.EgonTE.get('1.0', 'end')):
 			self.file_name = ''
 			self.file_bar.config(text='New file')
 			self.EgonTE.delete('1.0', END)
 			self.open_status_name = ''
-			self.record_list.append(f'> [{self.get_time()}] - New black file opened')
+			self.record_list.append(f'> [{get_time()}] - New black file opened')
 
 	def open_file(self, event=None):
 		'''
@@ -1008,15 +984,16 @@ class Window(Tk):
 		else:
 			self.text_name = filedialog.askopenfilename(title='Open file', filetypes=text_extensions)
 
-		if self.check_file_changes():
+		if check_file_changes(self.file_name, self.EgonTE.get('1.0', 'end')):
 			if self.text_name:
 				try:
 					self.EgonTE.delete('1.0', END)
 					self.open_status_name = self.text_name
 					self.file_name = self.text_name
 					self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
-					'''+ need to probably switch the arguments pos'''
-					self.file_name.replace('C:/EgonTE/', '')
+					'''+ add a special mode to redirect the files to and egon library'''
+					if self.egon_dir.get():
+						self.file_name.replace('', 'C:/EgonTE/')
 					text_file = open(self.text_name, 'r')
 					stuff = text_file.read()
 					# disable python IDE if python functionalities are on
@@ -1049,7 +1026,7 @@ class Window(Tk):
 					if self.data['open_last_file']:
 						self.save_last_file()
 
-					self.record_list.append(f'> [{self.get_time()}] - Opened {self.file_name}')
+					self.record_list.append(f'> [{get_time()}] - Opened {self.file_name}')
 
 				except UnicodeDecodeError:
 					messagebox.showerror(self.title_struct + 'error', 'File contains not supported characters')
@@ -1068,7 +1045,7 @@ class Window(Tk):
 			if text_file:
 				self.file_name = text_file
 				self.file_name = self.file_name.replace('C:/EgonTE', '')
-				self.file_bar.config(text=f'Saved: {self.file_name} - {self.get_time()}')
+				self.file_bar.config(text=f'Saved: {self.file_name} - {get_time()}')
 
 				text_file = open(text_file, 'w')
 				text_file.write(self.EgonTE.get(1.0, END))
@@ -1077,7 +1054,7 @@ class Window(Tk):
 				if self.data['open_last_file']:
 					self.save_last_file()
 
-				self.record_list.append(f'> [{self.get_time()}] - Saved {text_file}')
+				self.record_list.append(f'> [{get_time()}] - Saved {text_file}')
 
 		if event == 'get name':
 			try:
@@ -1095,8 +1072,8 @@ class Window(Tk):
 			text_file = open(self.open_status_name, 'w')
 			text_file.write(self.EgonTE.get(1.0, END))
 			text_file.close()
-			self.file_bar.config(text=f'Saved: {self.file_name} - {self.get_time()}')
-			self.record_list.append(f'> [{self.get_time()}] - Saved {self.file_name}')
+			self.file_bar.config(text=f'Saved: {self.file_name} - {get_time()}')
+			self.record_list.append(f'> [{get_time()}] - Saved {self.file_name}')
 		else:
 			self.save_as(event=None)
 
@@ -1125,7 +1102,10 @@ class Window(Tk):
 	def typefaces(self, tf: str):
 		'''+W.I.P
 
-		 italic cuases many spaces
+		 working only once with indexes
+		 and add ups in a weird stack data structure
+
+		 italic causes many spaces
 		 selected font with tag is different from the same one with the text widget selection
 		 '''
 		underline = False
@@ -1138,6 +1118,7 @@ class Window(Tk):
 
 		self.EgonTE.tag_configure(tf, font=tf_font, underline=underline)
 		current_tags = self.EgonTE.tag_names('1.0')
+
 		first, last = self.get_indexes()
 		if tf in current_tags:
 			self.EgonTE.tag_remove(tf, first, last)
@@ -1172,35 +1153,44 @@ class Window(Tk):
 		'''
 		custom UI colors for all of the main windows components, and for the "knowledge" (wiki/dictionary) window,
 		for the help / patch notes window, and for the virtual keyboard
+
+		NEW; WIP color picking algorithm that works for most instances
 		'''
 		if self.night_mode.get():
 			if not (messagebox.askyesno('EgonTE', 'Night mode is on, still want to proceed?')):
 				return
 
-		'''+ wip, semi automatic color picking
-		if components in singular_colors:
-			selected_color = colorchooser.askcolor(title=f'{components} color')[1]
-			if selected_color:
-				self.record_list.append(f'> [{self.get_time()}] - {components} changed to {selected_color}')
-				# index 0 for widget, index 1 for setting
-				(colors_dict[components[0]])[1] = selected_color
-		'''
-		if components == 'buttons':
-			selected_color = colorchooser.askcolor(title='Buttons background color')[1]
-			if selected_color:
-				self.record_list.append(f'> [{self.get_time()}] - Buttons color changed to {selected_color}')
-				for toolbar_button in self.toolbar_components:
-					toolbar_button.config(background=selected_color)
+		if components in tuple(self.singular_colors_d.keys()):
+			widget, type_ = self.singular_colors_d[components]
 
-		elif components == 'menus':
-			selected_main_color = colorchooser.askcolor(title='Menu background color')[1]
-			selected_text_color = colorchooser.askcolor(title='Menu text color')[1]
-			if selected_main_color and selected_text_color:
-				self.record_list.append(
-					f'> [{self.get_time()}] - Menu color changed to {selected_main_color}\n Menu text color'
-					f'changed to {selected_text_color}')
-				for menu_ in self.menus_components:
-					menu_.config(background=selected_main_color, foreground=selected_text_color)
+			if '-' in type_:
+				type_lst = type_.split('-')
+			else:
+				type_lst = type_
+
+			for type in type_lst:
+				if type:
+					if isinstance(type_lst, str) and len(type) < 2:
+						type = type_lst
+
+					color = colorchooser.askcolor(title=f'{components} {type} color')[1]
+					if color:
+						if isinstance(widget, list):
+							for widget_ in widget:
+								# not all the widgets need to be colored, some does not support it the same way
+								try:
+									widget_[type] = color
+								except TclError:
+									pass
+						else:
+							widget[type] = color
+						self.record_list.append(f'> [{get_time()}] - {components} {type} changed to {color}')
+
+					# checking if it the list contains one item
+					if type == type_lst:
+						break
+
+
 		elif components == 'app':
 			selected_main_color = colorchooser.askcolor(title='Frames color')[1]
 			selected_second_color = colorchooser.askcolor(title='Text box color')[1]
@@ -1213,26 +1203,10 @@ class Window(Tk):
 				self.EgonTE.config(bg=selected_second_color)
 				self.toolbar_frame.config(bg=selected_main_color)
 				self.record_list.append(
-					f'> [{self.get_time()}] - App\'s color changed to {selected_main_color}\n  '
+					f'> [{get_time()}] - App\'s color changed to {selected_main_color}\n  '
 					f'App\'s secondary color changed'
 					f' to {selected_second_color}\n  App\'s text color changed to {selected_text_color}')
 
-		# background custom color
-		elif components == 'background':
-			selected_color = colorchooser.askcolor(title='Background color')[1]
-			if selected_color:
-				self.EgonTE.config(bg=selected_color)
-
-		# entire custom text color
-		elif components == 'text':
-			color = colorchooser.askcolor(title='Text color')[1]
-			if color:
-				self.EgonTE.config(fg=color)
-
-		elif components == 'highlight':
-			color = colorchooser.askcolor(title='Highlight color')[1]
-			if color:
-				self.EgonTE.config(selectbackground=color)
 
 		elif components == 'info_page':
 			if self.info_page_active:
@@ -1273,13 +1247,7 @@ class Window(Tk):
 			else:
 				messagebox.showerror('EgonTE', 'Advance options window isn\'t opened')
 
-	@staticmethod
-	def fill_by_click(ui_element, event, listbox):
-		selected_item = listbox.get(ANCHOR)
-		if selected_item:
-			ui_element.delete(0, END)
-			ui_element.insert(END, selected_item)
-
+	
 	def make_pop_ups_window(self, function, custom_title=False):
 		'''+
 		beta - need extensive testing
@@ -1296,7 +1264,7 @@ class Window(Tk):
 		self.make_tm(root)
 		if self.limit_w_s.get():
 			root.resizable(False, False)
-		self.record_list.append(f'> [{self.get_time()}] - {root_name} tool window opened')
+		self.record_list.append(f'> [{get_time()}] - {root_name} tool window opened')
 		return root
 
 	def make_rich_textbox(self, root, place='pack_top', wrap=WORD, font='arial 10', size=False, selectbg='dark cyan',
@@ -1387,40 +1355,25 @@ class Window(Tk):
 		night mode function - have 2 types of night mode, night mode works of all the things that the UI custom colors
 		function works on
 		'''
+		main_color, second_color, third_color, _text_color = night_mode_colors[self.nm_palette.get()]
 		if self.night_mode.get():
 			USE_IMMERSIVE_DARK_MODE = 20
 			self.highlight_search_c = 'yellow', 'black'
-			if self.nm_palette.get() == 'black':
-				# black palette night mode
-				main_color = '#110022'
-				second_color = '#373737'
-				third_color = '#27374D'
-				_text_color = 'green'
-			else:
-				# blue palette night mode
-				main_color = '#041C32'
-				second_color = '#04293A'
-				third_color = '#064663'
-				_text_color = '#ECB365'
 			try:
-				self.record_list.append(f'> [{self.get_time()}] - Night mode activated')
+				self.record_list.append(f'> [{get_time()}] - Night mode activated')
 			except AttributeError:
 				pass
-			# self.night_mode.set(False)
-			self.data['night_mode'] = True
+
 		else:
 			self.highlight_search_c = 'blue', 'white'
 			USE_IMMERSIVE_DARK_MODE = 0
-			main_color = 'SystemButtonFace'
-			second_color = 'SystemButtonFace'
-			third_color = 'SystemButtonFace'
+			main_color, second_color, third_color = 'SystemButtonFace', 'SystemButtonFace', 'SystemButtonFace'
 			_text_color = 'black'
-			# self.night_mode.set(True)
-			self.data['night_mode'] = False
-			self.record_list.append(f'> [{self.get_time()}] - Night mode disabled')
+			self.record_list.append(f'> [{get_time()}] - Night mode disabled')
 			self.resizable(False, False)
 			self.resizable(True, True)
 
+		self.data['night_mode'] = self.night_mode.get()
 		self.update()
 
 		if system().lower() == 'windows':
@@ -1482,8 +1435,8 @@ class Window(Tk):
 			for button in tuple(self.dynamic_buttons.values()):
 				button.configure(bg=third_color, fg=_text_color)
 			self.night_frame.configure(bg=second_color)
-			self.change_button_color(self.last_c[0], self.last_c[1])
-			self.change_button_color(self.last_s[0], self.last_s[1])
+			self.change_button_color(self.last_cursor[0], self.last_cursor[1])
+			self.change_button_color(self.last_style[0], self.last_style[1])
 			self.change_button_color(self.last_r[0], self.last_r[1])
 
 		if self.hw_active:
@@ -1517,7 +1470,7 @@ class Window(Tk):
 		self.EgonTE.configure(font=(chosen_font, str(self.size_var.get())))
 
 		self.change_font_size()
-		self.record_list.append(f'> [{self.get_time()}] - font changed to {chosen_font}')
+		self.record_list.append(f'> [{get_time()}] - font changed to {chosen_font}')
 
 
 	def size_order(self, change_list=False):
@@ -1550,14 +1503,12 @@ class Window(Tk):
 			else:
 				self.EgonTE.tag_add('size', '1.0', END)
 
-		self.record_list.append(f'> [{self.get_time()}] - font size changed to {self.chosen_size}')
+		self.record_list.append(f'> [{get_time()}] - font size changed to {self.chosen_size}')
 
 	def replace(self, event=None):
 		'''
 		function that takes user input to change some terms with the thing that you will write
 		'''
-
-		'''+ update, fuse with another tool or improve features'''
 
 		# replacing functionality
 		def rep_button():
@@ -1566,6 +1517,15 @@ class Window(Tk):
 			content = self.EgonTE.get(1.0, END)
 
 			new_content = content.replace(find_, replace_)
+
+			if not(replace_message.winfo_manager()):
+				replace_message.grid(row=4, column=0)
+			if new_content != content:
+				replace_message.configure(text=f'{find_} text was changed to {replace_}', fg='dark green')
+				pass
+			else:
+				replace_message.configure(text=f'{find_} wasn\'t found', fg='red')
+
 			self.EgonTE.delete(1.0, END)
 			self.EgonTE.insert(1.0, new_content)
 
@@ -1576,12 +1536,13 @@ class Window(Tk):
 		find_input = Entry(replace_root, width=20)
 		replace_input = Entry(replace_root, width=20)
 		by_text = Label(replace_root, text='by')
+		replace_message = Label(replace_root, text='')
 		replace_button = Button(replace_root, text='Replace', pady=3, command=rep_button)
 		replace_text.grid(row=0, sticky=NSEW, column=0, columnspan=1)
 		find_input.grid(row=1, column=0)
 		by_text.grid(row=2)
 		replace_input.grid(row=3, column=0)
-		replace_button.grid(row=4, column=0, pady=5)
+		replace_button.grid(row=5, column=0, pady=5)
 
 	def is_marked(self) -> bool:
 		'''
@@ -1647,57 +1608,41 @@ class Window(Tk):
 
 	def text_formatter(self, phrase: str) -> str:
 		'''
-		function to make the analyzed text more organized
+		WIP function to make the analyzed text more organized
+
+
 		'''
-		interrogatives = ('how', 'why', 'what', 'when', 'who', 'where', 'is', 'do you', 'whom', 'whose')
+		interrogatives = ('how', 'why', 'what', 'when', 'who', 'where', 'is', 'do you', 'whom', 'whose', 'can')
 		capitalized = phrase.capitalize()
-
-
-		'''+ WIP - organizer,
-		if after a punctuation symbol like eq/question marks and dot - newline
-		if after a comma or letter or number, space
-		
-		check if current -1 used for last
-		
-		'''
-
 		self.EgonTE.update_idletasks()
 		index = self.EgonTE.index('current')
-		# line, col = index.split('.')
-		# current_index = (f'{line}.{int(col) - 1}')
-		# after_current = (f'{line}.{int(col) + 1}')
 
 
-		cal_index = self.EgonTE.index('insert')
-		line, col = cal_index.split('.')
-		current_index = (f'{line}.{int(col) - 0}') # one before pointer
-		after_current = (f'{line}.{int(col) + 1}') # at pointer
-		current_ascii = self.EgonTE.get(current_index)
-		after_ascii = self.EgonTE.get(after_current)
-		print(current_ascii, after_ascii)
+		line, col = map(int, self.get_pos().split('.'))
+		before_pointer_index = (f'{line}.{int(col) - 1}') # one before pointer
+		after_current = (f'{line}.{int(col)}+1c') # at pointer
+		before_pointer_char = self.EgonTE.get(before_pointer_index)
+		after_pointer_2char = self.EgonTE.get(after_current)
+		print(before_pointer_char, after_pointer_2char)
 
 
 		# part 1 - check for question words inside of the phrase
-		if punctuation.__contains__(current_ascii) or punctuation.__contains__(after_ascii):
+		if (after_pointer_2char in punctuation):
 			if phrase.startswith(interrogatives):
 				capitalized = f'{capitalized}?'
 			else:
 				capitalized = f'{capitalized}.'
 
-		# part 2 - for the index before pharse
-		space_before_conditions = []
-		if not(current_ascii in (' ', '\n')):
-			space_before_conditions = space_before_conditions.extend([ascii_letters, digits, punctuation])
-			if current_ascii in ['?', '!', '.']:
-				capitalized = '\n' + capitalized
-			elif current_ascii in space_before_conditions:
-				capitalized = ' ' + capitalized
+		# part 2 - for the index before phrase
+		space_before_conditions = ascii_letters + digits + punctuation
+		print(space_before_conditions)
+		if before_pointer_char in ['?', '!', '.']:
+			capitalized = '\n' + capitalized
+		elif before_pointer_char in space_before_conditions:
+			capitalized = ' ' + capitalized
 
-		# part 3 - if there something after the pharse
-		space_after_conditions = []
-		space_after_conditions.extend([ascii_letters, digits])
-		if after_ascii in ascii_letters:
-			capitalized = capitalized + ' '
+		# part 3 - maybe soon a better method will be added
+		capitalized = capitalized + ' '
 
 		return capitalized
 
@@ -1705,6 +1650,11 @@ class Window(Tk):
 		'''
 		advanced speech to text function that work for english speaking only (but more is planned)
 		'''
+
+		'''+ run loop dont stop bug
+		if new prompt starts that the program suggested, it will write it the number of times the program asked.
+		'''
+
 		error_sentences = ['I don\'t know what you mean!', 'can you say that again?', 'please speak more clear']
 		error_sentence = choice(error_sentences)
 		error_msg = f'Excuse me, {error_sentence}'
@@ -1741,12 +1691,8 @@ class Window(Tk):
 			self.usage_report()
 
 		if self.file_name:
-			text_file = open(self.file_name, 'r')
-			stuff = text_file.read()
-			if self.text_changed and (self.EgonTE.get('1.0', 'end')) != stuff:
-				if messagebox.askyesno(self.title_struct + 'Quit',
-									   'Some changes  warn\'t saved, do you wish to save first?'):
-					self.save()
+			if check_file_changes(self.file_name, self.EgonTE.get('1.0', 'end')):
+				self.save()
 
 		if event == 'r':
 			self.destroy()
@@ -1761,7 +1707,7 @@ class Window(Tk):
 
 	def close_pop_ups(self, root, th=False):
 		self.opened_windows.remove(root)
-		self.record_list.append(f'> [{self.get_time()}] - {root} tool window closed')
+		self.record_list.append(f'> [{get_time()}] - {root} tool window closed')
 		root.destroy()
 
 		if th:
@@ -1771,130 +1717,138 @@ class Window(Tk):
 				pass
 
 	def find_text(self, event=None):
+
+		'''+ make that the auto search will not work when pressing backspace'''
+
+		'''+ at the end indexes _tkinter.TclError: bad text index "+2c"'''
+
 		'''
 		find text in the main text box, with some options, and with navigation
 		'''
-		global cpt_settings, by_characters, occurs_label
+		def rep_button():
+			'''+ replace UI management'''
+			find_ = self.find_text_entry.get()
+			replace_ = replace_input.get()
+			content = self.EgonTE.get(1.0, END)
+			'''+ replace by regex for capitalization settings'''
+			new_content = content.replace(find_, replace_)
 
-		def match_by_capitalization():
-			global cpt_settings
-
-			def disable():
-				global cpt_settings
-				cpt_settings = 'c'
-				capitalize_button.config(command=match_by_capitalization, text='by capitalization ✓')
-
-			cpt_settings = 'unc'
-			capitalize_button.config(text='by capitalization ✖', command=disable)
-
-		def match_by_word():
-			global by_characters
-
-			def disable():
-				global by_characters
-				by_word.config(command=match_by_word, text='by characters ✓')
-				by_characters = True
-
-			by_word.config(text='by words ✓', command=disable)
-			by_characters = False
+			if replace_all:
+				self.EgonTE.delete(1.0, END)
+				self.EgonTE.insert(1.0, new_content)
+			else:
+				index = self.EgonTE.index('sel.first')
+				self.EgonTE.delete('sel.first', 'sel.last')
+				self.EgonTE.insert(index, replace_)
 
 		def enter():
-			global cpt_settings, by_characters, offset, starting_index, ending_index, occurs_label
+			global offset, starting_index, ending_index
 			text_data = self.EgonTE.get('1.0', END + '-1c')
+			if text_data:
+				if not self.nav_frame:
+					self.nav_frame = Frame(search_text_root)
+					nav_title = Label(search_text_root, text='Navigation', font='arial 12')
+					nav_title.grid(row=3, column=1)
+					self.nav_frame.grid(row=5, column=1)
 
-			if not self.nav_frame:
-				self.nav_frame = Frame(search_text_root)
-				self.nav_frame.grid(row=4, column=1)
-
-				# buttons ↑↓
-				self.button_up_find = Button(self.nav_frame, text='Reset',
-											 command=lambda: up(starting_index, ending_index),
-											 width=4, state=DISABLED, relief=FLAT)
-				self.button_down_find = Button(self.nav_frame, text='↓',
-											   command=lambda: down(starting_index, ending_index),
-											   width=4, relief=FLAT, state=DISABLED)
+					# buttons ↑↓
+					self.button_up_find = Button(self.nav_frame, text='Reset',
+												 command=lambda:navigation(False, starting_index, ending_index),
+												 width=4, state=DISABLED, relief=FLAT)
+					self.button_down_find = Button(self.nav_frame, text='↓',
+												   command=lambda: navigation(True, starting_index, ending_index),
+												   width=4, relief=FLAT, state=DISABLED)
 
 
-				'''+ unexpected arguments'''
-				self.button_all_find = Button(self.nav_frame, text='All',
-											  command=lambda: tag_all(starting_index, ending_index),
-											  width=4, relief=FLAT, state=DISABLED)
-				self.button_nothing_find = Button(self.nav_frame, text='Nothing',
-												  command=lambda: untag_all(starting_index, ending_index),
-												  width=5, relief=FLAT, state=DISABLED)
-				self.find_nav_buttons = self.button_up_find, self.button_down_find, self.button_all_find, self.button_nothing_find
+					self.button_all_find = Button(self.nav_frame, text='All',
+												  command=lambda: tag_all(),
+												  width=4, relief=FLAT, state=DISABLED)
+					self.button_nothing_find = Button(self.nav_frame, text='Nothing',
+													  command=lambda: self.EgonTE.tag_remove(SEL, 1.0, END),
+													  width=5, relief=FLAT, state=DISABLED)
+					self.find_nav_buttons = self.button_up_find, self.button_down_find, self.button_all_find, self.button_nothing_find
 
-			if not occurs_label:
-				occurs_label = Label(self.nav_frame)
-				self.button_up_find.grid(row=0, column=0)
-				self.button_down_find.grid(row=0, column=1)
-				occurs_label.grid(row=0, column=2)
-				self.button_all_find.grid(row=0, column=3)
-				self.button_nothing_find.grid(row=0, column=4)
+					self.find_tool_searched.set(True)
+					show_list()
 
-			# by word/character settings
-			if not by_characters:
-				# text_data = str(text_data.split(' '))
-				text_data = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
-				text_data = ''.join((''.join(words)).split(' '))
+				if not self.occurs_label:
+					self.occurs_label = Label(search_text_root)
+					self.occurs_label.grid(row=4, column=1)
 
-			# capitalize settings
-			if cpt_settings == 'unc':
-				text_data = text_data.lower()
-				entry_data = (self.find_text_entry.get()).lower()
-			elif cpt_settings == 'c':
-				entry_data = self.find_text_entry.get()
-			occurs = str(text_data.count(entry_data))
+					self.button_up_find.grid(row=0, column=0)
+					self.button_down_find.grid(row=0, column=1)
+					self.button_all_find.grid(row=0, column=3)
+					self.button_nothing_find.grid(row=0, column=4)
 
-			# check if text occurs
-			if occurs:
-				occurs_label.configure(text=f'{entry_data} has {occurs} occurrences')
-				buttons_state = ACTIVE
-				if self.aff.get():
-					self.EgonTE.focus_set()
-			else:
-				occurs_label.configure(text=f'Not found any matches')
-				buttons_state = DISABLED
-			for button in self.find_nav_buttons:
-				button.configure(state=buttons_state)
+				# by word/character settings
+				if not(self.by_characters.get()):
+					# text_data = str(text_data.split(' '))
+					text_data = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
+					text_data = ''.join((''.join(words)).split(' '))
 
-				# select first match
-			starting_index = self.EgonTE.search(entry_data, '1.0', END)
-			if starting_index:
-				offset = '+%dc' % len(entry_data)
-				ending_index = starting_index + offset
-				self.EgonTE.tag_add(SEL, starting_index, ending_index)
+				# capitalize settings
+				if not(self.capital_opt.get()):
+					text_data = text_data.lower()
+					entry_data = (self.find_text_entry.get()).lower()
+				else:
+					entry_data = self.find_text_entry.get()
+				occurs = str(text_data.count(entry_data))
 
-			def down(si, ei):
+				# check if text occurs
+				if occurs:
+					self.occurs_label.configure(text=f'"{entry_data}" has {occurs} occurrences')
+					buttons_state = ACTIVE
+					if self.aff.get():
+						self.EgonTE.focus_set()
+				else:
+					self.occurs_label.configure(text=f'Not found any matches')
+					buttons_state = DISABLED
+				for button in self.find_nav_buttons:
+					button.configure(state=buttons_state)
+
+					# select first match
+				starting_index = self.EgonTE.search(entry_data, '1.0', END)
+				if starting_index:
+					offset = '+%dc' % len(entry_data)
+					ending_index = starting_index + offset
+					self.EgonTE.tag_add(SEL, starting_index, ending_index)
+
+
+
+			def navigation(mode, start_ind, end_ind):
+				'''+ WIP new combined navigation function with many improvements
+
+
+				find a way to remove global and switch to self.
+				better solution that lasts unlike regular mark
+
+				'''
 				global ending_index, starting_index
 				if int(occurs) > 1:
 					self.EgonTE.tag_remove(SEL, '1.0', END)
-					starting_index = self.EgonTE.search(entry_data, ei, END)
-					if si:
-						offset = '+%dc' % len(entry_data)
-						ending_index = starting_index + offset
-						print(f'str:{starting_index} end:{ending_index}')
-						self.EgonTE.tag_add(SEL, starting_index, ending_index)
-						self.EgonTE.focus_set()
-						starting_index = ending_index
-					self.button_up_find.config(state=ACTIVE)
+					offset = '+%dc' % len(entry_data)
 
-			def up(si, ei):
-				global starting_index, ending_index
-				if int(occurs) > 1:
-					self.EgonTE.tag_remove(SEL, '1.0', END)
-					starting_index = self.EgonTE.search(entry_data, '1.0', si)
-					if si:
-						offset = '+%dc' % len(entry_data)
+					if not mode:
+						starting_index = self.EgonTE.search(entry_data, '1.0', start_ind)
+					else:
+						starting_index = self.EgonTE.search(entry_data, end_ind, END)
+						self.button_up_find.config(state=ACTIVE)
+
+					if start_ind:
 						ending_index = starting_index + offset
 						print(f'str:{starting_index} end:{ending_index}')
-						self.EgonTE.tag_add(SEL, starting_index, ending_index)
-						ending_index = starting_index
-						self.EgonTE.focus_set()
+						if starting_index and ending_index:
+							self.EgonTE.tag_add(SEL, starting_index, ending_index)
+							self.EgonTE.focus_set()
+							if not mode: ending_index = starting_index
+							else: starting_index = ending_index
+						else:
+							navigation(not(mode), start_ind, end_ind)
+
 
 			def tag_all():
 				global occurs, starting_index, ending_index
-				up(starting_index, ending_index)
+				navigation('up', starting_index, ending_index)
 				for i in range(occurs):
 					starting_index = self.EgonTE.search(entry_content, ending_index, END)
 					if starting_index:
@@ -1904,70 +1858,111 @@ class Window(Tk):
 						self.EgonTE.tag_add('highlight_all_result', starting_index, ending_index)
 						starting_index = ending_index
 
-			def untag_all():
-				self.EgonTE.tag_remove(SEL, 1.0, END)
 
 		def update_list():
 			entry_content = self.find_text_entry.get().lower()
-			if entry_content:
-				popular_terms.delete(0, END)
-				for popular_term in self.ft_popular_content:
-					if entry_content in popular_term.lower():
-						popular_terms.insert(END, popular_term)
+			# if entry_content:  condition removed - completed updated list, but check for bug possibilities'''
+			self.popular_terms.delete(0, END)
+			for popular_term in self.ft_popular_content:
+				if entry_content in popular_term.lower():
+					self.popular_terms.insert(END, popular_term)
+
+		def show_list():
+			'''
+			show the list only if it is useful enough and update the content
+
+			conditions:
+			1. initially / reset: 3 or more values
+			2. when searching only if there are 2 or more values and the user search do not match one of  the values in the list
+			'''
+
+			# updating the list-box by redoing the content insertion process
+			self.popular_terms.delete(0, END)
+			words = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
+			words = (''.join(words)).split(' ')
+			counter = Counter(words)
+			popular_tuple = (counter.most_common()[0:10])
+			self.ft_popular_content = []
+			for i in popular_tuple:
+				self.ft_popular_content.append(i[0])
+			for term in self.ft_popular_content:
+				self.popular_terms.insert(END, term)
+
+
+			# matching the settings of case sensitivity
+			text_entry = self.find_text_entry.get()
+			terms_list = list(self.popular_terms.get(0, END))
+			if not self.capital_opt.get():
+				text_entry = text_entry.lower()
+				terms_list =  list(map(str.lower, terms_list))
+
+
+
+			# placing the widget only if it will be useful enough, because it takes precious space
+			if not(self.find_text_entry.get()):
+				if len(self.ft_popular_content) > 2:
+					self.terms_frame.grid(row=2, column=1, pady=3)
+			else:
+				if self.find_tool_searched.get(): # a variable for when we are searched or not
+					if self.button_up_find.winfo_manager():
+						if len(terms_list) > 1 and text_entry not in terms_list:
+							self.terms_frame.grid(row=2, column=1, pady=3)
+							'''+ without options adaptability: anti word-sensitive measures'''
+						else:
+							self.terms_frame.grid_forget()
 
 		def keyrelease_events(events=False):
 			update_list()
 			enter()
+			show_list()
+			#find_tool_searched.set(False)
 
 		# window creation
 		search_text_root = self.make_pop_ups_window(self.find_text)
 		# variables
-		cpt_settings = 'c'
-		by_characters = True
 		self.nav_frame = ''
-		occurs_label = ''
+		self.occurs_label = ''
 		# buttons creation and placement
 		text = Label(search_text_root, text='Search text', font='arial 14 underline')
 		self.find_text_entry = Entry(search_text_root)
 		# enter_button = Button(search_text_root, command=enter, text='Enter')
-		capitalize_button = Button(search_text_root, command=match_by_capitalization, text='by capitalization ✓')
-		by_word = Button(search_text_root, command=match_by_word, text='by characters ✓', state=ACTIVE)
-		auto_focus = Checkbutton(search_text_root, variable=self.aff, text='Auto focus - every search')
+		options_title = Label(search_text_root, text='Search options', font='arial 12')
+		options_frame = Frame(search_text_root)
+		capitalize_button = Checkbutton(options_frame, text='case sensitive', variable=self.capital_opt)
+		by_word = Checkbutton(options_frame, text='characters sensitive', variable=self.by_characters)
+		auto_focus = Checkbutton(options_frame, variable=self.aff, text='Auto focus', bd=1)
 
-		terms_frame = Frame(search_text_root)
-		popular_terms = Listbox(terms_frame, width=25, height=2)
-		pt_scroll = ttk.Scrollbar(terms_frame, command=popular_terms.yview)
-		popular_terms.configure(yscrollcommand=pt_scroll.set)
-
-		words = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
-		words = (''.join(words)).split(' ')
+		self.terms_frame = Frame(search_text_root)
+		self.popular_terms = Listbox(self.terms_frame, width=25, height=2)
+		pt_scroll = ttk.Scrollbar(self.terms_frame, command=self.popular_terms.yview)
+		self.popular_terms.configure(yscrollcommand=pt_scroll.set)
 
 		# words = .replace('\n', '').split(' ')
-		counter = Counter(words)
-		popular_tuple = (counter.most_common()[0:10])
-		self.ft_popular_content = []
-		for i in popular_tuple:
-			self.ft_popular_content.append(i[0])
-		for term in self.ft_popular_content:
-			popular_terms.insert(END, term)
-
 		text.grid(row=0, column=1)
 		self.find_text_entry.grid(row=1, column=1)
 		capitalize_button.grid(row=2, column=0, pady=6, padx=5)
-		terms_frame.grid(row=2, column=1)
+
+		show_list()
 		by_word.grid(row=2, column=2, padx=5)
-		auto_focus.grid(row=3, column=1)
+
+		options_title.grid(row=6, column=1)
+		options_frame.grid(row=7, column=1)
+		capitalize_button.grid(row=0, column=0)
+		by_word.grid(row=0, column=1)
+		auto_focus.grid(row=1, column=0)
 		# enter_button.grid(row=3, column=1)
 
 		pt_scroll.pack(side=RIGHT, fill=Y)
-		popular_terms.pack(fill=BOTH, expand=True)
+		self.popular_terms.pack(fill=BOTH, expand=True)
 
-		popular_terms.bind('<<ListboxSelect>>', lambda e: self.fill_by_click(self.find_text_entry, e, self.popular_terms))
+		self.popular_terms.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.find_text_entry, e, self.popular_terms))
 		self.find_text_entry.bind('<KeyRelease>', keyrelease_events)
+
 		# self.find_text_entry.bind('<KeyRelease>', enter)
 
 		if self.is_marked():
 			self.find_text_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
+		show_list()
 
 	def ins_calc(self):
 		'''
@@ -1978,10 +1973,8 @@ class Window(Tk):
 
 		self.ins_equation = ''
 		self.extra_calc_ui = False
-		padx_b = 1
-		pady_b = 1
-		button_height = 3
-		button_width = 5
+		padx_b, pady_b = 1, 1
+		button_height, button_width = 3, 5
 		ex_color = '#B0A695'
 
 		def button_ui():
@@ -2061,16 +2054,11 @@ class Window(Tk):
 		calc_ui.pack()
 
 		op_frame = Frame(left_frame)
-		add = Button(op_frame, text='+ addition', command=lambda: insert_extra(' + '), relief=FLAT)
-		sub_b = Button(op_frame, text='- subtraction', command=lambda: insert_extra(' - '), relief=FLAT)
-		mul = Button(op_frame, text='* multiply', command=lambda: insert_extra(' * '), relief=FLAT)
-		div = Button(op_frame, text='/ deviation', command=lambda: insert_extra(' / '), relief=FLAT)
-		pow = Button(op_frame, text='** power', command=lambda: insert_extra(' ** '), relief=FLAT)
-		modu = Button(op_frame, text='% modulus', command=lambda: insert_extra(' % '), relief=FLAT)
-
-		numexpr_link = 'https://numexpr.readthedocs.io/en/latest/user_guide.html'
-		numexpr_tutorial = Button(left_frame, text='NumExpr tutorial', command=lambda: self.ex_links(link=numexpr_link)
-								  , relief=FLAT, fg='blue', font='arial 10 underline')
+		op_list, oper_buttons = ('+ addition', '- subtraction', '* multiply', '/ deviation', '** power', '% modulus'), []
+		for index, op in enumerate(op_list):
+			button = Button(op_frame, text=op, command=lambda i=op: insert_extra(f' {i[0]} '), relief=FLAT)
+			oper_buttons.append(button)
+		add, sub_b, mul, div, pow, modu = oper_buttons
 
 		add.grid(row=0, column=0)
 		sub_b.grid(row=0, column=2)
@@ -2078,6 +2066,10 @@ class Window(Tk):
 		div.grid(row=1, column=2)
 		pow.grid(row=2, column=0)
 		modu.grid(row=2, column=2)
+
+		numexpr_link = 'https://numexpr.readthedocs.io/en/latest/user_guide.html'
+		numexpr_tutorial = Button(left_frame, text='NumExpr tutorial', command=lambda: ex_links(link=numexpr_link)
+								  , relief=FLAT, fg='blue', font='arial 10 underline')
 
 		if self.is_marked():
 			if str(self.EgonTE.get('sel.first', 'sel.last')).isnumeric():
@@ -2102,14 +2094,22 @@ class Window(Tk):
 			if column_ == 3: row_, column_ = 1 + row_, 0
 
 	def dt(self, event=None):
-
-
-		'''+ add text formater regex'''
-
 		'''
 		insert the current date/time to where the pointer of your text are
 		'''
-		self.EgonTE.insert(self.get_pos(), self.get_time() + ' ')
+
+
+
+		message = get_time() + ' '
+
+		# message = self.text_formatter(message)
+		line, col = map(int, self.get_pos().split('.'))
+		prev_ind = f'{line}.{col - 1}'
+		before_char = self.EgonTE.get(prev_ind)
+
+		if before_char in ascii_letters or before_char in digits:
+			message = ' ' + message
+		self.EgonTE.insert(self.get_pos(), message)
 
 	def ins_random(self):
 		'''
@@ -2176,7 +2176,7 @@ class Window(Tk):
 			except IndexError:
 				pass
 		else:
-			if self.fun_n.get():
+			if self.fun_numbers.get():
 				number_entry1.insert('end', str(randint(1, 10)))
 				number_entry2.insert('end', str(randint(10, 1000)))
 
@@ -2195,12 +2195,12 @@ class Window(Tk):
 		'''
 		change between regular cursor (xterm) to a more unique one (tcross)
 		'''
-		if self.cc.get() == 'tcross':
-			self.cc.set('xterm')
+		if self.custom_cursor_v.get() == 'tcross':
+			self.custom_cursor_v.set('xterm')
 		else:
-			self.cc.set('tcross')
+			self.custom_cursor_v.set('tcross')
 
-		self.predefined_cursor = self.cc.get()
+		self.predefined_cursor = self.custom_cursor_v.get()
 		self.data['cursor'] = self.predefined_cursor
 		self.EgonTE.config(cursor=self.predefined_cursor)
 		try:
@@ -2212,7 +2212,7 @@ class Window(Tk):
 		if self.op_active:
 			self.change_button_color('cursors', self.predefined_cursor)
 
-		self.record_list.append(f'> [{self.get_time()}] - cursor changed to {self.cc}')
+		self.record_list.append(f'> [{get_time()}] - cursor changed to {self.custom_cursor_v}')
 
 	def custom_style(self):
 		'''
@@ -2230,36 +2230,36 @@ class Window(Tk):
 		if self.op_active:
 			self.change_button_color('styles', self.predefined_style)
 
-		self.record_list.append(f'> [{self.get_time()}] - style changed to {self.cs}')
+		self.record_list.append(f'> [{get_time()}] - style changed to {self.cs}')
 
 	def word_wrap(self):
 		'''
 		when pressed initially disabling word wrap and adding an vertical scrollbar
 		'''
-		if not self.ww:
+		if not self.word_wrap:
 			self.EgonTE.config(wrap=WORD)
 			self.geometry(f'{self.width}x{self.height - 10}')
 			self.horizontal_scroll.pack_forget()
-			self.ww = True
+			self.word_wrap = True
 			self.data['word_wrap'] = False
-			self.record_list.append(f'> [{self.get_time()}] - Word wrap is activated')
+			self.record_list.append(f'> [{get_time()}] - Word wrap is activated')
 		else:
 			self.geometry(f'{self.width}x{self.height + 10}')
 			self.horizontal_scroll.pack(side=BOTTOM, fill=X)
 			self.EgonTE.config(wrap=NONE)
-			self.ww = False
+			self.word_wrap = False
 			self.data['word_wrap'] = True
-			self.record_list.append(f'> [{self.get_time()}] - Word wrap is disabled')
+			self.record_list.append(f'> [{get_time()}] - Word wrap is disabled')
 
 	def reader_mode(self):
-		if not self.rm:
+		if not self.reader_mode_v:
 			self.EgonTE.configure(state=NORMAL)
-			self.record_list.append(f'> [{self.get_time()}] - Reader mode is disabled')
+			self.record_list.append(f'> [{get_time()}] - Reader mode is disabled')
 		else:
 			self.EgonTE.configure(state=DISABLED)
-			self.record_list.append(f'> [{self.get_time()}] - Reader mode is activated')
-		self.data['reader_mode'] = self.rm
-		self.rm = not (self.rm)
+			self.record_list.append(f'> [{get_time()}] - Reader mode is activated')
+		self.data['reader_mode'] = self.reader_mode_v
+		self.reader_mode_v = not (self.reader_mode_v)
 
 	def ins_random_name(self):
 		'''
@@ -2374,7 +2374,7 @@ class Window(Tk):
 		auto_detect.current(0)
 
 		chosen_language['values'] = languages_list
-		if self.fun_n.get():
+		if self.fun_numbers.get():
 			lng_length = len(chosen_language['values'])
 			lng_index = randint(0, lng_length - 1)
 			chosen_language.current(lng_index)
@@ -2438,7 +2438,7 @@ class Window(Tk):
 		if text is marked will return the selected indexes, and if not return the whole index of the text box
 		'''
 		if not (self.is_marked()):
-			self.text_index = 1.0, END
+			self.text_index = [1.0, END]
 			self.first_index, self.last_index = self.text_index[0], self.text_index[1]
 		else:
 			self.text_index = 'sel.first', 'sel.last'
@@ -2491,9 +2491,9 @@ class Window(Tk):
 
 	def lower_upper(self, event=None):
 
-		'''+ newline after usage bug'''
-
 		self.get_indexes()
+		if self.text_index[1] == END:
+			self.text_index[1] = 'end-1c'
 		content = self.EgonTE.get(*self.text_index)
 
 		if content == content.upper():
@@ -2608,7 +2608,7 @@ class Window(Tk):
 		enter_button = Button(generate_root, text='Enter', width=8, height=1, bd=1, command=generate_sequence)
 		preview_checkbutton = Checkbutton(options_frame, text='Open with preview', variable=self.preview_sequence)
 
-		if self.fun_n.get():
+		if self.fun_numbers.get():
 			length_entry.insert(0, randint(10, 100))
 
 		intro_text.pack()
@@ -2664,7 +2664,6 @@ class Window(Tk):
 
 		try:
 
-			'''+ shorten, dict?'''
 			# identify file types
 			if special_file.endswith('.xml'):
 				content = pandas.read_xml(special_file).to_string()
@@ -2688,7 +2687,7 @@ class Window(Tk):
 			self.EgonTE.insert(self.get_pos(), content)
 			starts = os.path.splitext(special_file)[0]
 			ends = os.path.splitext(special_file)[-1][1:]
-			self.record_list.append(f'> [{self.get_time()}] - Special file ({ends}) imported;\n  the files name is'
+			self.record_list.append(f'> [{get_time()}] - Special file ({ends}) imported;\n  the files name is'
 									f' {starts}\n   and the file was imported via {via}')
 		except AttributeError:
 			messagebox.showerror(self.title_struct + 'error', 'please enter a valid domain')
@@ -2975,7 +2974,7 @@ class Window(Tk):
 			entry_box.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
 
 	def save_outvariables(self):
-		self.data['fun_numbers'] = self.fun_n.get()
+		self.data['fun_numbers'] = self.fun_numbers.get()
 		self.data['auto_save'] = self.aus.get()
 
 	def advance_options(self):
@@ -3019,7 +3018,6 @@ class Window(Tk):
 		'''
 
 		def custom_binding(mode):
-			'''+ check id all the binding here go by the window (and not EgonTE and stuff like that) + test'''
 			b_values = self.bindings_dict[mode]
 			if self.binding_work[mode].get():
 				self.binds(mode=mode)
@@ -3053,9 +3051,9 @@ class Window(Tk):
 			self.data['cursor'] = cursor
 
 			if cursor == 'tcross':
-				self.cc.set('tcross')
+				self.custom_cursor_v.set('tcross')
 			elif cursor == 'xterm':
-				self.cc.set('xterm')
+				self.custom_cursor_v.set('xterm')
 
 			try:
 				sort_input.config(cursor=cursor)
@@ -3065,7 +3063,7 @@ class Window(Tk):
 				pass
 			self.change_button_color('cursors', cursor)
 			self.predefined_cursor = cursor
-			self.record_list.append(f'> [{self.get_time()}] - Cursor changed to {cursor}')
+			self.record_list.append(f'> [{get_time()}] - Cursor changed to {cursor}')
 
 		def hide_(bar: str):
 			if bar == 'statusbar':
@@ -3107,7 +3105,7 @@ class Window(Tk):
 				self.cs.set('clam')
 			self.predefined_style = style_
 			self.data['style'] = style_
-			self.record_list.append(f'> [{self.get_time()}] - Style changed to {style_}')
+			self.record_list.append(f'> [{get_time()}] - Style changed to {style_}')
 
 		def change_relief(relief_: str):
 			self.EgonTE.config(relief=relief_)
@@ -3120,13 +3118,13 @@ class Window(Tk):
 			self.change_button_color('relief', relief_)
 			self.predefined_relief = relief_
 			self.data['relief'] = relief_
-			self.record_list.append(f'> [{self.get_time()}] - Relief changed to {relief_}')
+			self.record_list.append(f'> [{get_time()}] - Relief changed to {relief_}')
 
 		def change_transparency(event=False):
 			tranc = int(transparency_config.get()) / 100
 			self.attributes('-alpha', tranc)
 			self.data['transparency'] = tranc
-			self.record_list.append(f'> [{self.get_time()}] - Transparency changed to {tranc}')
+			self.record_list.append(f'> [{get_time()}] - Transparency changed to {tranc}')
 
 		def change_lof():
 			if self.lf.get():
@@ -3186,9 +3184,9 @@ class Window(Tk):
 				self.bars_active.set(True)
 				self.show_statusbar.set(True)
 				self.show_toolbar.set(True)
-				self.ww.set(True)
+				self.word_wrap.set(True)
 				self.aus.set(True)
-				self.rm.set(False)
+				self.reader_mode_v.set(False)
 				self.predefined_cursor = 'xterm'
 				self.predefined_style = 'clam'
 				self.predefined_relief = 'ridge'
@@ -3197,25 +3195,25 @@ class Window(Tk):
 		def stt_key(event=False):
 			self.stt_lang_value = sr_supported_langs[self.stt_chosen_lang.get()]
 			self.record_list.append(
-				f'> [{self.get_time()}] - Speech to text language changed to: {self.stt_lang_value}')
+				f'> [{get_time()}] - Speech to text language changed to: {self.stt_lang_value}')
 
 		def autosave_changes():
 			if self.autosave_by_p.get():
 				self.EgonTE.bind('<KeyRelease>', self.auto_save_press)
 				self.record_list.append(
-					f'> [{self.get_time()}] - AutoSave method Added: save by pressing')
+					f'> [{get_time()}] - AutoSave method Added: save by pressing')
 			else:
 				self.EgonTE.unbind('<KeyRelease>', self.auto_save_press)
 				self.record_list.append(
-					f'> [{self.get_time()}] - AutoSave method Removed: save by pressing')
+					f'> [{get_time()}] - AutoSave method Removed: save by pressing')
 
 			if self.autosave_by_t.get():
 				self.record_list.append(
-					f'> [{self.get_time()}] - AutoSave method Added: save by waiting 30 seconds')
+					f'> [{get_time()}] - AutoSave method Added: save by waiting 30 seconds')
 
 			else:
 				self.record_list.append(
-					f'> [{self.get_time()}] - AutoSave method Removed: save by waiting 30 seconds')
+					f'> [{get_time()}] - AutoSave method Removed: save by waiting 30 seconds')
 
 		# default values for the check buttons
 		self.def_val1 = IntVar()
@@ -3257,6 +3255,15 @@ class Window(Tk):
 							fg=self.dynamic_text)
 
 		'''+ shorten'''
+
+		'''
+		self.opt_buttons = {'clam' : change_style, 'classic' : change_style, 'vista' : change_style,
+							'flat' : change_relief, 'ridge' : change_relief, 'groove': change_relief}
+
+		for name, function in self.opt_buttons.values():
+			b = Button(styles_frame, text=name, command=lambda: function(name), width=button_width,
+				   bg=self.dynamic_button, fg=self.dynamic_text)
+		'''
 
 		self.style_clam = Button(styles_frame, text='clam', command=lambda: change_style('clam'), width=button_width,
 								 bg=self.dynamic_button, fg=self.dynamic_text)
@@ -3322,6 +3329,11 @@ class Window(Tk):
 								 command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
 		by_press_rb = Checkbutton(auto_save_frame, text='By pressing', variable=self.autosave_by_p,
 								  command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
+
+		indent_title = Label(functional_frame, text='indent method (virtual keyboard)', font=font_)
+		indent_frame = Frame(functional_frame)
+		indent_tab = Radiobutton(indent_frame, text='Tab', variable=self.indent_method, value='tab')
+		indent_space = Radiobutton(indent_frame, text='Space', variable=self.indent_method, value='space')
 
 		state_title = Label(bindings_frame, text='State of shortcuts', font=font_, bg=self.dynamic_overall,
 							fg=self.dynamic_text)
@@ -3409,13 +3421,15 @@ class Window(Tk):
 		# functional widgets
 		pack_functional = (
 			hide_title, bar_frame, stt_title, stt_lang, file_opt_title, last_file_checkbox, usage_report_checkbox
-			, title_other, check_v_checkbox, reset_button, tt_checkbox, auto_save_title, auto_save_frame)
+			, title_other, check_v_checkbox, reset_button, tt_checkbox, auto_save_title, auto_save_frame, indent_title, indent_frame)
 		for widget in pack_functional:
 			widget.pack()
 		filebar_check.grid(row=1, column=0)
 		statusbar_check.grid(row=1, column=2)
 		by_time_rb.grid(row=0, column=0)
 		by_press_rb.grid(row=0, column=2)
+		indent_tab.grid(row=0, column=0)
+		indent_space.grid(row=0, column=2)
 
 		# binding widgets + other windows options
 		pack_binding = [state_title, file_actions_check, typefaces_action_check, edit_functions_check,
@@ -3473,7 +3487,7 @@ class Window(Tk):
 		opt_sizes = self.opt_root.winfo_width(), self.opt_root.winfo_width()
 		self.limit_list.append([self.opt_root, opt_sizes])
 
-		self.record_list.append(f'> [{self.get_time()}] - advanced option window opened')
+		self.record_list.append(f'> [{get_time()}] - advanced option window opened')
 
 	def change_button_color(self, button_family, button):
 		'''
@@ -3488,11 +3502,11 @@ class Window(Tk):
 		if self.op_active:
 			self.determine_highlight()
 			if button_family == 'cursors':
-				self.last_c = [button_family, button]
+				self.last_cursor = [button_family, button]
 				for adv_cursor_b in self.adv_cursor_bs:
 					adv_cursor_b.config(bg=self._background, fg=self.tc)
 			elif button_family == 'styles':
-				self.last_s = [button_family, button]
+				self.last_style = [button_family, button]
 				for adv_style_b in self.adv_style_bs:
 					adv_style_b.config(bg=self._background, fg=self.tc)
 			elif button_family == 'relief':
@@ -3819,15 +3833,13 @@ class Window(Tk):
 
 		else:
 			par_root.title(self.title_struct + 'dictionary')
-			self.record_list.append(f'> [{self.get_time()}] - Dictionary tool window opened')
+			self.record_list.append(f'> [{get_time()}] - Dictionary tool window opened')
 
 	def virtual_keyboard(self):
 		'''
 		virtual keyboard tool, that have most of the important functionalities:
 		tab, symbols, caps, numbers, and english characters in the qwert organization
 		'''
-
-		'''+ new newline mode soon'''
 
 		def close_vk():
 			self.opened_windows.remove(keyboard_root)
@@ -3860,7 +3872,10 @@ class Window(Tk):
 			self.EgonTE.insert(self.get_pos(), expr)
 
 		def tab():
-			exp = '    '
+			if self.indent_method.get() == 'space':
+				exp = '    '
+			else:
+				exp = '		'
 			self.EgonTE.insert(self.get_pos(), exp)
 
 		def modes(mode: str):
@@ -3932,49 +3947,48 @@ class Window(Tk):
 		Q, W, E, R, T, Y, U, I, O, P, A, S, D, F, G, H, J, K, L, Z, X, C, V, B, N, M = \
 			[Button(btn_frame, text=button, width=b_width, command=lambda: press(button)) for button in characters_str]
 
-		cur = Button(btn_frame, text='{', width=b_width, command=lambda: press('{'))
-		cur_c = Button(btn_frame, text='}', width=b_width, command=lambda: press('}'))
-		back_slash = Button(btn_frame, text='\\', width=b_width, command=lambda: press('\\'))
-		semi_co = Button(btn_frame, text=';', width=b_width, command=lambda: press(';'))
-		d_colon = Button(btn_frame, text='"', width=b_width, command=lambda: press('"'))
-		left = Button(btn_frame, text='<', width=b_width, command=lambda: press('<'))
-		right = Button(btn_frame, text='>', width=b_width, command=lambda: press('>'))
-		slas = Button(btn_frame, text='/', width=b_width, command=lambda: press('/'))
-		q_mark = Button(btn_frame, text='?', width=b_width, command=lambda: press('?'))
-		coma = Button(btn_frame, text=',', width=b_width, command=lambda: press(','))
-		dot = Button(btn_frame, text='.', width=b_width, command=lambda: press('.'))
+
+		sym_list = '{', '}', '\\', ';', '"', '<', '>', '/', '?', ',', '.'
+		cur, cur_c, back_slash, semi_co, d_colon, less_sign, more_sign, slas, q_mark, coma, dot = \
+			[Button(btn_frame, text=button, width=b_width, command=lambda: press(button)) for button in sym_list]
+
 		space = Button(extras_frame, text='Space', width=b_width, command=lambda: press(' '))
-		open_b = Button(extras_frame, text='(', width=b_width, command=lambda: press('('))
-		close_b = Button(extras_frame, text=')', width=b_width, command=lambda: press(')'))
-		tab_b = Button(extras_frame, text='Tab', width=b_width, command=tab)
 		caps = Button(extras_frame, text='Caps', width=b_width, command=lambda: modes('lower'))
 		sym_button = Button(extras_frame, text='1!*', width=b_width, command=lambda: modes('sym'))
 		sym_button_2 = Button(extras_frame, text='ƒ√€', width=b_width, command=lambda: modes('sym2'))
+		new_line_b = Button(extras_frame, text='Enter', width=b_width, command=lambda: press('\n'))
+		open_b = Button(extras_frame, text='(', width=b_width, command=lambda: press('('))
+		close_b = Button(extras_frame, text=')', width=b_width, command=lambda: press(')'))
+
+		tab_b = Button(extras_frame, text='Tab', width=b_width, command=tab)
+
+
 
 		# placing buttons
 		grid_list_1 = (Q, W, E, R, T, Y, U, I, O, P, cur, cur_c)
 		grid_list_2 = (A, S, D, F, G, H, J, K, L, semi_co, d_colon, dot)
-		grid_list_3 = (Z, X, C, V, B, N, M, left, right, slas, q_mark, coma)
+		grid_list_3 = (Z, X, C, V, B, N, M, less_sign, more_sign, slas, q_mark, coma)
 
 		quick_grid(grid_list_1, 1)
 		back_slash.grid(row=1, column=10, ipady=10)
 		quick_grid(grid_list_2, 2)
 		quick_grid(grid_list_3, 3)
 
-		space.grid(row=0, column=1, ipadx=130, ipady=10)
-		open_b.grid(row=0, column=2, ipady=10)
-		close_b.grid(row=0, column=3, ipady=10)
-		tab_b.grid(row=0, column=4, ipady=10)
-		caps.grid(row=0, column=5, ipady=10)
-		sym_button.grid(row=0, column=6, ipady=10)
-		sym_button_2.grid(row=0, column=7, ipady=10)
+		space.grid(row=0, column=1, ipadx=90, ipady=10)
+		new_line_b.grid(row=0, column=2, ipadx=14, ipady=10)
+		open_b.grid(row=0, column=3, ipady=10)
+		close_b.grid(row=0, column=4, ipady=10)
+		tab_b.grid(row=0, column=5, ipady=10)
+		caps.grid(row=0, column=6, ipady=10)
+		sym_button.grid(row=0, column=7, ipady=10)
+		sym_button_2.grid(row=0, column=8, ipady=10)
 
-		self.record_list.append(f'> [{self.get_time()}] - Virtual Keyboard tool window opened')
+		self.record_list.append(f'> [{get_time()}] - Virtual Keyboard tool window opened')
 
 		characters = A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
 		characters_by_order = Q, W, E, R, T, Y, U, I, O, P, A, S, D, F, G, H, J, K, L, Z, X, C, V, B, N, M
-		symbols = semi_co, cur, cur_c, back_slash, d_colon, left, right, slas, q_mark, coma, dot, open_b, close_b
-		functional_buttons = space, tab_b, caps, sym_button, sym_button_2
+		symbols = semi_co, cur, cur_c, back_slash, d_colon, less_sign, more_sign, slas, q_mark, coma, dot, open_b, close_b
+		functional_buttons = space, new_line_b, tab_b, caps, sym_button, sym_button_2
 		self.all_vk_buttons = characters_by_order + symbols + functional_buttons
 
 		for vk_btn in self.all_vk_buttons:
@@ -4027,7 +4041,7 @@ class Window(Tk):
 		if active:
 			if self.aed.get() or via_settings:
 				fail_msg = ''
-				lang = self.get_k_lang()[1]
+				lang = get_k_lang()[1]
 				if not lang:
 					lang = 'en'
 
@@ -4742,14 +4756,11 @@ class Window(Tk):
 
 
 	def handwriting(self):
-
-		'''+
-		draw app upgrades - move_paint function with settings, maybe
-		'''
-
 		'''
 		the handwriting tool allows you to draw on a pretty rich canvas (with most basic canvas option except shapes
 		and colors), and allows you to convert to text, upload and save the thing that you draw
+
+		more options and configuration will hopefully come soon
 		'''
 		global previous_point, current_point
 		previous_point = [0, 0]
@@ -4815,7 +4826,10 @@ class Window(Tk):
 					for line in range(1, loop_range + 1):
 						ind = line * -1
 						last_group.append(items[ind])
-						'''+ after spamming IndexError: tuple index out of range'''
+						'''+ after spamming IndexError: tuple index out of range - probably fixed'''
+						'''+ using eraser is ruining the list, options
+						 1. make undo also work on eraser
+						 2. find a method that will make the remaining of the line to be removed'''
 						self.draw_canvas.delete(items[ind])
 					# self.canvas.itemconfig(items[ind], state='hidden')
 
@@ -4827,12 +4841,27 @@ class Window(Tk):
 					del self.line_groups[-1]
 
 
-		def move(key : str, event=None):
-			move_x, move_y = self.move_dict[key]
-			for l in lines_list:
-				self.draw_canvas.move(l, move_x, move_y)
-			for img in images_list:
-				self.draw_canvas.move(img, move_x, move_y)
+		def move(key, event=None):
+			move_x, move_y = None, None
+			# move paint a bit depending on the arrow keys
+			# indicator for keys method
+			if isinstance(key, str):
+				move_x, move_y = self.move_dict[key]
+				print(move_x, move_y)
+			else:
+				if key.type == EventType.ButtonPress:
+					# for another function with the same bind
+					self.mp_x, self.mp_y = key.x, key.y
+				else:
+					# formula for moving the drawing relative to the mouse pos (at the start and at the end)
+					move_x, move_y = int((self.draw_x - self.mp_x) // 1), int(
+						(self.draw_y - self.mp_y) // 1)
+
+			if move_x or move_y:
+				for l in lines_list:
+					self.draw_canvas.move(l, move_x, move_y)
+				for img in images_list:
+					self.draw_canvas.move(img, move_x, move_y)
 
 		def cords(event):
 			self.draw_x, self.draw_y = event.x, event.y
@@ -4944,11 +4973,6 @@ class Window(Tk):
 				self.convert_output.insert('1.0', text)
 				self.convert_output.configure(relief='flat', state=DISABLED, height=5)
 				self.convert_output.pack()
-
-		def move_image(event):
-			x, y = self.draw_x, self.draw_y
-			if None:
-				pass
 
 		def cord_opt():
 
@@ -5087,14 +5111,15 @@ class Window(Tk):
 		hw_root.bind('<Up>', lambda e: move(key='up'))
 		hw_root.bind('<Down>', lambda e: move(key='down'))
 		hw_root.bind('<Motion>', cords)
-		hw_root.bind('<B2-Motion>', move_image)
 		hw_root.bind('<Control-Key-z>', lambda e: self.undo())
 		self.pencil_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
 		self.eraser_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
 		self.draw_canvas.bind('<MouseWheel>', sizes_shortcuts_hw)
+		self.draw_canvas.bind('<ButtonPress-3>', move)
+		self.draw_canvas.bind('<ButtonRelease-3>', move)
 		hw_root.protocol('WM_DELETE_WINDOW', quit_hw)
 		# existing file to writing
-		self.record_list.append(f'> [{self.get_time()}] - Hand writing tool window opened')
+		self.record_list.append(f'> [{get_time()}] - Hand writing tool window opened')
 
 	def natural_language_process(self, function: str):
 		'''
@@ -5334,7 +5359,7 @@ class Window(Tk):
 
 	def match_saved_settings(self):
 
-		self.rm.set(self.data['reader_mode'])
+		self.reader_mode_v.set(self.data['reader_mode'])
 		self.bars_active.set(self.data['status_bar'] and self.data['file_bar'])
 		self.show_statusbar.set(self.bars_active.get())
 		self.status_ = self.data['status_bar']
@@ -5344,16 +5369,16 @@ class Window(Tk):
 		self.tt_sc.set(self.data['text_twisters'])
 		self.nm_palette.set(self.data['night_type'])
 		self.cs.set(self.data['style'])
-		self.cc.set(self.data['cursor'])
-		self.ww.set(self.data['word_wrap'])
+		self.custom_cursor_v.set(self.data['cursor'])
+		self.word_wrap.set(self.data['word_wrap'])
 		self.aus.set(self.data['auto_save'])
 		self.ccc.set(self.data['preview_cc'])
 		self.awc.set(self.data['window_c_warning'])
 		self.adw.set(self.data['allow_duplicate'])
-		self.fun_n.set(self.data['fun_numbers'])
+		self.fun_numbers.set(self.data['fun_numbers'])
 		self.us_rp.set(self.data['usage_report'])
 		self.check_v.set(self.data['check_version'])
-		self.predefined_cursor = self.cc.get()
+		self.predefined_cursor = self.custom_cursor_v.get()
 		self.predefined_style = self.cs.get()
 		self.predefined_relief = self.data['relief']
 		if self.lf.get():
@@ -5372,11 +5397,7 @@ class Window(Tk):
 		result_box = ''
 
 		def enter():
-			self.ascii_dict, self.ascii_alph, newline_n = characters_dict[self.chosen_tdecorator]
-			# if self.chosen_tdecorator == 'bash':
-			#     sp = '&&&&&&\n&&&&&&\n&&&&&&\n&&&&&&\n\n'
-			#     dot = '----..----\n\n'
-
+			self.ascii_dict, self.ascii_alph, newline_n = characters_dict[self.chosen_text_decorator]
 			alphabet = 'abcdefghijklmnopqrstuvwxyz 0123456789?!,.-+'
 			decorator_input = text_box.get('1.0', END).lower()
 
@@ -5462,10 +5483,10 @@ class Window(Tk):
 				messagebox.showerror('EgonTE', 'text box is empty')
 
 		def change_style(s: str):
-			self.chosen_tdecorator = s
+			self.chosen_text_decorator = s
 			for style in td_styles_dict.values():
 				style.configure(bg='SystemButtonFace')
-			td_styles_dict[self.chosen_tdecorator].configure(bg='light grey')
+			td_styles_dict[self.chosen_text_decorator].configure(bg='light grey')
 
 		def cft():
 			content = self.EgonTE.get('1.0', 'end')
@@ -5570,7 +5591,6 @@ class Window(Tk):
 		# saving the content from the text box
 		data_1 = self.EgonTE.get('1.0', 'end')
 		# getting a file name to merge the content with another file
-		'''+ global filedialog function that use return'''
 		file_name = filedialog.askopenfilename(title='Open file to merge',
 											   filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html')))
 
@@ -5968,7 +5988,6 @@ class Window(Tk):
 
 			# title_gpt = Label(gpt_root, bg=BG_COLOR, fg=TEXT_COLOR, text='ChatGPT', font='Helvetica 13 bold',
 			#                  pady=10, width=20, height=1)
-			'''+ use text function'''
 			# text_frame, self.GPT_txt, scroll = self.make_rich_textbox(gpt_root, font=FONT, size=[60, 60])
 			self.GPT_txt = Text(text_frame, bg=BG_COLOR, fg=TEXT_COLOR, font=FONT, width=60, yscrollcommand=scroll.set,
 					   undo=True, wrap=WORD, cursor=self.predefined_cursor, state=DISABLED)
@@ -6041,18 +6060,17 @@ class Window(Tk):
 		this function will try to return you the result of a simple DallE prompt with some options
 		note: this function wasnt tested properly so its probably isnt good
 		'''
-		PROMPT = 'An eco-friendly computer from the 90s in the style of vaporwave'
+		self.dalle_prompt = 'An eco-friendly computer from the 90s in the style of vaporwave'
 		im_size_var = StringVar()
 		im_size_var.set('256x256')
 
 		def imagine():
-			global PROMPT
 			if prompt_entry.get():
-				PROMPT = prompt_entry.get()
+				self.dalle_prompt = prompt_entry.get()
 			try:
 				image_resp = self.api_client.images.generate(
 					model='dall-e-3', size=im_size_var.get(),
-					prompt=PROMPT,
+					prompt=self.dalle_prompt,
 				)
 				# Grab the URL out of the response
 				image_url = image_resp.data[0].url
@@ -6066,8 +6084,6 @@ class Window(Tk):
 			except openai.RateLimitError:
 				messagebox.showerror('OpenAI',
 									 'You exceeded your current quota, please check your plan and billing details')
-			label.grid(row=5)
-			'''+ label mystery'''
 
 		def ui():
 			global prompt_entry, dallE_root
@@ -6100,7 +6116,7 @@ class Window(Tk):
 			size_2048.grid(row=5, column=2)
 			imagine_button.grid(row=6, column=1, pady=4)
 
-			self.record_list.append(f'> [{self.get_time()}] - Dall-E tool window opened')
+			self.record_list.append(f'> [{get_time()}] - Dall-E tool window opened')
 
 		if not self.openai_code:
 			self.key_page(ui)
@@ -6126,7 +6142,7 @@ class Window(Tk):
 					end_entry.insert(END, 'Azure endpoint')
 					dep_entry.insert(END, 'Azure deployment name')
 					self.end_entry_state = True
-				get_key.bind('<Button-1>', lambda e: self.ex_links(link=
+				get_key.bind('<Button-1>', lambda e: ex_links(link=
 					'https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython&pivots=programming-language-python'))
 
 			elif self.service_type.get() == 1:
@@ -6134,7 +6150,7 @@ class Window(Tk):
 					end_entry.destroy()
 					dep_entry.destroy()
 					self.end_entry_state = False
-				get_key.bind('<Button-1>', lambda e: self.ex_links(link='https://platform.openai.com/account/api-keys'))
+				get_key.bind('<Button-1>', lambda e: ex_links(link='https://platform.openai.com/account/api-keys'))
 
 		def enter():
 			try:
@@ -6193,9 +6209,9 @@ class Window(Tk):
 		get_key.grid(row=6)
 		enter_button.grid(row=7)
 
-		get_key.bind('<Button-1>', lambda e: self.ex_links(link='https://platform.openai.com/account/api-keys'))
+		get_key.bind('<Button-1>', lambda e: ex_links(link='https://platform.openai.com/account/api-keys'))
 
-		self.record_list.append(f'> [{self.get_time()}] - OpenAI API login page opened')
+		self.record_list.append(f'> [{get_time()}] - OpenAI API login page opened')
 
 		login_root.mainloop()
 
@@ -6576,9 +6592,9 @@ class Window(Tk):
 				self.git_menu.add_command(label='Add', command=lambda: self.gitp('add'))
 				self.git_menu.add_separator()
 				self.git_menu.add_command(label='Clone', state=gstate, command=lambda: self.gitp('clone'))
-				self.git_menu.add_command(label='Commit data', state=gstate, command=lambda: self.gitp('c.d'))
+				self.git_menu.add_command(label='Commit data', state=gstate, command=lambda: self.gitp('commit data'))
 				self.git_menu.add_command(label='Repository Information', state=gstate,
-										  command=lambda: self.gitp('r.i'))
+										  command=lambda: self.gitp('repo info'))
 				self.git_menu.add_separator()
 				self.git_menu.add_command(label='Custom command', command=lambda: self.gitp('execute'))
 
@@ -6617,34 +6633,6 @@ class Window(Tk):
 				self.options_menu.add_checkbutton(label='Save by running', variable=self.sar)
 
 			# self.sta.set(not(self.sta.get()))
-
-	@staticmethod
-	def get_k_lang():
-		'''
-		this function gets the keyboard language in use by the current active window process.
-		'''
-		user32 = WinDLL('user32', use_last_error=True)
-
-		# Get the current active window handle
-		handle = user32.GetForegroundWindow()
-
-		# Get the thread id from that window handle
-		threadid = user32.GetWindowThreadProcessId(handle, 0)
-
-		# Get the keyboard layout id from the threadid
-		layout_id = user32.GetKeyboardLayout(threadid)
-
-		# Extract the keyboard language id from the keyboard layout id
-		language_id = layout_id & (2 ** 16 - 1)
-
-		# Convert the keyboard language id from decimal to hexadecimal
-		language_id_hex = hex(language_id)
-
-		# Check if the hex value is in the dictionary.
-		if language_id_hex in languages.keys():
-			return languages[language_id_hex]
-		else:
-			return ['not found', False]
 
 	def emoticons(self, reverse : bool):
 		content = self.EgonTE.get('1.0', 'end').split(' ')
@@ -6889,7 +6877,7 @@ class Window(Tk):
 		'''
 
 		git_ui = False
-		if (action == 'r.i') or (action == 'c.d'):
+		if (action == 'repo info') or (action == 'commit data'):
 			git_ui = True
 			git_root = Toplevel()
 			self.make_tm(git_root)
@@ -6897,7 +6885,7 @@ class Window(Tk):
 			title = Label(git_root, text='', font='arial 14 bold')
 			(text_frame, git_text, text_scroll) = self.make_rich_textbox(git_root, place=False)
 
-		if not (action == 'c.d' and action == 'clone'):
+		if not (action == 'commit data' and action == 'clone'):
 			# repo = simpledialog.askstring('Git', 'enter the repo link')
 			repo = filedialog.askopenfilename(title='Open repo')
 			if repo:
@@ -6908,7 +6896,7 @@ class Window(Tk):
 
 		# actions that need the repo variable
 		if repo:
-			if action == 'r.i':
+			if action == 'repo info':
 				title.configure(text='Respiratory information')
 				status = repo.git.status()
 				repo_description = repo.description
@@ -6922,8 +6910,7 @@ class Window(Tk):
 					remote_dict[remote] = remote.url
 
 				for remote, url in remote_dict.items():
-					'''+ insert insert'''
-					insert.insert('end', f'{remote} - {url}\n')
+					git_text.insert('end', f'{remote} - {url}\n')
 
 				last_commit = str(repo.head.commit.hexsha)
 
@@ -6960,15 +6947,13 @@ class Window(Tk):
 			link = simpledialog.askstring('EgonTE', 'please enter the repo\'s link')
 			file_location = filedialog.asksaveasfilename(title='Where do you want to save the repo?')
 			git.Repo.clone_from(link, file_location)
-		elif action == 'c.d':
+		elif action == 'commit data':
 			title.configure(text='Commit data')
 			commit = str(repo.head.commit.hexsha)
 			by = f'\"{commit.summary}\" by {commit.author.name} ({commit.author.email})'
 			date_time = str(commit.authored_datetime)
 
-
-			'''+ count parameter investigation'''
-			count_size = str(f'count: {commit.count()} and size: {commit.size}')
+			count_size = str(f'count: {len(str(commit))} and size: {commit.size}')
 
 			git_text.insert('1.0',
 							f'Commit:\n{commit}\nSummery & author:\n{by}\nDate/time:\n{date_time}\nCount & size:\n{count_size}')
@@ -7190,7 +7175,7 @@ class Window(Tk):
 		show_image = Button(buttons_frame, text='Show image', command=show_image, bd=1, bg=self.dynamic_bg,
 							fg=self.dynamic_text)
 
-		self.current_images_list.bind('<<ListboxSelect>>', lambda e: self.fill_by_click(self.self.image_entry, e, self.current_images_list))
+		self.current_images_list.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.self.image_entry, e, self.current_images_list))
 		self.image_entry.bind('<KeyRelease>', keyrelease_events)
 
 		title.grid(row=0, column=1, pady=5)
@@ -7225,7 +7210,7 @@ class Window(Tk):
 				if chosen_ext:
 					old_name = self.file_name
 					path_object = Path(old_name)
-					if self.dfpe.get():
+					if self.del_previous_file.get():
 						self.delete_file(custom=old_name)
 					self.file_name = path_object.with_suffix('.' + chosen_ext)
 					self.open_status_name = self.file_name
@@ -7242,7 +7227,7 @@ class Window(Tk):
 		cfui_combo = ttk.Combobox(cfui, width=10, textvariable=self.change_text_var)
 		cfui_combo['values'] = 'txt', 'html', 'log', 'asc', 'py'
 		delete_last_title = Label(cfui, text='Delete file', font='arial 10 underline')
-		delete_last_combo = Checkbutton(cfui, text='with previous extension', variable=self.dfpe)
+		delete_last_combo = Checkbutton(cfui, text='with previous extension', variable=self.del_previous_file)
 		change = Button(cfui, text='Change type', font='arial 10 bold', command=change_file_extension)
 
 		title.pack(padx=50)
@@ -7505,7 +7490,7 @@ class Window(Tk):
 						  'sort by characters': self.sort_by_characters, 'sort by words': self.sort_by_words,
 						  'insert images': self.insert_image
 						  }
-		tool_functions = {'translate': self.translate, 'current datetime': self.get_time,
+		tool_functions = {'translate': self.translate, 'current datetime': get_time,
 						  'random numbers': self.ins_random, 'random names': self.ins_random_name,
 						  'url shorter': self.url,
 						  'generate sequence': self.generate, 'search online': self.search_www, 'sort input': self.sort,
@@ -7544,7 +7529,7 @@ class Window(Tk):
 						   }
 		other_functions = {'advance options': self.call_settings, 'help': lambda: self.info_page('help'),
 						   'patch notes': lambda: self.info_page('patch_notes')}
-		links_functions = {'github link': lambda: self.ex_links('g'), 'discord link': lambda: self.ex_links('d')}
+		links_functions = {'github link': lambda: ex_links('g'), 'discord link': lambda: ex_links('d')}
 
 		make_c_dict(file_functions, edit_functions, tool_functions, nlp_functions, color_functions
 					, other_functions, links_functions)
@@ -7611,7 +7596,7 @@ class Window(Tk):
 		list_scroll.pack(side=RIGHT, fill=Y, expand=True)
 		self.functions_list.pack(fill=BOTH, expand=True)
 
-		self.functions_list.bind('<<ListboxSelect>>', lambda e: self.fill_by_click(self.find_function, e, self.functions_list))
+		self.functions_list.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.find_function, e, self.functions_list))
 		self.find_function.bind('<KeyRelease>', keyrelease_events)
 		modes_combobox.bind('<<ComboboxSelected>>', configure_modes)
 		configure_modes()
@@ -7650,7 +7635,7 @@ class Window(Tk):
 
 	def usage_report(self):
 		# gather information
-		current_time = self.get_time()
+		current_time = get_time()
 		current_usage_time = self.ut
 		# put in this file / inside this folder
 		dir_name = 'EgonTE-time-report'
@@ -7689,7 +7674,7 @@ class Window(Tk):
 		self.st_value = int(self.transparency_s.get()) / 100
 		for window in self.opened_windows:
 			window.attributes('-alpha', self.st_value)
-		self.record_list.append(f'> [{self.get_time()}] - Transparency of other windows changed to {self.st_value}')
+		self.record_list.append(f'> [{get_time()}] - Transparency of other windows changed to {self.st_value}')
 
 
 
