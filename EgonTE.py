@@ -1,11 +1,15 @@
 # default libraries
 from dependencies.large_variables import *
 from dependencies.universal_functions import *
+from UI import ui_builders
+from pop_ups.handwriting_popup import open_handwriting
+from UI.library_installer_ui import show_library_installer
 from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
 from tkinter import *
 import tkinter.ttk as ttk
 import subprocess
 from sys import exit as exit_
+import sys
 from sys import executable, argv
 import ssl
 from socket import gethostname
@@ -14,7 +18,7 @@ from itertools import islice
 import os
 from random import choice, randint, random, shuffle
 import time
-from re import findall, sub
+from re import findall, sub, compile, IGNORECASE, escape
 from re import search as reSearch
 from re import split as reSplit
 from json import dump, load, loads
@@ -28,83 +32,41 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from importlib import util
 from pathlib import Path
+import queue
 
-def library_installer():
-	global lib_index, dw_fails
-	lib_index = 0
-	dw_fails = 0
+def library_installer(parent: Misc | None = None) -> dict:
+	"""
+	Top-level installer entry point.
+	- parent: optional Tk widget to parent the dialog; pass a window or frame if you have one.
+			  If None, the installer will create its own root (standalone mode).
+	Returns the result dict from show_library_installer.
+	"""
+	# Use a copy so we never mutate module-level lists
+	required = list(library_list)
+	optional = list(library_optional)
 
-	def restart_program():
+	# If no parent was provided, try to use the default Tk root if one exists.
+	# Otherwise the installer will create its own root window.
+	if parent is None:
 		try:
-			os.execv(argv[0], argv)
-		except:
-			os.execv(executable, [executable] + argv)
+			parent = _get_default_root()
+		except Exception:
+			parent = None
 
-	def install_req():
-		try:
-			spec = util.find_spec('sys')
-		except:
-			spec = True
-		if spec is not None:
-			global lib_index, dw_fails
+	return show_library_installer(
+		parent=parent if isinstance(parent, Misc) else None,
+		base_libraries=required,
+		optional_libraries=optional,
+		allow_upgrade_pip=True,
+		allow_optional=bool(optional),
+		title='ETE - Install Required',
+		# Normalization + checks (all data lives in large_variables.py)
+		alias_map=library_alias_map,
+		blocklist=library_blocklist,
+		pins=library_pins,
+		skip_installed=True,
+	)
 
-			end_msg.configure(text=f'Download in progress', fg='orange')
-			if opt_var.get():
-				library_list.extend(
-					['pytesseract', 'openai', 'python-polyglot', 'googletrans', 'cryptography', 'rsa'
-					'GitPython', 'emoticon',
-					 'pytesseract', 'youtube-transcript-api',
-					 'email', 'pyshorteners'])
-
-			if pip_var.get():
-				try:
-					subprocess.check_call([executable, 'python -m pip install --upgrade pip'])
-				except:
-					end_msg.configure(text=f'Failed to upgrade pip', fg='red')
-
-			try:
-				subprocess.check_output(['ffdl', 'install', '--add-path'])
-				for lib in library_list[lib_index::]:
-					reqs = subprocess.check_output([executable, '-m', 'pip', 'install', lib])
-					lib_index += 1
-					print(f'Installed {lib}')
-					end_msg.configure(text=f'Download {lib}', fg='orange')
-				# installed_packages = [r.decode().split('==')[0] for r in reqs.split()]
-				# print(installed this libraries:\n{installed_packages}')
-
-			except (ImportError, NameError, ModuleNotFoundError, subprocess.CalledProcessError) as e:
-				print(e)
-				dw_fails += 1
-				lib_index += 1
-				print('trying to continue with the next library')
-				install_req()
-
-			end_msg.configure(text=f'Download complete with {dw_fails} fails', fg='green')
-			install_button.configure(text='Restart program', command=restart_program)
-
-		else:
-			print('sys library is not defined')
-
-	install_root = Tk()
-	install_root.title('ETE - install required')
-	end_msg = Label(install_root, font='arial 8')
-	pip_var = BooleanVar()
-	opt_var = BooleanVar()
-	install_root.resizable(False, False)
-	title = Label(install_root, text='It\'s seems that some of the required libraries aren\'t installed',
-				  font='arial 10 underline')
-	install_options = Label(install_root, text='Additional Installations', font='arial 8 underline')
-	check_frame = Frame(install_options)
-	additional_libs = Checkbutton(check_frame, text='Optional libraries', variable=opt_var)
-	up_pip = Checkbutton(check_frame, text='Upgrade pip', variable=pip_var)
-	install_button = Button(install_root, text='Install', command=lambda: Thread(target=install_req).start())
-	quit_button = Button(install_root, text='Quit', command=lambda: install_root.quit())
-	lib_ins_list = (title, end_msg, install_options, check_frame, install_button, quit_button)
-	for widget in lib_ins_list:
-		widget.pack()
-	up_pip.grid(row=0, column=0)
-	additional_libs.grid(row=0, column=2)
-	install_root.mainloop()
 
 
 # required libraries that aren't by default
@@ -116,7 +78,7 @@ try:
 	from win32api import ShellExecute, GetShortPathName
 	from pyttsx3 import init as ttsx_init
 	import pyaudio  # imported to make speech_recognition work
-	from speech_recognition import Recognizer, Microphone, AudioFile  # install SpeechRecognition
+	from speech_recognition import Recognizer, Microphone, AudioFile, WaitTimeoutError # install SpeechRecognition
 	import webbrowser
 	import names
 	import urllib.request, urllib.error
@@ -247,6 +209,18 @@ except:
 	neo_tt = False
 	import tkinter.tix as tkt
 
+try:
+	from tkhtmlview import HTMLText, RenderHTML
+	html_infop = 'html'
+except:
+	html_infop = 'txt'
+
+try:
+	from docx.shared import Mm
+	from docxtpl import DocxTemplate, InlineImage
+except:
+	pass
+
 # window creation
 class Window(Tk):
 	def __init__(self):
@@ -263,23 +237,23 @@ class Window(Tk):
 		self.night_mode = BooleanVar()
 		self.custom_cursor_v = StringVar()
 		self.cs = StringVar()
-		self.word_wrap = BooleanVar()
+		self.word_wrap_v = BooleanVar()
 		self.reader_mode_v = BooleanVar()
-		self.aus = BooleanVar()
-		self.ccc = BooleanVar()
-		self.us_rp = BooleanVar()
-		self.check_v = BooleanVar()
-		self.check_v.set(True)
-		self.awc = BooleanVar()
-		self.awc.set(True)
+		self.auto_save_v = BooleanVar()
+		self.corrector_check_changes = BooleanVar()
+		self.usage_report_v = BooleanVar()
+		self.check_ver_v = BooleanVar()
+		self.check_ver_v.set(True)
+		self.win_count_warn = BooleanVar()
+		self.win_count_warn.set(True)
 		self.adw = BooleanVar()
 		self.fun_numbers = BooleanVar()
 		self.fun_numbers.set(True)
 		self.all_tm_v = BooleanVar()
 		self.status_ = True
 		self.file_ = True
-		self.lf = BooleanVar()
-		self.tt_sc = BooleanVar()
+		self.last_file_v = BooleanVar()
+		self.textwist_special_chars = BooleanVar()
 		self.nm_palette = StringVar()
 		# auto save methods
 		self.autosave_by_p = BooleanVar()
@@ -289,12 +263,12 @@ class Window(Tk):
 		variables of the program that doesn't save when you close the program
 		'''
 		# don't included in the saved settings
-		self.sta, self.aed = BooleanVar(), BooleanVar()
-		self.sta.set(True), self.aed.set(True)
+		self.sta, self.automatic_emojis_v = BooleanVar(), BooleanVar()
+		self.sta.set(True), self.automatic_emojis_v.set(True)
 		# dev variables
 		self.prefer_gpu, self.python_file, self.auto_clear_c, self.sar = BooleanVar(), '', BooleanVar(), BooleanVar()
-		self.dm = BooleanVar()
-		self.auto_clear_c.set(True), self.dm.set(False)
+		self.dev_mode = BooleanVar()
+		self.auto_clear_c.set(True), self.dev_mode.set(False)
 		# basic file variables
 		self.file_name, self.open_status_name = '', ''
 		self.text_changed = False
@@ -304,7 +278,7 @@ class Window(Tk):
 		# handwriting
 		self.cimage_from = ''
 		# search/find text variables
-		self.aff = BooleanVar()
+		self.auto_focus_v = BooleanVar()
 		self.highlight_search_c = 'blue', 'white'
 		# bottom frame
 		self.status_var = StringVar()
@@ -350,13 +324,15 @@ class Window(Tk):
 		self.del_previous_file = BooleanVar()
 		self.chosen_text_decorator = 'bash'
 		self.fnt_sz_var = IntVar()
-		self.aul = False
 		self.tab_type = 'spaces'
 		self.capital_opt, self.by_characters = BooleanVar(), BooleanVar()
 		self.capital_opt.set(True), self.by_characters.set(True)
 		self.indent_method = StringVar()
 		self.indent_method.set('tab')
 		self.find_tool_searched = BooleanVar()
+		self.menu_pop = BooleanVar()
+		self.content_preference_v = StringVar()
+		self.content_preference_v.set('html')
 		# opening the saved settings early can make us create some widgets with the settings initially
 		try:
 			self.default_needed = self.saved_settings()
@@ -373,8 +349,8 @@ class Window(Tk):
 			if self.default_needed:
 				self.bars_active.set(True), self.show_statusbar.set(True), self.show_toolbar.set(True)
 				self.custom_cursor_v.set('xterm'), self.cs.set('clam')
-				self.word_wrap.set(True)
-				self.aus.set(True)
+				self.word_wrap_v.set(True)
+				self.auto_save_v.set(True)
 				self.nm_palette.set('black')
 				# pre-defined variables for the options of the program
 				self.predefined_cursor, self.predefined_style, self.predefined_relief = 'xterm', 'clam', 'ridge'
@@ -395,7 +371,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13 p4'
+		self.ver = '1.13'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -470,6 +446,11 @@ class Window(Tk):
 		self.app_menu = Menu(frame)
 		self.config(menu=self.app_menu)
 
+		self._popup = ui_builders.UIBuilders(self)
+		self.make_pop_ups_window = self._popup.make_pop_ups_window
+
+		self.load_function_links()
+		self.menu_assests()
 		self.create_menus(initial=True)
 
 		# add status bar
@@ -484,7 +465,7 @@ class Window(Tk):
 		# checks if the last open file option is on and there is a file to insert when opening the program
 		insert_lf = False
 		if self.data['open_last_file']:
-			self.lf.set(True)
+			self.last_file_v.set(True)
 			if isinstance(self.data['open_last_file'], str):
 				if os.path.exists(self.data['open_last_file']):
 					self.open_file(event='initial')
@@ -505,7 +486,7 @@ class Window(Tk):
 						(self.ALIGN_CENTER_IMAGE, lambda: self.align_text('center')),
 						(self.ALIGN_RIGHT_IMAGE, lambda: self.align_text('right')),
 						(self.TTS_IMAGE, lambda: Thread(target=self.text_to_speech).start()),
-						(self.STT_IMAGE, lambda: Thread(target=self.speech_to_text).start()),
+						(self.STT_IMAGE, lambda: self.after(0, self.start_speech_to_text)),
 						(self.KEY_IMAGE, lambda: Thread(target=self.virtual_keyboard()).start()),
 						(self.DTT_IMAGE, lambda: self.open_windows_control(self.handwriting)),
 						(self.CALC_IMAGE, lambda: self.open_windows_control(self.ins_calc)))
@@ -567,12 +548,13 @@ class Window(Tk):
 		self.place_toolt()
 		self.binds(mode='initial')
 		self.stt_time = get_time()
+		self._init_autol()
 		# Thread(target=self.record_logs, daemon=False).start()
 		# self.record_logs()
 		self.singular_colors_d = {'background': [self.EgonTE, 'bg'], 'text': [self.EgonTE, 'fg'],
 								  'menus': [self.menus_components, 'bg-fg'],
 								  'buttons': [self.toolbar_components, 'bg'], 'highlight': [self.EgonTE, 'selectbackground']}
-		if self.check_v.get():
+		if self.check_ver_v.get():
 			Thread(target=self.check_version, daemon=True).start()
 		if RA:
 			self.right_align_language_support()
@@ -622,315 +604,200 @@ class Window(Tk):
 		except (urllib.error.URLError, AttributeError) as e:
 			print(e)
 
-	def create_menus(self, initial):
+
+	def load_function_links(self):
+		self.file_functions = {'new file|(ctrl+n)': self.new_file, 'open file|(ctrl+o)': self.open_file,
+							   'save|(ctrl+s)': self.save,
+							   'save as': self.save_as,
+							   'delete file': self.delete_file, 'change file type': self.change_file_ui,
+							   'new window': new_window,
+							   'screenshot content.': lambda: self.save_images(self.EgonTE, self, self.toolbar_frame,
+																			   'main')
+			, 'file\'s info': self.file_info, 'content stats!': self.content_stats, 'file\'s comparison': self.compare,
+							   'merge files.': self.merge_files,
+							   'print file|(ctrl+p).': self.print_file, 'copy file path|(ctrl+d).': self.copy_file_path,
+							   'import local file!': self.special_files_import,
+							   'import global file.': lambda: self.special_files_import('link'),
+							   'exit|(alt+F4)': self.exit_app, 'restart': lambda: self.exit_app(event='r'),
+							   }
+		self.edit_functions = {'cut|(ctrl+x)': self.cut, 'copy|(ctrl+c)': self.copy, 'paste|(ctrl+v).': self.paste,
+							   'correct writing': self.corrector, 'organize writing.': self.organize,
+							   'undo|(ctrl+z)': self.EgonTE.edit_undo, 'redo|(ctrl+y).': self.EgonTE.edit_redo,
+							   'select all|(ctrl+a)': self.select_all, 'clear all|(ctrl+del).': self.clear,
+							   'find text|(ctrl+f)': self.find_replace,
+							   'replace|(ctrl+h)': self.replace, 'go to|(ctrl+g).': self.goto,
+							   'reverse characters|(ctrl+c)': self.reverse_characters,
+							   'reverse words|(ctrl+c)': self.reverse_words, 'join words|(ctrl+c)': self.join_words,
+							   'upper/lower|(ctrl+c)': self.lower_upper,
+							   'sort by characters': self.sort_by_characters, 'sort by words.': self.sort_by_words,
+							   'clipboard history.': self.clipboard_history, 'insert images': self.insert_image
+							   }
+		self.tool_functions = {'translate': self.translate, 'current datetime|(F5)': get_time(),
+							   'random numbers': self.ins_random, 'random names': self.ins_random_name,
+							   'url shorter': self.url,
+							   'generate sequence': self.generate, 'search online': self.search_www,
+							   'sort input': self.sort,
+							   'dictionary': lambda: Thread(target=self.knowledge_window('dict'), daemon=True).start(),
+							   'wikipedia!': lambda: Thread(target=self.knowledge_window('wiki'), daemon=True).start(),
+							   'web scrapping!': self.web_scrapping, 'text decorators': self.text_decorators,
+							   'inspirational quote': self.insp_quote, 'get weather': self.get_weather,
+							   'send email': self.send_email,
+							   'use chatgpt': self.chatGPT, 'use dalle': self.dallE, 'transcript': self.transcript,
+							   'symbols translator': self.emojicons_hub, 'encryption \ decryption': self.encryption,
+							   'Generate document' : self.file_template_generator
+							   }
+		self.nlp_functions = {'get nouns': lambda: self.natural_language_process(function='nouns')
+			, 'get verbs': lambda: self.natural_language_process(function='verbs')
+			, 'get adjectives': lambda: self.natural_language_process(function='adjective')
+			, 'get adverbs': lambda: self.natural_language_process(function='adverbs')
+			, 'get pronouns': lambda: self.natural_language_process(function='pronouns')
+			, 'get stop words': lambda: self.natural_language_process(function='stop words')
+			,
+							  'get names': lambda: self.natural_language_process(function='names')
+			, 'get phone numbers.': lambda: self.natural_language_process(function='phone numbers')
+			, 'entity recognition': lambda: self.natural_language_process(function='entity recognition')
+			, 'dependency tree': lambda: self.natural_language_process(function='dependency')
+			, 'lemmatization': lambda: self.natural_language_process(function='lemmatization')
+			,
+							  'most common words': lambda: self.natural_language_process(function='most common words')
+							  }
+		self.color_functions = {'whole text': lambda: self.custom_ui_colors(components='text')
+			, 'background': lambda: self.custom_ui_colors(components='background')
+			, 'highlight.': lambda: self.custom_ui_colors(components='highlight_color')
+			, 'buttons color': lambda: self.custom_ui_colors(components='buttons')
+			, 'menus color': lambda: self.custom_ui_colors(components='menus')
+			, 'app colors.': lambda: self.custom_ui_colors(components='app')
+			, 'info page colors': lambda: self.custom_ui_colors(components='info page')
+			, 'virtual keyboard colors': lambda: self.custom_ui_colors(components='v_keyboard'),
+								'advance options colors': lambda: self.custom_ui_colors(components='advance_options')
+								}
+
+		self.settings_fuctions = {'Night mode': (self.night, self.night_mode),
+								  'status bars': (self.hide_statusbars, self.show_statusbar),
+								  'tool bar': (self.hide_toolbar, self.show_toolbar), 'custom cursor': (
+				self.custom_cursor, 'tcross', 'xterm'), 'custom style': (self.custom_style, 'vista', 'clam'
+																		 ), 'word wrap': (self.word_wrap, self.word_wrap_v),
+								  'reader mode': (self.reader_mode,), 'auto save': (self.save_outvariables, self.auto_save_v),
+								  'top most': (self.topmost,), 'automatic emoji detection': (self.automatic_emojis_v,),
+								  # variable only
+								  'dev mode': (lambda: self.manage_menus(mode='dev'),),
+								  'special tools': (lambda: self.manage_menus(mode='tools'), self.sta),
+								  'fun numbers.': (self.save_outvariables, self.fun_numbers),
+								  'advance options': self.call_settings}
+
+		self.other_functions = {'advance options': self.call_settings, 'help': lambda: self.info_page('help'),
+								'patch notes': lambda: self.info_page('patch_notes')}
+		self.links_functions = {'github link': lambda: self.ex_links('g'), 'discord link': lambda: self.ex_links('d')}
+
+		self.conjoined_functions_only = {'file': self.file_functions, 'edit': self.edit_functions,
+										 'tools': self.tool_functions,
+										 'NLP': self.nlp_functions, 'colors': self.color_functions,
+										 'options': self.call_settings,
+										 'Help': lambda: self.open_windows_control(lambda: self.info_page('help')),
+										 'Patch notes': lambda: self.open_windows_control(
+											 lambda: self.info_page('patch_notes'))
+			, 'Search': self.search_functions, 'links': self.links_functions}
+		self.conjoined_functions_dict = self.conjoined_functions_only
+		self.conjoined_functions_dict['options'] = self.settings_fuctions
+
+	def menu_assests(self):
+		''' a one time menu initializer, to prevent attributes and variables duplication'''
+		self.file_menu, self.edit_menu, self.tool_menu, self.nlp_menu, self.color_menu, self.links_menu, self.options_menu = \
+			[Menu(self.app_menu, tearoff=False) for x in range(7)]
+		self.menus_list = [self.tool_menu, self.nlp_menu, self.color_menu, self.links_menu, self.options_menu]
+
+	def create_menus(self, initial: bool):
 		'''
 		a function that creates the UI's menus and helps to manage them because it's option to create specific
 		menus after some are deleted because of its initial parameter
 		'''
-		if initial:
-			# file menu
-			self.file_menu = Menu(self.app_menu, tearoff=False)
-			self.app_menu.add_cascade(label='File', menu=self.file_menu)
-			self.file_menu.add_command(label='New', accelerator='(ctrl+n)', command=self.new_file)
-			self.file_menu.add_command(label='Open', accelerator='(ctrl+o)', command=self.open_file)
-			self.file_menu.add_command(label='Save', command=self.save, accelerator='(ctrl+s)')
-			self.file_menu.add_command(label='Save As', command=self.save_as)
-			self.file_menu.add_command(label='Delete file', command=self.delete_file)
-			self.file_menu.add_command(label='Change file type',
-									   command=lambda: self.open_windows_control(self.change_file_ui))
-			self.file_menu.add_command(label='New window', command=lambda: new_window(Window), state=ACTIVE)
-			self.file_menu.add_command(label='Screenshot content',
-									   command=lambda: self.save_images(self.EgonTE, self, self.toolbar_frame, 'main'))
-			self.file_menu.add_separator()
-			self.file_menu.add_command(label='File\'s Info', command=lambda: self.open_windows_control(self.file_info))
-			self.file_menu.add_command(label='Content\'s stats',
-									   command=lambda: self.open_windows_control(self.content_stats)
-									   , font=self.ex_tool)
-			self.file_menu.add_command(label='File\'s comparison',
-									   command=lambda: self.open_windows_control(self.compare))
-			self.file_menu.add_command(label='Merge files', command=self.merge_files)
-			self.file_menu.add_separator()
-			self.file_menu.add_command(label='Print file', accelerator='(ctrl+p)', command=self.print_file)
-			self.file_menu.add_separator()
-			self.file_menu.add_command(label='Copy path', accelerator='(alt+d)', command=self.copy_file_path)
-			self.file_menu.add_separator()
-			self.file_menu.add_command(label='Import local file', command=self.special_files_import, font=self.ex_tool)
-			self.file_menu.add_command(label='Import global file', command=lambda: self.special_files_import('link'))
-			self.file_menu.add_separator()
-			self.file_menu.add_command(label='Exit', accelerator='(alt+f4)', command=self.exit_app)
-			self.file_menu.add_command(label='Restart', command=lambda: self.exit_app(event='r'))
-			# edit menu
-			self.edit_menu = Menu(self.app_menu, tearoff=True)
-			self.app_menu.add_cascade(label='Edit', menu=self.edit_menu)
-			self.edit_menu.add_command(label='Cut', accelerator='(ctrl+x)', command=lambda: self.cut(x=True))
-			self.edit_menu.add_command(label='Copy', accelerator='(ctrl+c)', command=lambda: self.copy())
-			self.edit_menu.add_command(label='Paste', accelerator='(ctrl+v)', command=lambda: self.paste())
-			self.edit_menu.add_separator()
-			self.edit_menu.add_command(label='Correct writing', command=self.corrector)
-			self.edit_menu.add_command(label='Organize writing', command=self.organize, state=DISABLED)
-			# self.edit_menu.add_command(label='Autocomplete', command=self.auto_complete)
-			self.edit_menu.add_separator()
-			self.edit_menu.add_command(label='Undo', accelerator='(ctrl+z)', command=self.EgonTE.edit_undo)
-			self.edit_menu.add_command(label='Redo', accelerator='(ctrl+y)', command=self.EgonTE.edit_redo)
-			self.edit_menu.add_separator()
-			self.edit_menu.add_command(label='Select all', accelerator='(ctrl+a)',
-									   command=lambda: self.select_all('nothing'))
-			self.edit_menu.add_command(label='Clear all', accelerator='(ctrl+del)', command=self.clear)
-			self.edit_menu.add_separator()
-			self.edit_menu.add_command(label='Find Text', accelerator='(ctrl+f)', command=self.find_text)
-			self.edit_menu.add_command(label='Replace', accelerator='(ctrl+h)', command=self.replace)
-			self.edit_menu.add_command(label='Go to', accelerator='(ctrl+g)', command=self.goto)
-			self.edit_menu.add_separator()
-			self.edit_menu.add_command(label='Reverse characters', accelerator='(ctrl+shift+c)',
-									   command=self.reverse_characters)
-			self.edit_menu.add_command(label='Reverse words', accelerator='(ctrl+shift+r)', command=self.reverse_words)
-			self.edit_menu.add_command(label='Join words', accelerator='(ctrl+shift+j)', command=self.join_words)
-			self.edit_menu.add_command(label='Upper/Lower', accelerator='(ctrl+shift+u)', command=self.lower_upper)
-			self.edit_menu.add_command(label='Sort by characters', command=self.sort_by_characters)
-			self.edit_menu.add_command(label='Sort by words', command=self.sort_by_words)
-			self.edit_menu.add_separator()
-			self.edit_menu.add_command(label='Insert images',
-									   command=lambda: self.open_windows_control(self.insert_image))
 
-		# tools menu
-		self.tool_menu = Menu(self.app_menu, tearoff=False)
-		self.app_menu.add_cascade(label='Tools', menu=self.tool_menu)
-		self.tool_menu.add_command(label='Current datetime', accelerator='(F5)', command=self.dt)
-		self.tool_menu.add_command(label='Random number', command=lambda: self.open_windows_control(self.ins_random))
-		self.tool_menu.add_command(label='Random name', command=lambda: self.open_windows_control(self.ins_random_name))
-		if google_trans:
-			self.tool_menu.add_command(label='Translate', command=lambda: self.open_windows_control(self.translate))
-		if short_links:
-			self.tool_menu.add_command(label='Url shorter', command=self.url)
-		self.tool_menu.add_command(label='Generate sequence', command=lambda: self.open_windows_control(self.generate))
-		self.tool_menu.add_command(label='Search online', command=lambda: self.open_windows_control(self.search_www))
-		self.tool_menu.add_command(label='Sort input', command=lambda: self.open_windows_control(self.sort))
-		self.tool_menu.add_command(label='Dictionary',
-								   command=lambda: Thread(target=self.knowledge_window('dict')).start())
-		self.tool_menu.add_command(label='Wikipedia',
-								   command=lambda: Thread(target=self.knowledge_window('wiki')).start(),
-								   font=self.ex_tool)
-		self.tool_menu.add_command(label='Web scrapping', command=self.web_scrapping, font=self.ex_tool)
-		self.tool_menu.add_command(label='Text decorators',
-								   command=lambda: Thread(target=self.text_decorators).start())
-		self.tool_menu.add_command(label='Inspirational quote', command=self.insp_quote)
-		self.tool_menu.add_command(label='Get weather', command=self.get_weather)
-		if email_tool:
-			self.tool_menu.add_command(label='Send Email', command=lambda: self.open_windows_control(self.send_email))
-		if chatgpt_2library or openai_library:
-			self.tool_menu.add_command(label='Use ChatGPT', command=self.chatGPT)
-		self.tool_menu.add_command(label='Use DallE', command=self.dallE)
-		self.tool_menu.add_command(label='Transcript', command=self.transcript)
-		self.tool_menu.add_command(label='Symbols translator',
-								   command=lambda: self.open_windows_control(self.emojicons_hub))
-		if enc_tool:
-			self.tool_menu.add_command(label='Encryption / decryption',
-									   command=lambda: self.open_windows_control(self.encryption))
-		# nlp menu
-		self.nlp_menu = Menu(self.app_menu, tearoff=False)
-		self.app_menu.add_cascade(label='NLP', menu=self.nlp_menu)
-		self.nlp_menu.add_command(label='Get nouns', command=lambda: self.natural_language_process(function='nouns'))
-		self.nlp_menu.add_command(label='Get verbs', command=lambda: self.natural_language_process(function='verbs'))
-		self.nlp_menu.add_command(label='Get adjectives', command=lambda: self.natural_language_process(
-			function='adjective'))
-		self.nlp_menu.add_command(label='Get adverbs',
-								  command=lambda: self.natural_language_process(function='adverbs'))
-		self.nlp_menu.add_command(label='Get pronouns', command=lambda: self.natural_language_process(
-			function='pronouns'))
-		self.nlp_menu.add_command(label='get stop words', command=lambda: self.natural_language_process(
-			function='stop words'))
-		self.nlp_menu.add_command(label='Get names', command=lambda: self.natural_language_process(
-			function='names'))
-		self.nlp_menu.add_command(label='Get phone numbers', command=lambda: self.natural_language_process(
-			function='phone numbers'))
-		self.nlp_menu.add_separator()
-		self.nlp_menu.add_command(label='Entity recognition',
-								  command=lambda: self.natural_language_process(function='entity recognition'))
-		self.nlp_menu.add_command(label='Dependency tree', command=lambda: self.natural_language_process(
-			function='dependency'))
-		self.nlp_menu.add_command(label='Lemmatization', command=lambda: self.natural_language_process(
-			function='lemmatization'))
-		self.nlp_menu.add_command(label='Most common words',
-								  command=lambda: self.natural_language_process(function='most common words'))
+		if not (initial):
+			chosen_functions_dict = {key: val for key, val in self.conjoined_functions_dict.items() if
+									 key not in ('file', 'edit')}
+		else:
+			chosen_functions_dict = self.conjoined_functions_dict
+			self.menus_list = [self.file_menu, self.edit_menu] + self.menus_list
 
-		# color menu
-		self.color_menu = Menu(self.app_menu, tearoff=False)
-		self.app_menu.add_cascade(label='Colors+', menu=self.color_menu)
-		self.color_menu.add_command(label='Whole text color', command=lambda: self.custom_ui_colors(components='text'))
-		self.color_menu.add_command(label='Background color',
-									command=lambda: self.custom_ui_colors(components='background'))
-		self.color_menu.add_command(label='Highlight color', command=lambda: self.custom_ui_colors(components='highlight'))
-		self.color_menu.add_separator()
-		self.color_menu.add_command(label='Buttons color',
-									command=lambda: self.custom_ui_colors(components='buttons'))
-		self.color_menu.add_command(label='Menus colors', command=lambda: self.custom_ui_colors(components='menus'))
-		self.color_menu.add_command(label='App colors', command=lambda: self.custom_ui_colors(components='app'))
-		self.color_menu.add_separator()
-		self.color_menu.add_command(label='Info page colors',
-									command=lambda: self.custom_ui_colors(components='info_page'))
-		self.color_menu.add_command(label='Virtual keyboard colors',
-									command=lambda: self.custom_ui_colors(components='v_keyboard'))
-		self.color_menu.add_command(label='Advance options colors',
-									command=lambda: self.custom_ui_colors(components='advance_options'))
-		# options menu
-		self.options_menu = Menu(self.app_menu, tearoff=False)
-		self.app_menu.add_cascade(label='Options', menu=self.options_menu)
-		# check marks
-		self.options_menu.add_checkbutton(label='Night mode', compound=LEFT, command=self.night, variable=self.night_mode)
-		self.options_menu.add_checkbutton(label='Status Bars', variable=self.show_statusbar, compound=LEFT, command=self.hide_statusbars)
-		self.options_menu.add_checkbutton(label='Tool Bar', variable=self.show_toolbar, compound=LEFT, command=self.hide_toolbar)
-		self.options_menu.add_checkbutton(label='Custom cursor', onvalue='tcross', offvalue='xterm', compound=LEFT, command=self.custom_cursor)
-		self.options_menu.add_checkbutton(label='Custom style', onvalue='vista', offvalue='clam', compound=LEFT, command=self.custom_style)
-		self.options_menu.add_checkbutton(label='Word wrap', compound=LEFT, command=self.word_wrap, variable=self.word_wrap)
-		self.options_menu.add_checkbutton(label='Reader mode', compound=LEFT, command=self.reader_mode)
-		self.options_menu.add_checkbutton(label='Auto save', compound=LEFT, variable=self.aus, command=self.save_outvariables)
-		self.options_menu.add_checkbutton(label='Top most', compound=LEFT, command=self.topmost)
-		self.options_menu.add_checkbutton(label='Automatic Emoji detection', compound=LEFT, variable=self.aed)
-		self.options_menu.add_checkbutton(label='Dev Mode', command=lambda: self.manage_menus(mode='dev'))
-		self.options_menu.add_checkbutton(label='Special tools', command=lambda: self.manage_menus(mode='tools'),
-										  variable=self.sta)
-		self.options_menu.add_checkbutton(label='Fun numbers', variable=self.fun_numbers, command=self.save_outvariables)
-		self.options_menu.add_separator()
-		self.options_menu.add_command(label='Advance options', command=self.call_settings)
-		# help page
-		self.app_menu.add_cascade(label='Help',
-								  command=lambda: self.open_windows_control(lambda: self.info_page('help')))
-		# patch notes page
-		self.app_menu.add_cascade(label='Patch notes',
-								  command=lambda: self.open_windows_control(lambda: self.info_page('patch_notes')))
-		# search function
-		self.app_menu.add_cascade(label='Search', command=self.search_functions)
-		# external links menu
-		self.links_menu = Menu(self.app_menu, tearoff=False)
-		self.app_menu.add_cascade(label='External links', menu=self.links_menu)
-		self.links_menu.add_command(label='GitHub', command=lambda: ex_links('g'))
-		self.links_menu.add_command(label='Discord', command=lambda: ex_links('d'))
-		self.links_menu.add_command(label='MS store', command=lambda: ex_links('m'), state=DISABLED)
+			'''+ loop of the commands - probably reverse this 
+			3. fix namings
 
-	def place_toolt(self):
+			5. fix list index - menu list
+
+			BONUS:
+			made also modes for non initials: use the specific "menu_content" with a conditional chosen name
+			'''
+		# newer
+		index = 0
+		for menu_name, menu_content in (chosen_functions_dict.items()):
+			menu = self.menus_list[index]
+			if isinstance(menu_content, dict) or isinstance(menu_content, list):
+				index += 1
+				self.app_menu.add_cascade(label=menu_name.capitalize(), menu=menu)
+				for name, function in menu_content.items():
+					separator = False
+					font = ('Segoe UI', 9)
+					name, acc = name.capitalize(), ''
+
+					if any(x in name for x in ('.', '!', '|')):
+						if '.' in name:
+							separator = True
+						if '!' in name:
+							font = 'arial 9 bold'
+						name = name.replace('.', '', 1).replace('!', '', 1)
+						if '|' in name:
+							name, acc = name.split('|')
+
+					if isinstance(function, tuple):
+						if len(function) > 1:
+							if isinstance(function[1], BooleanVar):
+								menu.add_checkbutton(label=name, command=function[0], variable=function[1])
+							else:
+								if [item for item in function if isinstance(item, BooleanVar)]:
+									menu.add_checkbutton(label=name, command=function[0], variable=function[1],
+														 onvalue=function[2],
+														 offvalue=function[3])
+								else:
+									menu.add_checkbutton(label=name, command=function[0], onvalue=function[1],
+														 offvalue=function[2])
+						else:
+							function = function[0]
+							if isinstance(function, BooleanVar) or isinstance(function, bool):
+								menu.add_checkbutton(label=name, variable=function)
+							else:
+								menu.add_checkbutton(label=name, command=function)
+
+					else:
+						menu.add_command(label=name, accelerator=acc, command=function, font=font)
+
+					if separator:
+						menu.add_separator()
+
+			else:
+				self.app_menu.add_cascade(label=menu_name, command=menu_content)
+				index -= 1
+
+	def place_toolt(self, *args, **kwargs):
 		'''
 			   placing tooltips with a function gives us the ability to be in charge of more settings
 			   '''
-		tt_list = [[self.bold_button, 'Bold (ctrl+b)'], [self.italics_button, 'Italics (ctrl+i)'],
-				   [self.color_button, 'Change colors'],
-				   [self.underline_button, 'Underline (ctrl+u)'], [self.align_left_button, 'Align left (ctrl+l)'],
-				   [self.align_center_button, 'Align center (ctrl+e)'],
-				   [self.align_right_button, 'Align right (ctrl+r)'], [self.tts_button, 'Text to speech'],
-				   [self.talk_button, 'Speech to text'],
-				   [self.font_size, 'upwards - (ctrl+plus) \n downwards - (ctrl+minus)'],
-				   [self.v_keyboard_button, 'Virtual keyboard'], [self.dtt_button, 'Draw to text']]
+		return self._popup.place_toolt(*args, **kwargs)
 
-		if not(neo_tt):
-			self.tk.eval('package require Tix')
-			ToolTip = tkt.Balloon(self)
 
-		for tt_button, tt_text in tt_list:
-			if neo_tt:
-				tooltip = ToolTip(tt_button, msg=tt_text, delay=0.9, follow=True, fg=self.dynamic_text,
-								  bg=self.dynamic_button)
-			else:
-				tooltip = ToolTip.bind_widget(tt_button, balloonmsg=tt_text)
+	def binds(self, mode='initial'):
+		return self._popup.binds(mode)
 
-	def binds(self, mode):
+	def unbind_group(self, mode):
+		return self._popup.unbind_group(mode)
 
-		'''
-		binding shortcuts,
-		made in a separate function to control some unbinding(s) via the advance settings
-		'''
-		initial_dict = {'Modified': self.status, 'Cut': lambda event: self.cut(True), 'Copy': self.copy(True),
-						'Control-Key-a': self.select_all,
-						'Control-Key-l': lambda e: self.align_text(), 'Control-Key-e': lambda e: self.align_text('center'),
-						'Control-Key-r': lambda e: self.align_text('right'),
-						'Alt-Key-c': self.clear, 'Alt-F4': self.exit_app,
-						'Control-Key-plus': self.sizes_shortcuts,
-						'Control-Key-minus': lambda: self.sizes_shortcuts(-1), 'F5': self.dt,
-						'Alt-Key-r': lambda e: self.exit_app(event='r')}
-		auto_dict, autol_dict = {'KeyPress': self.emoji_detection, 'KeyRelease': self.update_insert_image_list}, {
-			'KeyRelease': self.aul_var}
-		typef_dict = {'Control-Key-b': lambda e: self.typefaces(tf='weight-bold'),
-					  'Control-Key-i': lambda e: self.typefaces(tf='slant-italic'),
-					  'Control-Key-u': lambda e: self.typefaces(tf='underline')}
-		editf_dict = {'Control-Key-f': self.find_text, 'Control-Key-h': self.replace, 'Control-Key-g': self.goto}
-		filea_dict = {'Control-Key-p': self.print_file, 'Control-Key-n': self.new_file,
-					  'Alt-Key-d': self.copy_file_path,
-					  'Control-o': self.open_file, 'Control-Key-s': self.save}
-		textt_dict = {'Control-Shift-Key-j': self.join_words, 'Control-Shift-Key-u': self.lower_upper,
-					  'Control-Shift-Key-r': self.reverse_characters,
-					  'Control-Shift-Key-c': self.reverse_words}
-		win_dict = {'F11': self.full_screen, 'Control-Key-t': self.topmost}
-		bind_dict = {'initial': initial_dict, 'autof': auto_dict, 'typef': typef_dict, 'editf': editf_dict,
-					 'filea': filea_dict, 'textt': textt_dict, 'windf': win_dict, 'autol': autol_dict}
+	def reset_binds(self):
+		return self._popup.reset_binds()
 
-		if not (mode == 'initial' or mode == 'reset'):
-			chosen_dict = bind_dict[mode]
-		else:
-			chosen_dict = {}
-			for subdict in bind_dict.values():
-				for key, value in subdict.items():
-					chosen_dict[key] = value
 
-		# conventional shortcuts for functions
-		for index, bond in enumerate(chosen_dict.items()):
-			command, function = f'<{bond[0]}>', bond[1]
 
-			# if isinstance(function, tuple):
-			#     pass
-			bind_to = self
-			if mode == 'auto':
-				bind_to = self.EgonTE
-			elif command == '<ComboboxSelected>':
-				bind_to = self.font_size
-				if index > 0:
-					bind_to = self.font_ui
+	def open_windows_control(self, func, *args, **kwargs):
+		return self._popup.open_windows_control(func, *args, **kwargs)
 
-			default_bind = True
-			if command[-3] == '-' and command[-2].upper() in characters_str:
-				bind_to.bind(f'{command[:-2]}{command[-2].upper()}{command[-1]}', function)
-			else:
-				if not (command[-2].isdigit()):
-					bind_to.bind(f'<{command}>', function)
-					default_bind = False
-
-			if default_bind:
-				bind_to.bind(command, function)
-
-	def open_windows_control(self, func):
-		'''+ beta tool
-
-		this function is used to control some tools windows
-		- warn the user about opening to much tools windows at once ( can be disabled )
-		- wont duplicate windows, instead will show the window that is already opened more clearly ( can be disabled )
-
-		maybe for future updates:
-		integrate with knowledge window
-		make some tools not call the warning
-		'''
-		window = False
-		# searching if function is in the dictionary
-		for func_saved in self.func_window.keys():
-			if func_saved == func:
-				# searching if function's window is open
-				if self.func_window[func_saved] in self.opened_windows and not (self.adw.get()):
-					window = self.func_window[func_saved]
-					window.attributes('-topmost', True)
-					window.attributes('-topmost', self.all_tm_v.get())
-					break
-
-		# if window:
-		#     if window in self.opened_windows:
-
-		if not window:
-			opened_count = len(self.opened_windows)
-			open_window = False
-			if opened_count > 5 and self.awc.get():
-				if messagebox.askyesno('EgonTE', f'you have {opened_count} opened windows\nare you sure you want'
-												 f' to open another one?'):
-					open_window = True
-			else:
-				open_window = True
-
-			if open_window:
-				func()
 
 
 	def get_pos(self) -> str:
@@ -950,10 +817,10 @@ class Window(Tk):
 	def get_file(self, mode='open', message=''):
 		'''+ global filedialog function that use return
 
-		not used for now
+		in-effective because we need a brief way to integrate every file extensions type
 		'''
 		if mode == 'open':
-			file = filedialog.askopenfilename(title=f'{mode} {message} file', filetypes=text_extensions)
+			file = filedialog.askopenfilename(title=f'{mode}{message} file', filetypes=text_extensions)
 		elif mode == 'new':
 			file = filedialog.asksaveasfilename(defaultextension='.*', initialdir='C:/EgonTE', title='Save File',
 													 filetypes=text_extensions)
@@ -982,7 +849,7 @@ class Window(Tk):
 			self.text_name = self.data['open_last_file']
 
 		else:
-			self.text_name = filedialog.askopenfilename(title='Open file', filetypes=text_extensions)
+			self.text_name = self.get_file('Open')
 
 		if check_file_changes(self.file_name, self.EgonTE.get('1.0', 'end')):
 			if self.text_name:
@@ -991,7 +858,10 @@ class Window(Tk):
 					self.open_status_name = self.text_name
 					self.file_name = self.text_name
 					self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
-					'''+ add a special mode to redirect the files to and egon library'''
+					'''+ add a special mode to redirect the files to and egon library
+					
+					make it in the users document library
+					'''
 					if self.egon_dir.get():
 						self.file_name.replace('', 'C:/EgonTE/')
 					text_file = open(self.text_name, 'r')
@@ -1004,7 +874,7 @@ class Window(Tk):
 						self.app_menu.delete('Clear console')
 						self.options_menu.delete('Auto clear console')
 						self.options_menu.delete('Save by running')
-						if self.dm.get():
+						if self.dev_mode.get():
 							self.options_menu.delete(15)
 						else:
 							self.options_menu.delete(14)
@@ -1077,53 +947,437 @@ class Window(Tk):
 		else:
 			self.save_as(event=None)
 
-	def cut(self, x):
+	def cut(self):
 		if self.is_marked():
-			# grab the content
-			self.selected = self.EgonTE.selection_get()
-			# delete the content that selected and add it to clipboard
-			self.EgonTE.delete('sel.first', 'sel.last')
-			self.clipboard_clear()
-			self.clipboard_append(self.selected)
+			try:
+				selected_text = self.EgonTE.selection_get()
+			except Exception:
+				selected_text = ""
+			if selected_text:
+				# delete selection and update clipboard
+				self.EgonTE.delete('sel.first', 'sel.last')
+				self.clipboard_clear()
+				self.clipboard_append(selected_text)
+				# sync history
+				self.add_to_clipboard_history(selected_text)
 
 	def copy(self, event=None):
 		if self.is_marked():
-			# grab
-			self.clipboard_clear()
-			self.clipboard_append(self.EgonTE.selection_get())
-			self.update()
+			try:
+				selected_text = self.EgonTE.selection_get()
+			except Exception:
+				selected_text = ""
+			if selected_text:
+				self.clipboard_clear()
+				self.clipboard_append(selected_text)
+				try:
+					self.update()
+				except Exception:
+					pass
+				# sync history
+				self.add_to_clipboard_history(selected_text)
 
 	def paste(self, event=None):
 		try:
-			self.EgonTE.insert(self.get_pos(), self.clipboard_get())
+			text_from_clipboard = self.clipboard_get()
 		except BaseException:
-			pass
+			text_from_clipboard = ""
+		if text_from_clipboard:
+			try:
+				self.EgonTE.insert(self.get_pos(), text_from_clipboard)
+			except BaseException:
+				pass
+			# Optionally: do NOT push paste into history here, since it's already there from copy/cut/watcher.
+			# If you DO want to ensure it appears at top whenever pasted, uncomment:
+			# self.add_to_clipboard_history(text_from_clipboard)
+
+	def right_click_menu(self, event):
+		# it's the same pointer so it's ineffective
+		right_click_menu = self.clone_menu()
+		right_click_menu.delete('Correct writing'), right_click_menu.delete('Organize writing'), right_click_menu.delete(4)
+		[right_click_menu.delete(LAST) for i in range(4)]
+		# a condition that will prevent duplicate packing of menus
+
+		if not self.menu_pop.get() and event.num == 3:
+			x_cord, y_cord = event.x, event.y
+			self.active_rc_menu = right_click_menu.tk_popup(event.x_root, event.y_root)
+
+	def clone_menu(self, mode='right click'):
+		if mode == 'right click':
+			original_menu = self.edit_menu
+			commands = tuple(self.edit_functions.values())
+
+		command_index = 0
+		new_menu = Menu(self, tearoff=False)
+		for index in range(original_menu.index('end') + 1):
+			item_type = original_menu.type(index)
+			if item_type == 'separator':
+				new_menu.add_separator()
+			elif item_type == 'command':
+				label = original_menu.entrycget(index, 'label')
+				new_menu.add_command(label=label, command=commands[command_index])  # command can't be directly retrieved
+				command_index += 1
+		return new_menu
+
+	def add_to_clipboard_history(self, item_text: str):
+		"""Add text to the clipboard history, keeping most recent at index 0 and skipping consecutive duplicates."""
+		if not item_text:
+			return
+		if not hasattr(self, 'copy_list') or self.copy_list is None:
+			self.copy_list = []
+		max_history_items = getattr(self, 'clipboard_history_capacity', 100)
+		text_value = str(item_text)
+
+		# If the same text is already at the top, do nothing
+		if self.copy_list and self.copy_list[0] == text_value:
+			return
+
+		# If the same text exists elsewhere, move it to the top instead of duplicating
+		try:
+			existing_index = self.copy_list.index(text_value)
+			self.copy_list.pop(existing_index)
+			self.copy_list.insert(0, text_value)
+		except ValueError:
+			self.copy_list.insert(0, text_value)
+
+		# Enforce capacity
+		if len(self.copy_list) > max_history_items:
+			del self.copy_list[max_history_items:]
+
+	def clipboard_history(self):
+		# Ensure storage exists
+		if not hasattr(self, 'copy_list') or self.copy_list is None:
+			self.copy_list = []
+		# Optional: set a capacity for the history
+		max_items = getattr(self, 'clipboard_history_capacity', 100)
+
+		# Helpers to manage history
+		def add_to_clipboard_history(text: str):
+			if not text:
+				return
+			s = str(text)
+			# skip immediate duplicates at the head
+			if self.copy_list and self.copy_list[0] == s:
+				return
+			self.copy_list.insert(0, s)
+			# enforce capacity
+			if len(self.copy_list) > max_items:
+				del self.copy_list[max_items:]
+			apply_filter(refresh_list=True)
+
+		# Expose for external use (e.g., copy/cut hooks can call this)
+		self.add_to_clipboard_history = add_to_clipboard_history
+
+		# Build the pop-up window with your standardized helper
+		root = self.make_pop_ups_window(self.clipboard_history)
+		root.title('Clipboard History')
+		# root is a tk.Toplevel returned by the helper
+
+		# UI state
+		filter_var = StringVar() if hasattr(self, 'tk') else __import__('tkinter').StringVar()
+		filtered_view = []  # snapshot of items after filter
+		listbox = None
+		dragging_model_index = None
+
+		# ---- Data/UI sync helpers ----
+		def apply_filter(refresh_list=False):
+			nonlocal filtered_view
+			q = filter_var.get().strip().lower()
+			if q:
+				filtered_view = [s for s in self.copy_list if q in s.lower()]
+			else:
+				filtered_view = list(self.copy_list)
+			if refresh_list and listbox is not None:
+				listbox.delete(0, 'end')
+				for s in filtered_view:
+					display = s if len(s) <= 120 else (s[:117] + '...')
+					listbox.insert('end', display)
+
+		def get_view_selection():
+			sel = listbox.curselection()
+			return sel[0] if sel else None
+
+		def get_selected_text():
+			idx = get_view_selection()
+			if idx is None or not (0 <= idx < len(filtered_view)):
+				return None
+			return filtered_view[idx]
+
+		def model_index_from_view():
+			txt = get_selected_text()
+			if txt is None:
+				return None
+			try:
+				return self.copy_list.index(txt)
+			except ValueError:
+				return None
+
+		def select_model_index(model_idx: int):
+			if not (0 <= model_idx < len(self.copy_list)):
+				return
+			target_value = self.copy_list[model_idx]
+			try:
+				view_idx = filtered_view.index(target_value)
+			except ValueError:
+				return
+			listbox.selection_clear(0, 'end')
+			listbox.selection_set(view_idx)
+			listbox.activate(view_idx)
+			listbox.see(view_idx)
+
+		# ---- Actions ----
+		def do_copy():
+			txt = get_selected_text()
+			if txt is None:
+				return
+			try:
+				root.clipboard_clear()
+				root.clipboard_append(txt)
+				root.update_idletasks()
+			except Exception:
+				pass
+
+		def do_paste():
+			# paste into main text area if available
+			txt = get_selected_text()
+			if txt is None:
+				return
+			try:
+				root.clipboard_clear()
+				root.clipboard_append(txt)
+			except Exception:
+				pass
+			try:
+				if hasattr(self, 'EgonTE') and self.EgonTE:
+					self.EgonTE.insert(self.get_pos(), txt)
+			except Exception:
+				pass
+
+		def do_delete():
+			mi = model_index_from_view()
+			if mi is None:
+				return
+			del self.copy_list[mi]
+			apply_filter(refresh_list=True)
+
+		def do_clear():
+			self.copy_list.clear()
+			apply_filter(refresh_list=True)
+
+		def do_move(delta: int):
+			mi = model_index_from_view()
+			if mi is None:
+				return
+			new_idx = max(0, min(len(self.copy_list) - 1, mi + delta))
+			if new_idx == mi:
+				return
+			self.copy_list[mi], self.copy_list[new_idx] = self.copy_list[new_idx], self.copy_list[mi]
+			apply_filter(refresh_list=True)
+			select_model_index(new_idx)
+
+		def on_activate_row():
+			# Default: copy; if text widget exists, also paste
+			do_copy()
+			if hasattr(self, 'EgonTE') and self.EgonTE:
+				do_paste()
+
+		# ---- Drag-and-drop handlers ----
+		def on_drag_start(e):
+			nonlocal dragging_model_index
+			idx = listbox.nearest(e.y)
+			if 0 <= idx < listbox.size():
+				listbox.selection_clear(0, 'end')
+				listbox.selection_set(idx)
+				listbox.activate(idx)
+				dragging_model_index = model_index_from_view()
+			else:
+				dragging_model_index = None
+
+		def on_drag_motion(e):
+			if dragging_model_index is None:
+				return
+			idx = listbox.nearest(e.y)
+			if 0 <= idx < listbox.size():
+				listbox.selection_clear(0, 'end')
+				listbox.selection_set(idx)
+				listbox.activate(idx)
+
+		def on_drag_release(e):
+			nonlocal dragging_model_index
+			if dragging_model_index is None:
+				return
+			drop_view_idx = listbox.nearest(e.y)
+			if not (0 <= drop_view_idx < listbox.size()):
+				dragging_model_index = None
+				return
+			target_value = filtered_view[drop_view_idx]
+			try:
+				new_model_idx = self.copy_list.index(target_value)
+			except ValueError:
+				dragging_model_index = None
+				return
+			if new_model_idx != dragging_model_index:
+				item = self.copy_list.pop(dragging_model_index)
+				self.copy_list.insert(new_model_idx, item)
+				apply_filter(refresh_list=True)
+				select_model_index(new_model_idx)
+			dragging_model_index = None
+
+		# ---- Layout ----
+		# Top: filter row
+		top = Frame(root)
+		top.pack(fill='x', padx=8, pady=(8, 4))
+		Label(top, text='Filter:').pack(side='left')
+		ent_filter = ttk.Entry(top, textvariable=filter_var, width=30)
+		ent_filter.pack(side='left', fill='x', expand=True, padx=(6, 0))
+		filter_var.trace_add('write', lambda *_: apply_filter(refresh_list=True))
+
+		# Middle: listbox + scrollbar
+		mid = Frame(root)
+		mid.pack(fill='both', expand=True, padx=8, pady=4)
+		yscroll = ttk.Scrollbar(mid, orient='vertical')
+		listbox = __import__('tkinter').Listbox(mid, selectmode='browse', activestyle='dotbox',
+												yscrollcommand=yscroll.set)
+		yscroll.config(command=listbox.yview)
+		listbox.pack(side='left', fill='both', expand=True)
+		yscroll.pack(side='right', fill='y')
+
+		# Bottom: control buttons
+		btns = Frame(root)
+		btns.pack(fill='x', padx=8, pady=(4, 8))
+		Button(btns, text='Copy', command=do_copy).pack(side='left')
+		Button(btns, text='Paste', command=do_paste).pack(side='left', padx=(6, 0))
+		Button(btns, text='Delete', command=do_delete).pack(side='left', padx=(6, 0))
+		Button(btns, text='Move Up', command=lambda: do_move(-1)).pack(side='left', padx=(6, 0))
+		Button(btns, text='Move Down', command=lambda: do_move(1)).pack(side='left', padx=(6, 0))
+		Button(btns, text='Clear All', command=do_clear).pack(side='left', padx=(6, 0))
+
+		# Context menu
+		ctx = __import__('tkinter').Menu(root, tearoff=False)
+		ctx.add_command(label='Copy', command=do_copy)
+		ctx.add_command(label='Paste', command=do_paste)
+		ctx.add_separator()
+		ctx.add_command(label='Move Up', command=lambda: do_move(-1))
+		ctx.add_command(label='Move Down', command=lambda: do_move(1))
+		ctx.add_separator()
+		ctx.add_command(label='Delete', command=do_delete)
+		ctx.add_command(label='Clear All', command=do_clear)
+
+		def show_ctx(e):
+			try:
+				listbox.selection_clear(0, 'end')
+				idx = listbox.nearest(e.y)
+				if 0 <= idx < listbox.size():
+					listbox.selection_set(idx)
+					listbox.activate(idx)
+				ctx.tk_popup(e.x_root, e.y_root)
+			finally:
+				try:
+					ctx.grab_release()
+				except Exception:
+					pass
+
+		# Bindings
+		listbox.bind('<Button-3>', show_ctx)  # Right-click
+		listbox.bind('<Double-Button-1>', lambda e: on_activate_row())
+		listbox.bind('<Return>', lambda e: on_activate_row())
+		listbox.bind('<Delete>', lambda e: do_delete())
+		listbox.bind('<Control-BackSpace>', lambda e: do_clear())
+		listbox.bind('<Control-Up>', lambda e: do_move(-1))
+		listbox.bind('<Control-Down>', lambda e: do_move(1))
+		root.bind('<Escape>', lambda e: root.destroy())
+		root.bind('<Control-l>', lambda e: do_clear())
+		root.bind('<Control-f>', lambda e: ent_filter.focus_set())
+
+		# Drag-and-drop
+		listbox.bind('<ButtonPress-1>', on_drag_start)
+		listbox.bind('<B1-Motion>', on_drag_motion)
+		listbox.bind('<ButtonRelease-1>', on_drag_release)
+
+		# Populate initial data and focus
+		apply_filter(refresh_list=True)
+		if listbox.size() > 0:
+			listbox.selection_set(0)
+			listbox.activate(0)
+		ent_filter.focus_set()
 
 	def typefaces(self, tf: str):
-		'''+W.I.P
+		"""
+		Toggle simple typeface styles over the selection (or whole document if no selection).
 
-		 working only once with indexes
-		 and add ups in a weird stack data structure
+		Supported:
+		  - 'weight-bold'
+		  - 'slant-italic'
+		  - 'underline'
+		  - 'overstrike'
+		  - 'normal'  -> clears all the above styles
 
-		 italic causes many spaces
-		 selected font with tag is different from the same one with the text widget selection
-		 '''
-		underline = False
-		tf_font = font.Font(self.EgonTE, self.EgonTE.cget('font'))
-		if '-' in tf:
-			type, option = tf.split('-')
-			tf_font[type] = option
-		elif tf == 'underline':
-			underline = True
+		Notes:
+		- No size or family handling here.
+		- Uses the widget's base font as the starting point to keep rendering consistent.
+		- Avoids trailing-newline issues by operating up to 'end-1c'.
+		"""
 
-		self.EgonTE.tag_configure(tf, font=tf_font, underline=underline)
-		current_tags = self.EgonTE.tag_names('1.0')
+		def base_font_copy(widget):
+			spec = widget.cget('font')
+			try:
+				# Works only if spec is a named font
+				return font.nametofont(spec).copy()
+			except TclError:
+				# spec is a literal like 'Arial 16' -> make a Font from it
+				return font.Font(widget, font=spec)
 
+		# Normalize selection bounds
 		first, last = self.get_indexes()
-		if tf in current_tags:
+		if str(last) == END:
+			last = 'end-1c'
+
+		STYLE_TAGS = ('weight-bold', 'slant-italic', 'underline', 'overstrike')
+
+		# Clear everything for 'normal'
+		if tf == 'normal':
+			for tag in STYLE_TAGS:
+				self.EgonTE.tag_remove(tag, first, last)
+			return
+
+		if tf not in STYLE_TAGS:
+			return
+
+		# Build base font safely (no nametofont error)
+		base = base_font_copy(self.EgonTE)
+
+		# Minimal config
+		font_cfg = {}
+		tag_cfg = {}
+
+		if tf == 'weight-bold':
+			font_cfg['weight'] = 'bold'
+		elif tf == 'slant-italic':
+			font_cfg['slant'] = 'italic'
+		elif tf == 'underline':
+			tag_cfg['underline'] = 1
+		elif tf == 'overstrike':
+			tag_cfg['overstrike'] = 1
+
+		if font_cfg:
+			base.configure(**font_cfg)
+
+		# Configure tag idempotently
+		if font_cfg and tag_cfg:
+			self.EgonTE.tag_configure(tf, font=base, **tag_cfg)
+		elif font_cfg:
+			self.EgonTE.tag_configure(tf, font=base)
+		elif tag_cfg:
+			self.EgonTE.tag_configure(tf, **tag_cfg)
+		else:
+			self.EgonTE.tag_configure(tf, font=base)
+
+		# Toggle based on presence in current range
+		if self.EgonTE.tag_nextrange(tf, first, last):
 			self.EgonTE.tag_remove(tf, first, last)
 		else:
 			self.EgonTE.tag_add(tf, first, last)
+
 
 	def text_color(self):
 		'''
@@ -1149,7 +1403,7 @@ class Window(Tk):
 					self.EgonTE.tag_add('colored_txt', '1.0', 'end')
 
 
-	def custom_ui_colors(self, components):
+	def custom_ui_colors(self, components: str):
 		'''
 		custom UI colors for all of the main windows components, and for the "knowledge" (wiki/dictionary) window,
 		for the help / patch notes window, and for the virtual keyboard
@@ -1247,46 +1501,11 @@ class Window(Tk):
 			else:
 				messagebox.showerror('EgonTE', 'Advance options window isn\'t opened')
 
-	
-	def make_pop_ups_window(self, function, custom_title=False):
-		'''+
-		beta - need extensive testing
-		'''
-		root = Toplevel()
-		root_name = (function.__name__.replace('_', ' ')).capitalize()
-		if custom_title:
-			root_name = custom_title
-		root.title(self.title_struct + root_name)
-		self.opened_windows.append(root)
-		self.func_window[function] = root
-		root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(root))
-		root.attributes('-alpha', self.st_value)
-		self.make_tm(root)
-		if self.limit_w_s.get():
-			root.resizable(False, False)
-		self.record_list.append(f'> [{get_time()}] - {root_name} tool window opened')
-		return root
 
-	def make_rich_textbox(self, root, place='pack_top', wrap=WORD, font='arial 10', size=False, selectbg='dark cyan',
-						  bd=0, relief=''):
-		if not relief:
-			relief = self.predefined_relief
-		text_frame = Frame(root)
-		text_scroll = ttk.Scrollbar(text_frame)
-		rich_tbox = Text(text_frame, wrap=wrap, relief=relief, font=font, borderwidth=bd,
-						 cursor=self.predefined_cursor, yscrollcommand=text_scroll.set, undo=True,
-						 selectbackground=selectbg)
-		text_scroll.config(command=rich_tbox.yview)
-		if size:
-			rich_tbox.configure(width=size[0], height=size[1])
-		if place:
-			if 'pack' in place:
-				text_frame.pack(fill=BOTH, expand=True, side=place.split('_')[1])
-			elif isinstance(place, list):
-				text_frame.grid(row=place[0], column=place[1])
-			text_scroll.pack(side=RIGHT, fill=Y)
-			rich_tbox.pack(fill=BOTH, expand=True)
-		return (text_frame, rich_tbox, text_scroll)
+	def make_rich_textbox(self, root, place='pack_top', wrap=None, font='arial 10', size=None,
+			selectbg='dark cyan', bd=0, relief='', format='txt',):
+		return self._popup.make_rich_textbox(root=root, place=place, wrap=wrap, font=font,
+			size=size, selectbg=selectbg, bd=bd, relief=relief, format=format,)
 
 	def print_file(self, event=None):
 		'''
@@ -1646,38 +1865,91 @@ class Window(Tk):
 
 		return capitalized
 
-	def speech_to_text(self):
-		'''
-		advanced speech to text function that work for english speaking only (but more is planned)
-		'''
+	def _ensure_stt_attrs(self):
+		if not hasattr(self, '_stt_queue'):
+			self._stt_queue = queue.Queue()
+		if not hasattr(self, '_stt_running'):
+			self._stt_running = False
+		if not hasattr(self, '_stt_attempts'):
+			self._stt_attempts = 0
+		if not hasattr(self, '_stt_max_attempts'):
+			self._stt_max_attempts = 3
 
-		'''+ run loop dont stop bug
-		if new prompt starts that the program suggested, it will write it the number of times the program asked.
-		'''
+	def start_speech_to_text(self):
+		"""
+		Main-thread entry point. Bind this to the button.
+		"""
+		self._ensure_stt_attrs()
+		if self._stt_running:
+			return
+		self._stt_running = True
+		self._stt_attempts = 0
 
+		# Offload TTS or any slow intro message
+		Thread(target=self.read_text,
+						 kwargs={'text': 'Please say the message you would like to the text editor!'},
+						 daemon=True).start()
+
+		Thread(target=self._stt_worker_once, daemon=True).start()
+		self._poll_stt_queue()
+
+
+	def _stt_worker_once(self):
+		"""
+		Background thread: does one listen+recognize cycle.
+		No Tkinter calls here.
+		"""
+		r = Recognizer()
+		try:
+			with Microphone() as source:
+				r.adjust_for_ambient_noise(source, duration=0.5)
+				r.pause_threshold = 1.0
+				audio = r.listen(source, timeout=7, phrase_time_limit=20)
+			text = r.recognize_google(audio, language=getattr(self, 'stt_lang_value', 'en-US'))
+			self._stt_queue.put({'status': 'ok', 'text': text})
+		except WaitTimeoutError:
+			self._stt_queue.put({'status': 'error', 'kind': 'timeout'})
+		except Exception as e:
+			self._stt_queue.put({'status': 'error', 'kind': 'recognition', 'error': str(e)})
+
+	def _poll_stt_queue(self):
+		"""
+		Main-thread polling for worker results. Safe UI updates happen here.
+		"""
+		try:
+			msg = self._stt_queue.get_nowait()
+		except queue.Empty:
+			# schedule next poll; use your Tk root or top-level widget here
+			self.after(50, self._poll_stt_queue)
+			return
+
+		if msg['status'] == 'ok':
+			raw = msg['text']
+			try:
+				formatted = self.text_formatter(raw)  # this touches Text widget state, keep on main thread
+			except Exception:
+				formatted = raw + ' '
+			self.EgonTE.insert('insert', formatted)
+			self._finish_stt()
+			return
+
+		# Error case
+		self._stt_attempts += 1
 		error_sentences = ['I don\'t know what you mean!', 'can you say that again?', 'please speak more clear']
 		error_sentence = choice(error_sentences)
 		error_msg = f'Excuse me, {error_sentence}'
-		recolonize = Recognizer()  # initialize the listener
-		mic = Microphone()
-		with mic as source:  # set listening device to microphone
-			self.read_text(text='Please say the message you would like to the text editor!')
-			recolonize.pause_threshold = 1
-			audio = recolonize.listen(source)
-		try:
-			query = recolonize.recognize_google(audio, language=self.stt_lang_value)  # listen to audio
-			query = self.text_formatter(query)
-		except Exception as e:
-			print(e)
-			self.read_text(text=error_msg)
-			if messagebox.askyesno('EgonTE', 'do you want to try again?'):
-				query = self.speech_to_text()
-			else:
-				gb_sentences = ['ok', 'goodbye', 'sorry', 'my bad']
-				gb_sentence = choice(gb_sentences)
-				self.read_text(text=f'{gb_sentence}, I will try to do my best next time!')
-		self.EgonTE.insert(INSERT, query, END)
-		return query
+
+		if self._stt_attempts < self._stt_max_attempts and messagebox.askyesno('EgonTE', 'Do you want to try again?'):
+			Thread(target=self._stt_worker_once, daemon=True).start()
+		self.root.after(50, self._poll_stt_queue)
+		return
+
+		self.read_text(text=f"{choice(['ok', 'goodbye', 'sorry', 'my bad'])}, I will try to do my best next time!")
+		self._finish_stt()
+
+	def _finish_stt(self):
+		self._stt_running = False
+		self._stt_attempts = 0
 
 	# force the app to quit, warn user if file data is about to be lost
 	def exit_app(self, event=None):
@@ -1687,7 +1959,7 @@ class Window(Tk):
 		'''
 		self.saved_settings(special_mode='save')
 
-		if self.us_rp.get():
+		if self.usage_report_v.get():
 			self.usage_report()
 
 		if self.file_name:
@@ -1716,253 +1988,535 @@ class Window(Tk):
 			except RuntimeError:
 				pass
 
+
+	def find_replace(self, event=None):
+
+		'''+ the tool is a bit too advanced, so we will probably preserve somehow also the origianl one'''
+
+		"""
+		Unified Find & Replace dialog for self.EgonTE.
+
+		Features:
+		  - Case sensitive, Regex, Wrap, Partial (characters) vs Whole word
+		  - In selection (stable snapshot), Highlight all
+		  - Live search, Popular terms (conditional), Auto focus editor
+		  - Prev/Next, Reset, All (tag all matches), Nothing (clear that tag)
+		  - Replace current / Replace All (regex backrefs supported)
+		  - Shortcuts: Enter=Next, Shift+Enter=Prev, Ctrl+Enter=Replace, Ctrl+Shift+Enter=Replace All, Esc=Close
+		  - Occurrences counter (current/total) between Prev and Next
+		"""
+		text = self.EgonTE
+
+		# --- State container kept on self ---
+		State = getattr(self, '_fr', None)
+		if State is None:
+			class _FR:
+				pattern = ""
+				replace = ""
+				case = False
+				regex = False
+				partial = True  # True => "characters sensitive" (partial matches); False => whole word
+				wrap = True
+				in_selection = False
+				highlight_all = True
+				matches: list[tuple[str, str]] = []
+				current = -1
+				# Selection snapshot for "In selection"
+				sel_start: str | None = None
+				sel_end: str | None = None
+				# Popular list cache
+				popular: list[str] = []
+
+			self._fr = _FR()
+			State = self._fr
+
+		# --- Popup creation (singleton behavior via name) ---
+		root = self.make_pop_ups_window(function=self.find_replace, name='find_replace', title='Find & Replace')
+
+		# --- Variables bound to UI ---
+		find_var = StringVar(value=State.pattern)
+		repl_var = StringVar(value=State.replace)
+		case_var = BooleanVar(value=State.case)
+		regex_var = BooleanVar(value=State.regex)
+		partial_var = BooleanVar(value=State.partial)
+		wrap_var = BooleanVar(value=State.wrap)
+		in_sel_var = BooleanVar(value=State.in_selection)
+		all_var = BooleanVar(value=State.highlight_all)
+
+		# Attempt to use app-wide auto focus var if present
+		try:
+			auto_focus_var = self.auto_focus_v if isinstance(self.auto_focus_v, BooleanVar) else BooleanVar(False)
+		except Exception:
+			auto_focus_var = BooleanVar(False)
+
+		# --- Layout ---
+		Label(root, text='Find & Replace', font=('Segoe UI', 12, 'underline')).grid(
+			row=0, column=0, columnspan=10, pady=(6, 2)
+		)
+		e_find = Entry(root, textvariable=find_var, width=46)
+		e_repl = Entry(root, textvariable=repl_var, width=46)
+		e_find.grid(row=1, column=0, columnspan=10, padx=8, pady=(6, 2), sticky='ew')
+		e_repl.grid(row=2, column=0, columnspan=10, padx=8, pady=(0, 8), sticky='ew')
+
+		# Options
+		Checkbutton(root, text='Case sensitive', variable=case_var).grid(row=3, column=0, sticky='w', padx=8)
+		Checkbutton(root, text='Regex', variable=regex_var).grid(row=3, column=1, sticky='w')
+		Checkbutton(root, text='Wrap', variable=wrap_var).grid(row=3, column=2, sticky='w')
+		Checkbutton(root, text='In selection', variable=in_sel_var).grid(row=3, column=3, sticky='w')
+		Checkbutton(root, text='Highlight all', variable=all_var).grid(row=3, column=4, sticky='w')
+
+		# Matching mode and behavior
+		Checkbutton(root, text='Partial match (characters)', variable=partial_var).grid(row=4, column=0, sticky='w',
+																						   padx=8)
+		Checkbutton(root, text='Auto focus editor', variable=auto_focus_var).grid(row=4, column=1, sticky='w')
+
+		# Navigation and actions
+		btn_prev = Button(root, text='Prev')
+		# Occurrences counter (current/total)
+		occ_counter = Label(root, text='0/0', width=8, anchor='center')
+		btn_next = Button(root, text='Next')
+		btn_all_tag = Button(root, text='All')
+		btn_none_tag = Button(root, text='Nothing')
+		btn_reset = Button(root, text='Reset')
+		btn_replace = Button(root, text='Replace')
+		btn_replace_all = Button(root, text='Replace All')
+
+		# Row 5 layout with counter between Prev and Next
+		btn_prev.grid(row=5, column=0, padx=4, pady=6, sticky='ew')
+		occ_counter.grid(row=5, column=1, padx=2, pady=6, sticky='ew')
+		btn_next.grid(row=5, column=2, padx=4, pady=6, sticky='ew')
+		btn_all_tag.grid(row=5, column=3, padx=4, pady=6, sticky='ew')
+		btn_none_tag.grid(row=5, column=4, padx=4, pady=6, sticky='ew')
+		btn_reset.grid(row=5, column=5, padx=4, pady=6, sticky='ew')
+		btn_replace.grid(row=6, column=3, padx=4, pady=(0, 8), sticky='ew')
+		btn_replace_all.grid(row=6, column=4, padx=4, pady=(0, 8), sticky='ew')
+
+		status = Label(root, text="", anchor='w')
+		status.grid(row=7, column=0, columnspan=10, sticky='ew', padx=8, pady=(2, 6))
+
+		# Popular terms (conditionally visible)
+		terms_frame = Frame(root)
+		terms_list = Listbox(terms_frame, height=3, width=30)
+		pt_scroll = ttk.Scrollbar(terms_frame, command=terms_list.yview)
+		terms_list.configure(yscrollcommand=pt_scroll.set)
+		pt_scroll.pack(side='right', fill='y')
+		terms_list.pack(side='left', fill='both', expand=True)
+
+		# Column weights
+		for c in range(10):
+			root.grid_columnconfigure(c, weight=1)
+
+		# Tooltips if available
+		try:
+			if hasattr(self, 'ToolTip') and hasattr(self.ToolTip, 'bind_widget'):
+				self.ToolTip.bind_widget(btn_prev, balloonmsg='Previous match (Shift+Enter)')
+				self.ToolTip.bind_widget(btn_next, balloonmsg='Next match (Enter)')
+				self.ToolTip.bind_widget(btn_all_tag, balloonmsg='Tag all matches')
+				self.ToolTip.bind_widget(btn_none_tag, balloonmsg="Clear 'All' tag")
+				self.ToolTip.bind_widget(btn_reset, balloonmsg='Clear inputs and tags')
+				self.ToolTip.bind_widget(btn_replace, balloonmsg='Replace current (Ctrl+Enter)')
+				self.ToolTip.bind_widget(btn_replace_all, balloonmsg='Replace all (Ctrl+Shift+Enter)')
+		except Exception:
+			pass
+
+		# --- Tags ---
+		TAG_ALL = 'fr_match_all'  # all matches
+		TAG_CUR = 'fr_match_cur'  # current match
+		TAG_SEL = 'fr_all_select'  # selection tag for 'All' button
+		try:
+			text.tag_configure(TAG_ALL, background='#ffe08a')
+			text.tag_configure(TAG_CUR, background='#ffd24a')
+			text.tag_configure(TAG_SEL, background='#ffe8b3')
+		except Exception:
+			pass
+
+		def _clear_tags():
+			try:
+				text.tag_remove(TAG_ALL, '1.0', 'end')
+				text.tag_remove(TAG_CUR, '1.0', 'end')
+				text.tag_remove(TAG_SEL, '1.0', 'end')
+			except Exception:
+				pass
+
+		# --- Helpers ---
+		def _bounds():
+			"""
+			Respect a stable selection snapshot if 'In selection' is enabled.
+			If no snapshot exists, try to create one from current selection; otherwise full range.
+			"""
+			if in_sel_var.get():
+				# Establish or reuse stable snapshot
+				if not State.sel_start or not State.sel_end:
+					try:
+						State.sel_start = text.index('sel.first')
+						State.sel_end = text.index('sel.last')
+					except Exception:
+						State.sel_start, State.sel_end = '1.0', 'end-1c'
+				return State.sel_start, State.sel_end
+			# When turning off 'In selection', discard snapshot
+			State.sel_start, State.sel_end = None, None
+			return '1.0', 'end-1c'
+
+		def _to_tk_pattern(literal: str, partial: bool, allow_regex: bool) -> tuple[str, bool]:
+			"""
+			Returns (pattern, use_regex_flag) for Tk's Text.search.
+			- partial=True: use literal or raw regex as-is
+			- partial=False: enforce whole word with \\m...\\M
+			"""
+			if allow_regex:
+				pat = literal
+				if not partial:
+					pat = fr'\\m(?:{pat})\\M'
+				return pat, True
+			if not partial:
+				esc = escape(literal)
+				return fr'\\m{esc}\\M', True
+			return literal, False
+
+		def _sync_state_from_ui():
+			State.pattern = find_var.get()
+			State.replace = repl_var.get()
+			State.case = case_var.get()
+			State.regex = regex_var.get()
+			State.partial = partial_var.get()
+			State.wrap = wrap_var.get()
+			State.in_selection = in_sel_var.get()
+			State.highlight_all = all_var.get()
+
+		def _set_status_found(n: int):
+			status.config(text=f"{n} match{'es' if n != 1 else ''}")
+
+		def _set_status_not_found():
+			status.config(text='No matches')
+
+		def _update_counter():
+			total = len(State.matches)
+			if total == 0 or State.current < 0:
+				occ_counter.configure(text='0/0')
+			else:
+				occ_counter.configure(text=f'{State.current + 1}/{total}')
+
+		def _set_nav_enabled(enabled: bool):
+			state = ('!disabled',) if enabled else ('disabled',)
+			try:
+				btn_prev.config(state='normal' if enabled else 'disabled')
+				btn_next.config(state='normal' if enabled else 'disabled')
+				btn_all_tag.config(state='normal' if enabled else 'disabled')
+				btn_none_tag.config(state='normal' if enabled else 'disabled')
+				btn_replace.config(state='normal' if enabled else 'disabled')
+				btn_replace_all.config(state='normal' if enabled else 'disabled')
+			except Exception:
+				pass
+
+		# --- Core: collect matches and highlight ---
+		def _collect_matches():
+			_sync_state_from_ui()
+			_clear_tags()
+			State.matches.clear()
+			State.current = -1
+
+			pat = State.pattern
+			if not pat:
+				status.config(text='Enter text to find')
+				_update_counter()
+				_set_nav_enabled(False)
+				_update_terms()
+				return
+
+			start, stop = _bounds()
+			pat_tk, use_regex = _to_tk_pattern(pat, State.partial, State.regex)
+
+			options = {}
+			if not State.case:
+				options['nocase'] = 1
+			if use_regex:
+				options['regexp'] = 1
+
+			idx = start
+			count = IntVar(value=0)
+			cap = 40000  # safety cap
+
+			while True:
+				pos = text.search(pat_tk, idx, stopindex=stop, count=count, **options)
+				if not pos:
+					break
+				length = count.get()
+				if length <= 0:
+					# avoid infinite loops on zero-length matches (e.g., empty regex)
+					idx = text.index(f'{pos}+1c')
+					continue
+				end = text.index(f'{pos}+{length}c')
+				State.matches.append((pos, end))
+				idx = end
+				if len(State.matches) >= cap:
+					break
+
+			# Highlight all and select first
+			if State.highlight_all:
+				for s, e in State.matches:
+					text.tag_add(TAG_ALL, s, e)
+
+			if State.matches:
+				State.current = 0
+				_focus_current()
+				_set_status_found(len(State.matches))
+				_set_nav_enabled(True)
+			else:
+				_set_status_not_found()
+				_set_nav_enabled(False)
+
+			_update_counter()
+			_update_terms()
+
+		def _focus_current():
+			try:
+				text.tag_remove(TAG_CUR, '1.0', 'end')
+			except Exception:
+				pass
+			if 0 <= State.current < len(State.matches):
+				s, e = State.matches[State.current]
+				try:
+					text.tag_add(TAG_CUR, s, e)
+					text.see(s)
+					text.mark_set('insert', s)
+					if auto_focus_var.get():
+						text.focus_set()
+				except Exception:
+					pass
+			_update_counter()
+
+		def _goto(delta: int):
+			if not State.matches:
+				_collect_matches()
+				if not State.matches:
+					return
+			nxt = State.current + delta
+			if 0 <= nxt < len(State.matches):
+				State.current = nxt
+			else:
+				if State.wrap and State.matches:
+					State.current = nxt % len(State.matches)
+				else:
+					return
+			_focus_current()
+
+		def _tag_all_matches():
+			try:
+				text.tag_remove(TAG_SEL, '1.0', 'end')
+			except Exception:
+				pass
+			for s, e in State.matches:
+				text.tag_add(TAG_SEL, s, e)
+
+		def _clear_all_tag():
+			try:
+				text.tag_remove(TAG_SEL, '1.0', 'end')
+			except Exception:
+				pass
+
+		def _reset():
+			find_var.set("")
+			repl_var.set("")
+			State.matches.clear()
+			State.current = -1
+			State.sel_start, State.sel_end = None, None
+			_clear_tags()
+			status.config(text="")
+			_update_counter()
+			_set_nav_enabled(False)
+			_update_terms()
+
+		# --- Replace operations ---
+		def _replace_current():
+			if not (0 <= State.current < len(State.matches)):
+				return
+			s, e = State.matches[State.current]
+			try:
+				frag = text.get(s, e)
+			except Exception:
+				_collect_matches()
+				if not (0 <= State.current < len(State.matches)):
+					return
+				s, e = State.matches[State.current]
+				frag = text.get(s, e)
+
+			repl = State.replace
+			if State.regex:
+				try:
+					flags = 0 if State.case else IGNORECASE
+					compiled = compile(State.pattern, flags)
+					new_frag = compiled.sub(repl, frag, count=1)
+				except Exception:
+					new_frag = repl
+			else:
+				new_frag = repl
+
+			text.edit_separator()
+			text.delete(s, e)
+			text.insert(s, new_frag)
+			text.edit_separator()
+
+			_collect_matches()
+
+		def _replace_all():
+			if not State.matches:
+				_collect_matches()
+			if not State.matches:
+				return
+
+			compiled = None
+			if State.regex:
+				try:
+					flags = 0 if State.case else IGNORECASE
+					compiled = compile(State.pattern, flags)
+				except Exception:
+					compiled = None
+
+			text.edit_separator()
+			for s, e in reversed(State.matches):
+				try:
+					frag = text.get(s, e)
+				except Exception:
+					continue
+				if compiled:
+					new = compiled.sub(State.replace, frag)
+				else:
+					new = State.replace
+				text.delete(s, e)
+				text.insert(s, new)
+			text.edit_separator()
+
+			_collect_matches()
+
+		# --- Popular terms ---
+		def _tokenize_for_popular():
+			full = text.get('1.0', 'end-1c')
+			tokens = findall(r'\w+', full)
+			if not case_var.get():
+				tokens = [t.lower() for t in tokens]
+			return tokens
+
+		def _update_terms():
+			try:
+				terms_list.delete(0, END)
+			except Exception:
+				return
+
+			tokens = _tokenize_for_popular()
+			if not tokens:
+				terms_frame.grid_forget()
+				return
+
+			cnt = Counter(tokens)
+			popular = [t for (t, _) in cnt.most_common(10)]
+			State.popular = popular
+
+			# Respect case option
+			entry = find_var.get()
+			entry_norm = entry if case_var.get() else entry.lower()
+			popular_norm = popular if case_var.get() else [p.lower() for p in popular]
+
+			for t in popular:
+				terms_list.insert(END, t)
+
+			# Heuristics
+			if not entry:
+				show = len(popular) > 2
+			else:
+				show = len(popular) > 1 and entry_norm not in popular_norm
+
+			if show:
+				terms_frame.grid(row=8, column=0, columnspan=10, sticky='ew', padx=8, pady=(0, 6))
+			else:
+				terms_frame.grid_forget()
+
+		def _fill_from_popular(_evt=None):
+			try:
+				sel = terms_list.curselection()
+				if not sel:
+					return
+				term = terms_list.get(sel[0])
+				find_var.set(term)
+				e_find.icursor('end')
+				_schedule()
+			except Exception:
+				pass
+
+		# --- Debounced live search ---
+		_pending = {'id': None}
+
+		def _schedule(_evt=None):
+			if _pending['id']:
+				try:
+					root.after_cancel(_pending['id'])
+				except Exception:
+					pass
+			_pending['id'] = root.after(120, _collect_matches)
+
+		# --- Bindings ---
+		e_find.bind('<KeyRelease>', _schedule)
+		terms_list.bind('<<ListboxSelect>>', _fill_from_popular)
+
+		for var in (case_var, regex_var, partial_var, wrap_var, in_sel_var, all_var, auto_focus_var):
+			var.trace_add('write', lambda *args: _schedule())
+
+		btn_prev.configure(command=lambda: _goto(-1))
+		btn_next.configure(command=lambda: _goto(+1))
+		btn_all_tag.configure(command=_tag_all_matches)
+		btn_none_tag.configure(command=_clear_all_tag)
+		btn_reset.configure(command=_reset)
+		btn_replace.configure(command=_replace_current)
+		btn_replace_all.configure(command=_replace_all)
+
+		# Keyboard shortcuts
+		def _on_enter(evt=None):
+			_goto(+1)
+			return 'break'
+
+		def _on_shift_enter(evt=None):
+			_goto(-1)
+			return 'break'
+
+		def _on_ctrl_enter(evt=None):
+			_replace_current()
+			return 'break'
+
+		def _on_ctrl_shift_enter(evt=None):
+			_replace_all()
+			return 'break'
+
+		def _on_escape(evt=None):
+			try:
+				root.destroy()
+			except Exception:
+				pass
+			return 'break'
+
+		root.bind('<Return>', _on_enter)
+		root.bind('<Shift-Return>', _on_shift_enter)
+		root.bind('<Control-Return>', _on_ctrl_enter)
+		root.bind('<Control-Shift-Return>', _on_ctrl_shift_enter)
+		root.bind('<Escape>', _on_escape)
+
+		# Seed from current selection if find is empty
+		try:
+			if not find_var.get() and text.tag_ranges('sel'):
+				sel = text.get('sel.first', 'sel.last')
+				if sel:
+					find_var.set(sel)
+		except Exception:
+			pass
+
+		# Initial compute
+		_collect_matches()
+		e_find.focus_set()
+
+	# Backward-compatible entry points
 	def find_text(self, event=None):
+		return self.find_replace(event)
 
-		'''+ make that the auto search will not work when pressing backspace'''
-
-		'''+ at the end indexes _tkinter.TclError: bad text index "+2c"'''
-
-		'''
-		find text in the main text box, with some options, and with navigation
-		'''
-		def rep_button():
-			'''+ replace UI management'''
-			find_ = self.find_text_entry.get()
-			replace_ = replace_input.get()
-			content = self.EgonTE.get(1.0, END)
-			'''+ replace by regex for capitalization settings'''
-			new_content = content.replace(find_, replace_)
-
-			if replace_all:
-				self.EgonTE.delete(1.0, END)
-				self.EgonTE.insert(1.0, new_content)
-			else:
-				index = self.EgonTE.index('sel.first')
-				self.EgonTE.delete('sel.first', 'sel.last')
-				self.EgonTE.insert(index, replace_)
-
-		def enter():
-			global offset, starting_index, ending_index
-			text_data = self.EgonTE.get('1.0', END + '-1c')
-			if text_data:
-				if not self.nav_frame:
-					self.nav_frame = Frame(search_text_root)
-					nav_title = Label(search_text_root, text='Navigation', font='arial 12')
-					nav_title.grid(row=3, column=1)
-					self.nav_frame.grid(row=5, column=1)
-
-					# buttons ↑↓
-					self.button_up_find = Button(self.nav_frame, text='Reset',
-												 command=lambda:navigation(False, starting_index, ending_index),
-												 width=4, state=DISABLED, relief=FLAT)
-					self.button_down_find = Button(self.nav_frame, text='↓',
-												   command=lambda: navigation(True, starting_index, ending_index),
-												   width=4, relief=FLAT, state=DISABLED)
-
-
-					self.button_all_find = Button(self.nav_frame, text='All',
-												  command=lambda: tag_all(),
-												  width=4, relief=FLAT, state=DISABLED)
-					self.button_nothing_find = Button(self.nav_frame, text='Nothing',
-													  command=lambda: self.EgonTE.tag_remove(SEL, 1.0, END),
-													  width=5, relief=FLAT, state=DISABLED)
-					self.find_nav_buttons = self.button_up_find, self.button_down_find, self.button_all_find, self.button_nothing_find
-
-					self.find_tool_searched.set(True)
-					show_list()
-
-				if not self.occurs_label:
-					self.occurs_label = Label(search_text_root)
-					self.occurs_label.grid(row=4, column=1)
-
-					self.button_up_find.grid(row=0, column=0)
-					self.button_down_find.grid(row=0, column=1)
-					self.button_all_find.grid(row=0, column=3)
-					self.button_nothing_find.grid(row=0, column=4)
-
-				# by word/character settings
-				if not(self.by_characters.get()):
-					# text_data = str(text_data.split(' '))
-					text_data = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
-					text_data = ''.join((''.join(words)).split(' '))
-
-				# capitalize settings
-				if not(self.capital_opt.get()):
-					text_data = text_data.lower()
-					entry_data = (self.find_text_entry.get()).lower()
-				else:
-					entry_data = self.find_text_entry.get()
-				occurs = str(text_data.count(entry_data))
-
-				# check if text occurs
-				if occurs:
-					self.occurs_label.configure(text=f'"{entry_data}" has {occurs} occurrences')
-					buttons_state = ACTIVE
-					if self.aff.get():
-						self.EgonTE.focus_set()
-				else:
-					self.occurs_label.configure(text=f'Not found any matches')
-					buttons_state = DISABLED
-				for button in self.find_nav_buttons:
-					button.configure(state=buttons_state)
-
-					# select first match
-				starting_index = self.EgonTE.search(entry_data, '1.0', END)
-				if starting_index:
-					offset = '+%dc' % len(entry_data)
-					ending_index = starting_index + offset
-					self.EgonTE.tag_add(SEL, starting_index, ending_index)
-
-
-
-			def navigation(mode, start_ind, end_ind):
-				'''+ WIP new combined navigation function with many improvements
-
-
-				find a way to remove global and switch to self.
-				better solution that lasts unlike regular mark
-
-				'''
-				global ending_index, starting_index
-				if int(occurs) > 1:
-					self.EgonTE.tag_remove(SEL, '1.0', END)
-					offset = '+%dc' % len(entry_data)
-
-					if not mode:
-						starting_index = self.EgonTE.search(entry_data, '1.0', start_ind)
-					else:
-						starting_index = self.EgonTE.search(entry_data, end_ind, END)
-						self.button_up_find.config(state=ACTIVE)
-
-					if start_ind:
-						ending_index = starting_index + offset
-						print(f'str:{starting_index} end:{ending_index}')
-						if starting_index and ending_index:
-							self.EgonTE.tag_add(SEL, starting_index, ending_index)
-							self.EgonTE.focus_set()
-							if not mode: ending_index = starting_index
-							else: starting_index = ending_index
-						else:
-							navigation(not(mode), start_ind, end_ind)
-
-
-			def tag_all():
-				global occurs, starting_index, ending_index
-				navigation('up', starting_index, ending_index)
-				for i in range(occurs):
-					starting_index = self.EgonTE.search(entry_content, ending_index, END)
-					if starting_index:
-						offset = '+%dc' % len(entry_content)
-						ending_index = starting_index + offset
-						print(f'str:{starting_index} end:{ending_index}')
-						self.EgonTE.tag_add('highlight_all_result', starting_index, ending_index)
-						starting_index = ending_index
-
-
-		def update_list():
-			entry_content = self.find_text_entry.get().lower()
-			# if entry_content:  condition removed - completed updated list, but check for bug possibilities'''
-			self.popular_terms.delete(0, END)
-			for popular_term in self.ft_popular_content:
-				if entry_content in popular_term.lower():
-					self.popular_terms.insert(END, popular_term)
-
-		def show_list():
-			'''
-			show the list only if it is useful enough and update the content
-
-			conditions:
-			1. initially / reset: 3 or more values
-			2. when searching only if there are 2 or more values and the user search do not match one of  the values in the list
-			'''
-
-			# updating the list-box by redoing the content insertion process
-			self.popular_terms.delete(0, END)
-			words = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', END))
-			words = (''.join(words)).split(' ')
-			counter = Counter(words)
-			popular_tuple = (counter.most_common()[0:10])
-			self.ft_popular_content = []
-			for i in popular_tuple:
-				self.ft_popular_content.append(i[0])
-			for term in self.ft_popular_content:
-				self.popular_terms.insert(END, term)
-
-
-			# matching the settings of case sensitivity
-			text_entry = self.find_text_entry.get()
-			terms_list = list(self.popular_terms.get(0, END))
-			if not self.capital_opt.get():
-				text_entry = text_entry.lower()
-				terms_list =  list(map(str.lower, terms_list))
-
-
-
-			# placing the widget only if it will be useful enough, because it takes precious space
-			if not(self.find_text_entry.get()):
-				if len(self.ft_popular_content) > 2:
-					self.terms_frame.grid(row=2, column=1, pady=3)
-			else:
-				if self.find_tool_searched.get(): # a variable for when we are searched or not
-					if self.button_up_find.winfo_manager():
-						if len(terms_list) > 1 and text_entry not in terms_list:
-							self.terms_frame.grid(row=2, column=1, pady=3)
-							'''+ without options adaptability: anti word-sensitive measures'''
-						else:
-							self.terms_frame.grid_forget()
-
-		def keyrelease_events(events=False):
-			update_list()
-			enter()
-			show_list()
-			#find_tool_searched.set(False)
-
-		# window creation
-		search_text_root = self.make_pop_ups_window(self.find_text)
-		# variables
-		self.nav_frame = ''
-		self.occurs_label = ''
-		# buttons creation and placement
-		text = Label(search_text_root, text='Search text', font='arial 14 underline')
-		self.find_text_entry = Entry(search_text_root)
-		# enter_button = Button(search_text_root, command=enter, text='Enter')
-		options_title = Label(search_text_root, text='Search options', font='arial 12')
-		options_frame = Frame(search_text_root)
-		capitalize_button = Checkbutton(options_frame, text='case sensitive', variable=self.capital_opt)
-		by_word = Checkbutton(options_frame, text='characters sensitive', variable=self.by_characters)
-		auto_focus = Checkbutton(options_frame, variable=self.aff, text='Auto focus', bd=1)
-
-		self.terms_frame = Frame(search_text_root)
-		self.popular_terms = Listbox(self.terms_frame, width=25, height=2)
-		pt_scroll = ttk.Scrollbar(self.terms_frame, command=self.popular_terms.yview)
-		self.popular_terms.configure(yscrollcommand=pt_scroll.set)
-
-		# words = .replace('\n', '').split(' ')
-		text.grid(row=0, column=1)
-		self.find_text_entry.grid(row=1, column=1)
-		capitalize_button.grid(row=2, column=0, pady=6, padx=5)
-
-		show_list()
-		by_word.grid(row=2, column=2, padx=5)
-
-		options_title.grid(row=6, column=1)
-		options_frame.grid(row=7, column=1)
-		capitalize_button.grid(row=0, column=0)
-		by_word.grid(row=0, column=1)
-		auto_focus.grid(row=1, column=0)
-		# enter_button.grid(row=3, column=1)
-
-		pt_scroll.pack(side=RIGHT, fill=Y)
-		self.popular_terms.pack(fill=BOTH, expand=True)
-
-		self.popular_terms.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.find_text_entry, e, self.popular_terms))
-		self.find_text_entry.bind('<KeyRelease>', keyrelease_events)
-
-		# self.find_text_entry.bind('<KeyRelease>', enter)
-
-		if self.is_marked():
-			self.find_text_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
-		show_list()
+	def replace(self, event=None):
+		return self.find_replace(event)
 
 	def ins_calc(self):
 		'''
@@ -2022,12 +2576,6 @@ class Window(Tk):
 		def insert_extra(exp):
 			calc_entry.insert(END, str(exp))
 
-		def clear_entry():
-			calc_entry.delete(0, END)
-
-		def clear_one():
-			calc_entry.delete(calc_entry.index(INSERT) - 1)
-
 		calc_root = self.make_pop_ups_window(self.ins_calc)
 		left_frame = Frame(calc_root)
 		title = Label(left_frame, text='Calculator', font=self.titles_font, padx=2, pady=3)
@@ -2079,10 +2627,10 @@ class Window(Tk):
 		b0, b1, b2, b3, b4, b5, b6, b7, b8, b9 = [
 			Button(extra_frame, text=f'{num}', command=lambda num=num: insert_extra(num), padx=padx_b, pady=pady_b,
 				   relief=FLAT, bg=ex_color, height=button_height, width=button_width) for num in range(10)]
-		clear_b = Button(extra_frame, text='C', command=clear_entry, pady=pady_b, relief=FLAT, bg='#F3B664',
+		clear_b = Button(extra_frame, text='C', command=lambda: calc_entry.delete(0, END), pady=pady_b, relief=FLAT, bg='#F3B664',
 						 height=button_height
 						 , width=button_width)
-		del_b = Button(extra_frame, text='DEL', command=clear_one, pady=pady_b, relief=FLAT, bg='#F3B664',
+		del_b = Button(extra_frame, text='DEL', command=lambda: calc_entry.delete(calc_entry.index(INSERT) - 1), pady=pady_b, relief=FLAT, bg='#F3B664',
 					   height=button_height
 					   , width=button_width)
 
@@ -2236,18 +2784,18 @@ class Window(Tk):
 		'''
 		when pressed initially disabling word wrap and adding an vertical scrollbar
 		'''
-		if not self.word_wrap:
+		if not self.word_wrap_v:
 			self.EgonTE.config(wrap=WORD)
 			self.geometry(f'{self.width}x{self.height - 10}')
 			self.horizontal_scroll.pack_forget()
-			self.word_wrap = True
+			self.word_wrap_v = True
 			self.data['word_wrap'] = False
 			self.record_list.append(f'> [{get_time()}] - Word wrap is activated')
 		else:
 			self.geometry(f'{self.width}x{self.height + 10}')
 			self.horizontal_scroll.pack(side=BOTTOM, fill=X)
 			self.EgonTE.config(wrap=NONE)
-			self.word_wrap = False
+			self.word_wrap_v = False
 			self.data['word_wrap'] = True
 			self.record_list.append(f'> [{get_time()}] - Word wrap is disabled')
 
@@ -2451,13 +2999,13 @@ class Window(Tk):
 		content = self.EgonTE.get(*self.text_index)
 		n = ''
 
-		if self.tt_sc.get():
+		if self.textwist_special_chars.get():
 			content = content.replace(' ', '')
 
 		if '\n' in content:
 			content, newline = content.split('\n', maxsplit=1)
 			content = content.replace('\n', '')
-			if self.tt_sc.get():
+			if self.textwist_special_chars.get():
 				n = ''
 			else:
 				n = '\n'
@@ -2481,7 +3029,7 @@ class Window(Tk):
 
 		content = self.EgonTE.get(*self.text_index)
 
-		if self.tt_sc.get():
+		if self.textwist_special_chars.get():
 			content = content.replace(' ', '').replace('\n', '')
 
 		words = content.split()
@@ -2508,14 +3056,14 @@ class Window(Tk):
 		# need some work still
 		content = (self.EgonTE.get(1.0, END))
 
-		if self.tt_sc.get():
+		if self.textwist_special_chars.get():
 			content = content.replace(' ', '').replace('\n', '')
 
 		sorted_content = ''.join(sorted(content))
 		# if the content is already sorted it will sort it reversed
 		if content == sorted_content:
 			sorted_content = ''.join(sorted(sorted_content, reverse=True))
-			if self.tt_sc.get():
+			if self.textwist_special_chars.get():
 				sorted_content.replace(' ', '').replace('\n', '')
 		self.EgonTE.delete(1.0, END)
 		self.EgonTE.insert(1.0, sorted_content)
@@ -2716,10 +3264,18 @@ class Window(Tk):
 
 		# putting the lines in order
 		def place_lines():
+			'''+
+			make scrollbars work with html-tkinter
+			'''
 			self.info_page_text.delete('1.0', END)
-			with open(f'{path}.txt') as ht:
-				for line in ht:
-					self.info_page_text.insert('end', line)
+			file_path = fr'content_msgs\{path}.{self.content_mode}'
+			with open(file_path) as ht:
+				if self.content_mode == 'txt':
+					for line in ht:
+						self.info_page_text.insert('end', line)
+				else:
+					html_content = ht.read()
+					self.info_page_text.set_html(html_content)
 
 		def find_content(event=False):
 			global entry_content, starting_index, ending_index, offset
@@ -2824,11 +3380,17 @@ class Window(Tk):
 
 		title_frame = Frame(info_root)
 		title_frame.pack(fill=X, expand=True)
+
+		if html_infop == 'txt' or self.content_preference_v.get() == 'txt':
+			self.content_mode = 'txt'
+		else:
+			self.content_mode = 'html'
+
 		# labels
 		self.info_page_title = Label(title_frame, text='Help', font='arial 16 bold underline', justify='left',
 									 fg=self.dynamic_text, bg=self.dynamic_bg)
 		info_root_frame, self.info_page_text, help_text_scroll = self.make_rich_textbox(info_root, font='arial 10',
-																						bd=3, relief=RIDGE)
+																						bd=3, relief=RIDGE, format=self.content_mode, wrap=WORD)
 
 		if path == 'patch_notes':
 			self.info_page_title.configure(text='Patch notes')
@@ -2975,7 +3537,7 @@ class Window(Tk):
 
 	def save_outvariables(self):
 		self.data['fun_numbers'] = self.fun_numbers.get()
-		self.data['auto_save'] = self.aus.get()
+		self.data['auto_save'] = self.auto_save_v.get()
 
 	def advance_options(self):
 		'''
@@ -3017,29 +3579,30 @@ class Window(Tk):
 		6. view text corrector changes before applying them
 		'''
 
-		def custom_binding(mode):
-			b_values = self.bindings_dict[mode]
-			if self.binding_work[mode].get():
+
+		def custom_binding(mode: str):
+			"""
+			mode is the group key (e.g., 'filea', 'typea', 'editf', 'textt', 'windf', 'autof', 'autol').
+			Each checkbox drives a BooleanVar in self.binding_work[mode].
+			"""
+			var = self.binding_work.get(mode)
+			if var and var.get():
+				# enable (bind) this group only
 				self.binds(mode=mode)
 			else:
-				# for auto list - singular item!
-				if isinstance(b_values, list) or isinstance(b_values, tuple):
-					for bind in b_values:
-						self.unbind(bind)
-				else:
-					self.unbind(b_values)
+				# disable (unbind) this group only
+				self.unbind_group(mode)
 
 		def reset_binds():
-			for bind_group in self.bindings_dict.values():
-				# for auto list - singular item!
-				if isinstance(bind_group, list) or isinstance(bind_group, tuple):
-					for bind in bind_group:
-						self.unbind(bind)
-				else:
-					self.unbind(bind_group)
-			for variable in self.binding_work.values():
-				variable.set(True)
-			self.binds('reset')
+			"""
+			Restore original values: set all flags to True and re-apply all bindings.
+			"""
+			for var in self.binding_work.values():
+				try:
+					var.set(True)
+				except Exception:
+					pass
+			self.binds('reset')  # or self.reset_binds() if you want the builder to do the unbind+rebind cycle
 
 		def exit_op():
 			self.opened_windows.remove(self.opt_root)
@@ -3127,7 +3690,7 @@ class Window(Tk):
 			self.record_list.append(f'> [{get_time()}] - Transparency changed to {tranc}')
 
 		def change_lof():
-			if self.lf.get():
+			if self.last_file_v.get():
 				if self.file_name:
 					self.save_last_file()
 				else:
@@ -3166,12 +3729,12 @@ class Window(Tk):
 				# the assignment of the builtin boolean values is important to make the file & status bar work well
 
 		def save_variables():
-			self.data['usage_report'] = self.us_rp.get()
-			self.data['text_twisters'] = self.tt_sc.get()
+			self.data['usage_report'] = self.usage_report_v.get()
+			self.data['text_twisters'] = self.textwist_special_chars.get()
 			self.data['night_type'] = self.nm_palette.get()
-			self.data['preview_cc'] = self.ccc.get()
-			self.data['check_version'] = self.check_v.get()
-			self.data['window_c_warning'] = self.awc.get()
+			self.data['preview_cc'] = self.corrector_check_changes.get()
+			self.data['check_version'] = self.check_ver_v.get()
+			self.data['window_c_warning'] = self.win_count_warn.get()
 			self.data['allow_duplicate'] = self.adw.get()
 
 		def restore_defaults():
@@ -3184,8 +3747,8 @@ class Window(Tk):
 				self.bars_active.set(True)
 				self.show_statusbar.set(True)
 				self.show_toolbar.set(True)
-				self.word_wrap.set(True)
-				self.aus.set(True)
+				self.word_wrap_v.set(True)
+				self.auto_save_v.set(True)
 				self.reader_mode_v.set(False)
 				self.predefined_cursor = 'xterm'
 				self.predefined_style = 'clam'
@@ -3216,12 +3779,9 @@ class Window(Tk):
 					f'> [{get_time()}] - AutoSave method Removed: save by waiting 30 seconds')
 
 		# default values for the check buttons
+		'''+ prob initialize in the init method'''
 		self.def_val1 = IntVar()
 		self.def_val2 = IntVar()
-		self.file_actions_v, self.typefaces_actions_v, self.edit_functions_v, self.texttwisters_functions_v, self.win_actions_v, self.auto_functions, \
-			self.aul = [BooleanVar() for x in range(7)]
-		self.file_actions_v.set(True), self.typefaces_actions_v.set(True), self.edit_functions_v.set(True)
-		self.texttwisters_functions_v.set(True), self.win_actions_v.set(True)
 
 		# tabs for different categories
 		settings_tabs = ttk.Notebook(self.opt_root)
@@ -3296,9 +3856,9 @@ class Window(Tk):
 		# lf_frame = Frame(functional_frame)
 		file_opt_title = Label(functional_frame, text='Files', font=font_, bg=self.dynamic_overall,
 							   fg=self.dynamic_text)
-		last_file_checkbox = Checkbutton(functional_frame, text='Open initially last file', variable=self.lf,
+		last_file_checkbox = Checkbutton(functional_frame, text='Open initially last file', variable=self.last_file_v,
 										 command=change_lof, bg=self.dynamic_bg, fg=self.dynamic_text)
-		usage_report_checkbox = Checkbutton(functional_frame, text='Usage report', variable=self.us_rp,
+		usage_report_checkbox = Checkbutton(functional_frame, text='Usage report', variable=self.usage_report_v,
 											command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
 
 		# last_bg_checkbox = Checkbutton(lf_frame, text='last background file', variable=self.save_bg,
@@ -3312,12 +3872,12 @@ class Window(Tk):
 		# transparency_set = Button(styles_frame, text='Change transparency', command=change_transparency)
 
 		title_other = Label(functional_frame, text='Others', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
-		check_v_checkbox = Checkbutton(functional_frame, text='Check version', variable=self.check_v,
+		check_v_checkbox = Checkbutton(functional_frame, text='Check version', variable=self.check_ver_v,
 									   bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
 		reset_button = Button(functional_frame, text='Restore default', command=restore_defaults, bg=self.dynamic_bg,
 							  fg=self.dynamic_text)
 		tt_checkbox = Checkbutton(functional_frame, text='Text twisters\nremove special characters',
-								  variable=self.tt_sc,
+								  variable=self.textwist_special_chars,
 								  command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
 		# open_record_cb = Checkbutton(functional_frame, text='Text twisters\nremove special characters', variable=self.tt_sc,
 		#                           command=save_variables, bg=self.dynamic_bg, fg=self.dynamic_text)
@@ -3369,12 +3929,17 @@ class Window(Tk):
 		never_limit_s = Checkbutton(pop_ups_frame, text='Don\'t limit sizes', variable=self.limit_w_s,
 									bg=self.dynamic_bg, fg=self.dynamic_text, command=self.limit_sizes)
 		warning_title = Label(pop_ups_frame, text='Warnings', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
-		many_windows_checkbox = Checkbutton(pop_ups_frame, text='Many windows', variable=self.awc,
+		many_windows_checkbox = Checkbutton(pop_ups_frame, text='Many windows', variable=self.win_count_warn,
 											bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
 		corrector_title = Label(pop_ups_frame, text='Text corrector', font=font_, bg=self.dynamic_overall,
 								fg=self.dynamic_text)
-		corrector_preview = Checkbutton(pop_ups_frame, text='Preview changes', variable=self.ccc,
+		corrector_preview = Checkbutton(pop_ups_frame, text='Preview changes', variable=self.corrector_check_changes,
 										bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
+		content_preference_title = Label(pop_ups_frame, text='Informative content prefrence', font=font_,
+										bg=self.dynamic_overall, fg=self.dynamic_text)
+		preference_frame = Frame(pop_ups_frame)
+		preference_text = Radiobutton(preference_frame, value='txt', variable=self.content_preference_v, text='Text file')
+		preference_html = Radiobutton(preference_frame, value='html', variable=self.content_preference_v, text='HTML file')
 		other_w_title = Label(pop_ups_frame, text='Others', font=font_, bg=self.dynamic_overall, fg=self.dynamic_text)
 		duplicate_windows = Checkbutton(pop_ups_frame, text='Allow duplicates', variable=self.adw,
 										bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
@@ -3430,6 +3995,8 @@ class Window(Tk):
 		by_press_rb.grid(row=0, column=2)
 		indent_tab.grid(row=0, column=0)
 		indent_space.grid(row=0, column=2)
+		preference_text.grid(row=0, column=0)
+		preference_html.grid(row=0, column=2)
 
 		# binding widgets + other windows options
 		pack_binding = [state_title, file_actions_check, typefaces_action_check, edit_functions_check,
@@ -3438,7 +4005,7 @@ class Window(Tk):
 						order_title, order_frame]
 		pack_other = [attr_title, top_most_s, open_m_s, never_limit_s, warning_title, many_windows_checkbox,
 					  trans_s_title
-			, self.transparency_s, corrector_title, corrector_preview, other_w_title, duplicate_windows]
+			, self.transparency_s, corrector_title, corrector_preview, content_preference_title, preference_frame, other_w_title, duplicate_windows]
 		pack_bin_oth = pack_binding + pack_other
 		for index, widget in enumerate(pack_bin_oth):
 			py = 0
@@ -3454,7 +4021,7 @@ class Window(Tk):
 		self.opt_commands = (nm_black_checkbox, nm_blue_checkbox, transparency_config, filebar_check, statusbar_check,
 							 last_file_checkbox, reset_button, tt_checkbox, by_time_rb, by_press_rb, corrector_preview,
 							 file_actions_check, typefaces_action_check, edit_functions_check, auto_function_check,
-							 auto_list_check,
+							 auto_list_check, indent_tab, indent_space, preference_text, preference_html,
 							 textt_function_check, win_actions_check, open_m_s, never_limit_s, self.transparency_s,
 							 usage_report_checkbox, biggest_top, biggest_bottom,
 							 duplicate_windows, many_windows_checkbox, top_most_s, check_v_checkbox, reset_binds_button)
@@ -4039,7 +4606,7 @@ class Window(Tk):
 						pass
 
 		if active:
-			if self.aed.get() or via_settings:
+			if self.automatic_emojis_v.get() or via_settings:
 				fail_msg = ''
 				lang = get_k_lang()[1]
 				if not lang:
@@ -4154,8 +4721,7 @@ class Window(Tk):
 			file_info_name = self.file_name
 
 		else:
-			file_info_name = filedialog.askopenfilename(title='Open file to get info about', filetypes=text_extensions)
-
+			file_info_name = self.get_file('Open', ' file to get info about')
 		try:
 			if file_info_name:
 				stat = os.stat(file_info_name)
@@ -4208,7 +4774,7 @@ class Window(Tk):
 		if self.file_name:
 			if self.autosave_by_t.get():
 				t = 300
-				while self.aus.get():
+				while self.auto_save_v.get():
 					while t:
 						mins, secs = divmod(t, 60)
 						timer = '{:02d}:{:02d}'.format(mins, secs)
@@ -4218,48 +4784,589 @@ class Window(Tk):
 			else:
 				self.save()
 
+
+
+	def file_template_generator(self):
+		"""
+		Open a popup that contains both the UI and the generation logic.
+
+		Features:
+		- File type: PDF | WORD | JINJA
+		- Subject: resume | personal info | computer stats | letter | Egon stats
+		- Optional: Use docxtpl with a provided .docx template file
+		- Edit placeholders prior to generation (context form)
+		- [Generate], [Open Folder], [Open File], [Copy Path], [Close]
+		"""
+
+		# ------------ validation helpers (nested) ------------
+		def ensure_python_docx():
+			"""
+			Ensure the correct 'python-docx' package is installed (not the legacy 'docx').
+			Returns: (Document, Pt)
+			"""
+			try:
+				import docx  # provided by python-docx
+				from docx import Document
+				from docx.shared import Pt
+			except ImportError as e:
+				raise RuntimeError(
+					"Word generation requires the 'python-docx' package.\n"
+					"Install it using:\n"
+					"  pip install python-docx"
+				) from e
+
+			bad = False
+			if not hasattr(docx, "Document"):
+				bad = True
+			else:
+				try:
+					from docx import shared  # noqa: F401
+					_ = Pt  # ensure available
+				except Exception:
+					bad = True
+
+			if bad:
+				raise RuntimeError(
+					"It looks like the legacy 'docx' package is installed instead of 'python-docx'.\n"
+					"Please run:\n"
+					"  pip uninstall -y docx\n"
+					"  pip install python-docx"
+				)
+			return Document, Pt
+
+		def ensure_fpdf():
+			try:
+				from fpdf import FPDF
+				return FPDF
+			except ImportError as e:
+				raise RuntimeError(
+					"PDF generation requires the 'fpdf' package.\n"
+					"Install it using:\n"
+					"  pip install fpdf"
+				) from e
+
+		def ensure_jinja():
+			try:
+				from jinja2 import Template
+				return Template
+			except ImportError as e:
+				raise RuntimeError(
+					"Jinja rendering requires the 'jinja2' package.\n"
+					"Install it using:\n"
+					"  pip install jinja2"
+				) from e
+
+		def ensure_docxtpl():
+			try:
+				from docxtpl import DocxTemplate
+				return DocxTemplate
+			except ImportError as e:
+				raise RuntimeError(
+					"Using a .docx template requires the 'docxtpl' package.\n"
+					"Install it using:\n"
+					"  pip install docxtpl"
+				) from e
+
+		# ------------ generation helpers (nested) ------------
+		def choose_context(subj):
+			if subj == "resume":
+				return "Resume", {
+					"full_name": "<FULL_NAME>",
+					"title": "<JOB_TITLE>",
+					"email": "<EMAIL>",
+					"phone": "<PHONE>",
+					"summary": "<ONE_SENTENCE_SUMMARY>",
+					"skills": "<SKILL_1>, <SKILL_2>, <SKILL_3>",
+				}
+			if subj == "personal info":
+				return "Personal Information", {
+					"full_name": "<FULL_NAME>",
+					"address": "<ADDRESS_LINE>",
+					"city": "<CITY>",
+					"country": "<COUNTRY>",
+					"email": "<EMAIL>",
+					"phone": "<PHONE>",
+					"dob": "<YYYY-MM-DD>",
+				}
+			if subj == "computer stats":
+				return "Computer Stats", {
+					"os": "<OS_NAME_VERSION>",
+					"cpu": "<CPU_MODEL>",
+					"ram": "<RAM_GB> GB",
+					"storage": "<STORAGE_TOTAL_GB> GB",
+					"gpu": "<GPU_MODEL>",
+					"python": "<PYTHON_VERSION>",
+				}
+			if subj == "letter":
+				return "Letter", {
+					"date": "<YYYY-MM-DD>",
+					"recipient_name": "<RECIPIENT_NAME>",
+					"recipient_company": "<RECIPIENT_COMPANY>",
+					"greeting": "Dear <RECIPIENT_NAME>,",
+					"body": "<LETTER_BODY>",
+					"closing": "Sincerely,",
+					"sender_name": "<SENDER_NAME>",
+				}
+			if subj == "Egon stats":
+				return "Egon Stats", {
+					"level": "<LEVEL>",
+					"hp": "<HP>",
+					"mp": "<MP>",
+					"strength": "<STR>",
+					"agility": "<AGI>",
+					"intelligence": "<INT>",
+					"notes": "<NOTES>",
+				}
+			return subj.title(), {"note": "<PLACEHOLDER>"}
+
+		def out_dir():
+			p = Path("outputs")
+			p.mkdir(parents=True, exist_ok=True)
+			return p
+
+		def make_filename(prefix, ext):
+			ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+			safe = str(prefix).replace(" ", "_").lower()
+			return out_dir() / f"{safe}_{ts}.{ext}"
+
+		def write_pdf(title, context):
+			FPDF = ensure_fpdf()
+			pdf = FPDF()
+			pdf.set_auto_page_break(auto=True, margin=15)
+			pdf.add_page()
+			pdf.set_font("Arial", "B", 16)
+			pdf.cell(0, 10, txt=title, ln=True)
+			pdf.ln(4)
+			pdf.set_font("Arial", size=12)
+			for k, v in context.items():
+				pdf.multi_cell(0, 8, f"{k.replace('_', ' ').title()}: {v}")
+			path = make_filename(title, "pdf")
+			pdf.output(str(path))
+			return str(path)
+
+		def write_word(title, context):
+			Document, Pt = ensure_python_docx()
+			doc = Document()
+			heading = doc.add_heading(title, level=1)
+			for run in heading.runs:
+				try:
+					run.font.size = Pt(18)
+				except Exception:
+					pass
+			for k, v in context.items():
+				p = doc.add_paragraph()
+				p.add_run(f"{k.replace('_', ' ').title()}: ").bold = True
+				p.add_run(str(v))
+			path = make_filename(title, "docx")
+			doc.save(str(path))
+			return str(path)
+
+		def write_jinja_docx(title, context):
+			Template = ensure_jinja()
+			Document, _Pt = ensure_python_docx()
+
+			template_text = (
+				"{{ title }}\n"
+				"{% for _ in range(title|length) %}={% endfor %}\n\n"
+				"{% for k, v in context.items() %}{{ k.replace('_',' ') | title }}: {{ v }}\n{% endfor %}"
+			)
+			rendered = Template(template_text).render(title=title, context=context)
+
+			doc = Document()
+			lines = rendered.splitlines()
+			if lines:
+				doc.add_heading(lines[0], level=1)
+				body = "\n".join(lines[2:]) if len(lines) > 2 else ""
+			else:
+				body = rendered
+			for line in body.split("\n"):
+				doc.add_paragraph(line)
+
+			path = make_filename(title, "docx")
+			doc.save(str(path))
+			return str(path)
+
+		def write_docxtpl(title, context, template_path: str):
+			DocxTemplate = ensure_docxtpl()
+			template_file = Path(template_path)
+			if not template_file.exists():
+				raise FileNotFoundError(f"Template file not found:\n{template_file}")
+			doc = DocxTemplate(str(template_file))
+			# Add title into context to allow {{ title }} usage in template
+			render_ctx = {"title": title, **context}
+			doc.render(render_ctx)
+			path = make_filename(title, "docx")
+			doc.save(str(path))
+			return str(path)
+
+		def generate(filetype, subject, use_tpl: bool, tpl_path: str, context_override: dict | None = None):
+			allowed_types = {"PDF", "WORD", "JINJA"}
+			allowed_subjects = {"resume", "personal info", "computer stats", "letter", "Egon stats"}
+			if filetype not in allowed_types:
+				raise ValueError(f"filetype must be one of {sorted(allowed_types)}")
+			if subject not in allowed_subjects:
+				raise ValueError(f"subject must be one of {sorted(allowed_subjects)}")
+
+			title, context = choose_context(subject)
+			# Allow UI-edited context to override defaults
+			if context_override:
+				context = {**context, **context_override}
+
+			if use_tpl:
+				if not tpl_path:
+					raise ValueError("Please select a .docx template file or turn off 'Use docxtpl'.")
+				# docxtpl always outputs a .docx
+				return write_docxtpl(title, context, tpl_path)
+
+			if filetype == "PDF":
+				return write_pdf(title, context)
+			if filetype == "WORD":
+				return write_word(title, context)
+			return write_jinja_docx(title, context)
+
+		# ------------ UI (uses make_pop_ups_window) ------------
+		root = self.make_pop_ups_window(self.file_template_generator, title="Template Generator")
+
+		# State variables
+		filetype_var = StringVar(value="WORD")
+		subject_var = StringVar(value="resume")
+		use_tpl_var = BooleanVar(value=False)
+		tpl_path_var = StringVar(value="")
+		result_path_var = StringVar(value="")
+		status_var = StringVar(value="Select options and click Generate")
+
+		# Choices
+		filetypes = ("PDF", "WORD", "JINJA")
+		subjects = ("resume", "personal info", "computer stats", "letter", "Egon stats")
+
+		# Context dynamic form state
+		context_vars: dict[str, StringVar] = {}
+
+		# Callbacks
+		def rebuild_context_fields(*_):
+			# Clear existing widgets
+			for w in context_frame.grid_slaves():
+				w.destroy()
+			context_vars.clear()
+
+			_title, ctx = choose_context(subject_var.get())
+			ttk.Label(context_frame, text="Placeholders (editable):", font=("Segoe UI", 9, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", padx=2, pady=(0, 4))
+
+			r = 1
+			for k, v in ctx.items():
+				ttk.Label(context_frame, text=k.replace("_", " ").title() + ":").grid(row=r, column=0, sticky="e", padx=4, pady=2)
+				sv = StringVar(value=v)
+				context_vars[k] = sv
+				ttk.Entry(context_frame, textvariable=sv, width=40).grid(row=r, column=1, sticky="we", padx=4, pady=2)
+				r += 1
+
+			context_frame.grid_columnconfigure(1, weight=1)
+
+		def do_generate(event=None):
+			ft = filetype_var.get()
+			sbj = subject_var.get()
+			use_tpl = bool(use_tpl_var.get())
+			tpl_path = tpl_path_var.get().strip()
+			try:
+				# Pull edited context overrides from UI
+				context_override = {k: sv.get() for k, sv in context_vars.items()}
+				path = generate(ft, sbj, use_tpl, tpl_path, context_override=context_override)
+				result_path_var.set(str(path))
+				status_var.set("Generated successfully.")
+				open_folder_btn.config(state=NORMAL)
+				open_file_btn.config(state=NORMAL)
+				copy_btn.config(state=NORMAL)
+				result_entry.configure(state="normal")
+				result_entry.select_range(0, END)
+				result_entry.configure(state="readonly")
+			except Exception as e:
+				status_var.set("Generation failed.")
+				messagebox.showerror("Generation error", str(e))
+
+		def open_folder():
+			p = result_path_var.get()
+			if not p:
+				return
+			folder = str(Path(p).resolve().parent)
+			try:
+				if os.name == "nt":
+					os.startfile(folder)  # type: ignore[attr-defined]
+				elif sys.platform == "darwin":
+					subprocess.Popen(["open", folder])
+				else:
+					subprocess.Popen(["xdg-open", folder])
+			except Exception as e:
+				messagebox.showwarning("Open Folder", f"Could not open folder:\n{e}")
+
+		def open_file():
+			p = result_path_var.get()
+			if not p:
+				return
+			file_path = str(Path(p).resolve())
+			try:
+				if os.name == "nt":
+					os.startfile(file_path)  # type: ignore[attr-defined]
+				elif sys.platform == "darwin":
+					subprocess.Popen(["open", file_path])
+				else:
+					subprocess.Popen(["xdg-open", file_path])
+			except Exception as e:
+				messagebox.showwarning("Open File", f"Could not open file:\n{e}")
+
+		def copy_path():
+			p = result_path_var.get()
+			if not p:
+				return
+			try:
+				root.clipboard_clear()
+				root.clipboard_append(p)
+				status_var.set("Path copied to clipboard.")
+			except Exception:
+				pass
+
+		def browse_tpl():
+			path = filedialog.askopenfilename(
+				title="Select .docx template",
+				filetypes=[("Word Template", "*.docx"), ("All Files", "*.*")]
+			)
+			if path:
+				tpl_path_var.set(path)
+
+		def on_use_tpl_toggle():
+			state = "normal" if use_tpl_var.get() else "disabled"
+			tpl_path_entry.configure(state=state)
+			browse_btn.configure(state=state)
+			# If using template, filetype choice still matters (output remains .docx).
+			# No change needed here; we just let generate() route to docxtpl.
+
+		# Layout
+		pad = {"padx": 8, "pady": 6}
+		ttk.Label(root, text="Document Template Generator", font=("Segoe UI", 12, "bold")).grid(row=0, column=0, columnspan=3, **pad)
+
+		# File type
+		ttk.Label(root, text="File type:").grid(row=1, column=0, sticky="e", **pad)
+		filetype_cb = ttk.Combobox(root, textvariable=filetype_var, values=filetypes, state="readonly", width=12)
+		filetype_cb.grid(row=1, column=1, sticky="w", **pad)
+
+		# Subject
+		ttk.Label(root, text="Subject:").grid(row=2, column=0, sticky="e", **pad)
+		subject_cb = ttk.Combobox(root, textvariable=subject_var, values=subjects, state="readonly", width=20)
+		subject_cb.grid(row=2, column=1, sticky="w", **pad)
+
+		# DocxTpl controls
+		use_tpl_chk = ttk.Checkbutton(root, text="Use docxtpl (.docx template)", variable=use_tpl_var, command=on_use_tpl_toggle)
+		use_tpl_chk.grid(row=3, column=0, columnspan=2, sticky="w", **pad)
+
+		ttk.Label(root, text="Template path:").grid(row=4, column=0, sticky="e", **pad)
+		tpl_path_entry = ttk.Entry(root, textvariable=tpl_path_var, width=40, state="disabled")
+		tpl_path_entry.grid(row=4, column=1, sticky="we", **pad)
+		browse_btn = ttk.Button(root, text="Browse...", command=browse_tpl, state="disabled")
+		browse_btn.grid(row=4, column=2, sticky="w", padx=(0, 8), pady=6)
+
+		# Status line
+		status_label = ttk.Label(root, textvariable=status_var, foreground="gray30")
+		status_label.grid(row=5, column=0, columnspan=3, sticky="w", **pad)
+
+		# Result path
+		ttk.Label(root, text="Result path:").grid(row=6, column=0, sticky="e", **pad)
+		result_entry = ttk.Entry(root, textvariable=result_path_var, width=48, state="readonly")
+		result_entry.grid(row=6, column=1, columnspan=2, sticky="we", **pad)
+
+		# Context editor frame
+		context_frame = ttk.LabelFrame(root, text="Context")
+		context_frame.grid(row=7, column=0, columnspan=3, sticky="nsew", padx=8, pady=(0, 8))
+		rebuild_context_fields()
+
+		# Buttons
+		btn_frame = ttk.Frame(root)
+		btn_frame.grid(row=8, column=0, columnspan=3, sticky="e", **pad)
+
+		generate_btn = ttk.Button(btn_frame, text="Generate", command=do_generate)
+		open_folder_btn = ttk.Button(btn_frame, text="Open Folder", command=open_folder, state=DISABLED)
+		open_file_btn = ttk.Button(btn_frame, text="Open File", command=open_file, state=DISABLED)
+		copy_btn = ttk.Button(btn_frame, text="Copy Path", command=copy_path, state=DISABLED)
+		close_btn = ttk.Button(btn_frame, text="Close", command=root.destroy)
+
+		generate_btn.grid(row=0, column=0, padx=4)
+		open_folder_btn.grid(row=0, column=1, padx=4)
+		open_file_btn.grid(row=0, column=2, padx=4)
+		copy_btn.grid(row=0, column=3, padx=4)
+		close_btn.grid(row=0, column=4, padx=4)
+
+		# Bindings
+		root.bind("<Return>", do_generate)
+		root.bind("<Control-Return>", do_generate)
+		root.bind("<Escape>", lambda e: root.destroy())
+
+		# React to subject change by rebuilding context fields
+		subject_cb.bind("<<ComboboxSelected>>", lambda e: rebuild_context_fields())
+
+		# Stretch columns
+		root.grid_columnconfigure(1, weight=1)
+		context_frame.grid_columnconfigure(1, weight=1)
+
 	def auto_save_press(self, event=False):
-		if self.file_name and self.aus.get() and (self.autosave_by_p.get()):
+		if self.file_name and self.auto_save_v.get() and (self.autosave_by_p.get()):
 			self.save()
 
-	def aul_var(self):
-		if self.aul.get():
-			self.aul_thread.start()
-		else:
-			self.aul_thread.join()
+	def _init_autol(self):
+		# Internal book-keeping
+		self._auto_list_binding = None
+		self._autol_enabled_last = None
+		self._list_rx_ready = False
 
-	def auto_lists(self):
-		'''
-		W.I.P function that the vision with it is to make that if you write any kind of something that organizes
-		the content like a list (numeric, dotted) it will automatically will write the next kind of this item
-		in the next line
-		'''
-		if self.aul:
-			# boolean variables to identify if there is a list
-			numeric_list = False
-			dotted_list = False
-			indexes = []
-			content = self.EgonTE.get('1.0', 'end').split(' ')
-			numerics = []
-			numerics_iterate = [numerics.append(f'{i}.') for i in range(100)]
-			# checking if there are list's key components in the text
-			for num in numerics:
-				if num in content:
-					numeric_list = True
-					last_num = int(num)
-			if '*' in content:
-				dotted_list = True
-			# first steps if key components are found
-			if numeric_list and dotted_list:
+		# Keep bindings_dict compatible (autol stores the variable, not patterns)
+		if not hasattr(self, 'bindings_dict') or not isinstance(self.bindings_dict, dict):
+			self.bindings_dict = {}
+		self.bindings_dict['autol'] = self.aul
+
+		# Reflect changes immediately when user toggles the option
+		self.aul.trace_add('write', lambda *args: self.aul_var())
+
+		# Apply initial state (enable/disable <Return> handler)
+		self.aul_var()
+
+	def aul_var(self, event=None) -> None:
+		"""
+		Auto-lists variable manager. Applies current self.aul state by
+		binding/unbinding the Enter handler. Safe to call often; no threads.
+		"""
+		try:
+			enabled = self.aul.get()
+		except Exception:
+			enabled = bool(getattr(self, 'aul', False))
+
+		if getattr(self, '_autol_enabled_last', None) == enabled:
+			return
+		self._autol_enabled_last = enabled
+
+		# Apply on the UI thread
+		try:
+			self.EgonTE.after(0, self.enable_auto_lists, enabled)
+		except Exception:
+			self.enable_auto_lists(enabled)
+
+	def enable_auto_lists(self, enable: bool) -> None:
+		"""
+		Bind/unbind the <Return> auto-list handler.
+		"""
+		# Always unbind previous to keep state clean
+		if getattr(self, '_auto_list_binding', None):
+			try:
+				self.EgonTE.unbind('<Return>', self._auto_list_binding)
+			except Exception:
 				pass
-			elif numeric_list:
-				list_prefix = str(last_num + 1)
-			elif dotted_list:
-				list_prefix = '*'
-			insert_indexes = list(''.join(int(indexes[0]) + 1), indexes[1])
-			# checking to not duplicate existing lists
-			if self.EgonTE.index(insert_indexes[0] + 1) == list_prefix:
-				self.EgonTE.insert(insert_indexes, list_prefix)
+			self._auto_list_binding = None
+
+		if enable:
+			handler = getattr(self, '_on_return_auto_list', None)
+			if callable(handler):
+				self._auto_list_binding = self.EgonTE.bind('<Return>', handler, add='+')
+
+	def _ensure_list_regex(self):
+		if getattr(self, '_list_rx_ready', False):
+			return
+
+		# Accept more bullet markers:
+		# - ASCII: -, +, *
+		# - Unicode common bullets: •, ●, ◦, ‣, ▪, ·
+		# - Dashes used as bullets: en dash (–), em dash (—)
+		bullet_chars = r'\-\+\*•●◦‣▪·\u2013\u2014'
+
+		# Bulleted list at line start:
+		# - Capture leading indent (group 1) and the bullet (group 2)
+		# - Allow an optional space after bullet, but require that some non-space content exists on the line
+		#   so a bare marker line still counts as “only marker”
+		self._rx_bullet = compile(rf'^(\s*)([{bullet_chars}])(?:\s+|)(?=\S)')
+
+		# Numbered list at line start:
+		# - Separators supported: ., ), :, -, ], }
+		# - Require at least one space after the separator (classic “1. item” style)
+		self._rx_number = compile(r ^ '(\s*)(\d+)([.\):\-\]\}])\s+')
+
+		# Only-marker checks (no non-space content after bullet/number)
+		self._rx_only_bul = compile(rf'^\s*([{bullet_chars}])\s*$')
+		self._rx_only_num = compile(r'^\s*\d+[.\):\-\]\}]\s*$')
+
+		self._list_rx_ready = True
+
+	def _on_return_auto_list(self, event):
+		"""
+		Auto-continue lists on Enter.
+		- Continues bullets and numbers.
+		- Preserves indent.
+		- Ends list when the line contains only the marker.
+		- Clean undo.
+		Return 'break' when handled, or None to let default newline occur.
+		"""
+		# Respect activation flag
+		try:
+			if not bool(self.aul.get()):
+				return None
+		except Exception:
+			return None
+
+		w = event.widget
+
+		# Allow replacing selection normally
+		if w.tag_ranges('sel'):
+			return None
+
+		# Treat Shift+Enter as plain newline (Windows Tk: Shift is bit 0x0001)
+		if getattr(event, 'state', 0) & 0x0001:
+			return None
+
+		# Read current line
+		line_start = w.index('insert linestart')
+		line_end = w.index('insert lineend')
+		line_text = w.get(line_start, line_end)
+
+		# Only continue at end-of-line or when only whitespace follows
+		if w.compare('insert', '<', line_end) and w.get('insert', line_end).strip():
+			return None
+
+		self._ensure_list_regex()
+
+		mb = self._rx_bullet.match(line_text)
+		mn = self._rx_number.match(line_text)
+		s = line_text.rstrip()
+
+		# End list if line is just the marker
+		if mb and self._rx_only_bul.fullmatch(s):
+			w.edit_separator()
+			w.delete(line_start, line_end)
+			indent = mb.group(1)
+			w.insert(line_start, indent + '\n' + indent)
+			w.edit_separator()
+			return 'break'
+		if mn and self._rx_only_num.fullmatch(s):
+			w.edit_separator()
+			w.delete(line_start, line_end)
+			indent = mn.group(1)
+			w.insert(line_start, indent + '\n' + indent)
+			w.edit_separator()
+			return 'break'
+
+		# Not a list line -> let default behavior happen
+		if not (mb or mn):
+			return None
+
+		indent = (mb or mn).group(1)
+		if mn:
+			n = int(mn.group(2))
+			sep = mn.group(3)
+			next_marker = f'{n + 1}{sep} '
+			continuation = indent + next_marker
+		else:
+			bullet = mb.group(2)
+			continuation = indent + f'{bullet} '
+
+		# Insert as one undo step
+		w.edit_separator()
+		w.insert('insert', '\n' + continuation)
+		w.edit_separator()
+		return 'break'
+
 
 	def compare(self):
 		'''
@@ -4375,7 +5482,7 @@ class Window(Tk):
 
 		content = self.EgonTE.get('1.0', 'end')
 		corrected_content = TextBlob(content).correct()
-		if self.ccc.get():
+		if self.corrector_check_changes.get():
 			preview_ui()
 		else:
 			self.advance_correction = True
@@ -4756,370 +5863,8 @@ class Window(Tk):
 
 
 	def handwriting(self):
-		'''
-		the handwriting tool allows you to draw on a pretty rich canvas (with most basic canvas option except shapes
-		and colors), and allows you to convert to text, upload and save the thing that you draw
+		open_handwriting(self)
 
-		more options and configuration will hopefully come soon
-		'''
-		global previous_point, current_point
-		previous_point = [0, 0]
-		current_point = [0, 0]
-		self.convert_output = ''
-		img_array = ''
-		self.convert_image = ''
-		color = StringVar()
-		color.set('black')
-		width = IntVar()
-		width.set(1)
-		lines_list, images_list = [], []
-		# I'm making the y axis with a low value because it's expands to the size of the window - and by using this
-		# size Its will serve me because this will be the size that the canvas will take the other widgets' space
-		canvas_x, canvas_y = 500, 400
-		self.pnc_width, self.ers_width = IntVar(), IntVar()  # values
-		self.pnc_width.set(2)
-		self.ers_width.set(5)
-		self.current_tool = 'pencil'
-		self.ers_current, self.pnc_current = 1, 1  # index
-
-
-		def quit_hw():
-			self.opened_windows.remove(hw_root)
-			self.hw_active = False
-			if self.hw_bonus_root:
-				self.hw_bonus_root.destroy()
-				self.hw_bonus_root = None
-			hw_root.destroy()
-
-		def paint(event):
-			global previous_point, current_point
-			current_point = [self.draw_x, self.draw_y]
-			self.last_items.clear()
-
-			if previous_point != [0, 0]:
-				self.line = self.draw_canvas.create_line(previous_point[0], previous_point[1], self.draw_x,
-													self.draw_y,
-													fill=color.get(), width=width.get())
-				lines_list.append(self.line)
-				self.line_group.append(self.line)
-				self.lg_dict[self.line] = (self.draw_canvas.coords(self.line), self.draw_canvas.itemcget(self.line, 'width'))
-				if event.type == EventType.ButtonRelease and self.current_tool == 'pencil':
-					self.line_groups.append(self.line_group)
-					self.lgs_dict[self.line_groups.index(self.line_group)] = self.lg_dict
-
-			previous_point = [self.draw_x, self.draw_y]
-			self.line = ''
-			if event.type == EventType.ButtonRelease:
-				self.line_group, self.lg_dict = [], {}
-			if event.type == '5':
-				previous_point = [0, 0]
-
-
-		def undo_line(event=None):
-			items = self.draw_canvas.find_all()
-			if items:
-				last_group = []
-				item_type = self.draw_canvas.type(items[-1])
-				line_group = self.line_groups[-1]
-				if items[-1] in line_group:
-					loop_range = len(line_group)
-					for line in range(1, loop_range + 1):
-						ind = line * -1
-						last_group.append(items[ind])
-						'''+ after spamming IndexError: tuple index out of range - probably fixed'''
-						'''+ using eraser is ruining the list, options
-						 1. make undo also work on eraser
-						 2. find a method that will make the remaining of the line to be removed'''
-						self.draw_canvas.delete(items[ind])
-					# self.canvas.itemconfig(items[ind], state='hidden')
-
-					last_item_group = (self.lgs_dict[self.line_groups.index(self.line_groups[-1])])
-					last_item_value = last_item_group.values()
-					self.last_items.append([list(last_item_group)] + [list(last_item_value)])
-
-					del self.lgs_dict[self.line_groups.index(self.line_groups[-1])]
-					del self.line_groups[-1]
-
-
-		def move(key, event=None):
-			move_x, move_y = None, None
-			# move paint a bit depending on the arrow keys
-			# indicator for keys method
-			if isinstance(key, str):
-				move_x, move_y = self.move_dict[key]
-				print(move_x, move_y)
-			else:
-				if key.type == EventType.ButtonPress:
-					# for another function with the same bind
-					self.mp_x, self.mp_y = key.x, key.y
-				else:
-					# formula for moving the drawing relative to the mouse pos (at the start and at the end)
-					move_x, move_y = int((self.draw_x - self.mp_x) // 1), int(
-						(self.draw_y - self.mp_y) // 1)
-
-			if move_x or move_y:
-				for l in lines_list:
-					self.draw_canvas.move(l, move_x, move_y)
-				for img in images_list:
-					self.draw_canvas.move(img, move_x, move_y)
-
-		def cords(event):
-			self.draw_x, self.draw_y = event.x, event.y
-			cords_label.configure(text=f'X coordinates:{self.draw_x} | Y coordinates:{self.draw_y}')
-
-		def upload():
-			# tkinter garbage collector have problems with images, to solve that we need to make all of them, global
-			global img_array, image, image_tk
-			# load image into the canvas
-			self.convert_image = filedialog.askopenfilename(filetypes=self.img_extensions)
-			if self.convert_image:
-				image = Image.open(self.convert_image)
-				image_tk = PhotoImage(file=self.convert_image)
-				image_x = (self.draw_canvas.winfo_width() // 2) - (image.width // 2)
-				image_y = (self.draw_canvas.winfo_height() // 2) - (image.height // 2)
-				canvas_image = self.draw_canvas.create_image(image_x, image_y, image=image_tk, anchor=NW)
-				images_list.append(canvas_image)
-				self.cimage_from = 'upload'
-
-		def save_canvas():
-			self.convert_image = self.save_images(self.draw_canvas, hw_root, buttons_frame)
-			self.cimage_from = 'save'
-
-		def draw_erase(mode='pencil'):
-			self.determine_highlight()
-			if mode == 'pencil':
-				self.draw_canvas.configure(cursor='pencil')
-				color.set('black')
-				pencil.configure(bg=self._background), eraser.configure(bg=self.dynamic_button)
-			else:
-				self.draw_canvas.configure(cursor=DOTBOX)
-				color.set(self.dynamic_bg)
-				pencil.configure(bg=self.dynamic_button), eraser.configure(bg=self._background)
-
-			self.current_tool = mode
-			update_sizes()
-
-
-		def update_sizes(scrollwheel_event=False):
-			if self.current_tool == 'pencil':
-				size = self.pnc_width.get()
-				pencil_list = list(map(int, list(self.pencil_size['values'])))
-				self.pnc_current = pencil_list.index(size)
-				self.pencil_size.current(pencil_list.index(size))
-			else:
-
-				size = self.ers_width.get()
-				eraser_list = list(map(int, list(self.eraser_size['values'])))
-				self.ers_current = eraser_list.index(size)
-				self.eraser_size.current(eraser_list.index(size))
-
-			width.set(size)
-
-		def sizes_shortcuts_hw(event):
-			if isinstance(event, int):
-				 value = event
-			else:
-				if (event.num == 5 or event.delta == -120):
-					value = -1
-				else:
-					value = 1
-
-			try:
-
-				if self.current_tool == 'pencil':
-					self.pencil_size.current(self.pnc_current + value)
-					self.pnc_current += value
-
-				else:
-					self.eraser_size.current(self.ers_current + value)
-					self.ers_current += value
-
-				update_sizes()
-			except Exception as e:
-				print(e)
-
-		def custom_size(event=False):
-			if self.current_tool == 'pencil':
-				if isinstance(self.pnc_width.get(), int):
-					self.pnc_width.set(self.pencil_size.get())
-
-			else:
-				if isinstance(self.ers_width.get(), int):
-					self.ers_width.set(self.eraser_size.get())
-					try:
-						fixed_values_list = list(map(int, list(self.eraser_size['values'])))
-						self.eraser_size.current(fixed_values_list.index(self.ers_width.get()))  # (pencil_size.get()
-					except ValueError:
-						pass
-
-		def convert():
-			if not self.convert_image:
-				save_canvas()
-
-			# saving gives you the name
-			if self.cimage_from == 'save':
-				image_txt = Image.open(self.convert_image)  # upload gives you this
-				image_txt = self.convert_image
-			else:
-				image_txt = image
-
-			if image_txt:
-				text = image_to_string(image_txt)
-			if self.convert_output:
-				self.convert_output.destroy()
-				pass
-			if text:
-				self.convert_output = Text(hw_root)
-				self.convert_output.insert('1.0', text)
-				self.convert_output.configure(relief='flat', state=DISABLED, height=5)
-				self.convert_output.pack()
-
-		def cord_opt():
-
-			def lt_cords(event):
-				if self.draw_tool_cords.get():
-					pos_x, pos_y = self.draw_x, self.draw_y
-					tool_lc.configure(text=f'{self.current_tool} coordinates:{pos_x} | {self.current_tool} coordinates:{pos_y}')
-
-			if self.draw_tool_cords.get():
-				cords_label.pack_forget()
-				cords_label.grid(row=1, column=0)
-				tool_lc.grid(row=1, column=2)
-				hw_root.bind('<B1-Motion>', lt_cords)
-
-			else:
-				tool_lc.grid_forget()
-				cords_label.grid_forget()
-				cords_label.pack(fill=BOTH)
-				hw_root.unbind('<B1-Motion>')
-				self.draw_canvas.bind('<B1-Motion>', paint)
-
-		def information():
-			self.hw_bonus_root = Toplevel()
-			self.make_tm(self.hw_bonus_root)
-			self.hw_bonus_root.title(f'{self.title_struct} Handwriting bonuses')
-
-			arrows_desc = 'with the arrows keys, you can move the entire content \nof the canvas to the direction that' \
-						  'you want'
-			keybind_dict = {'🡡': 'up', '🡣': 'down', '🡢': 'right', '🡠': 'left'}
-			btn_up, btn_down, btn_right, btn_left = Label(self.hw_bonus_root), Label(self.hw_bonus_root), Label(
-				self.hw_bonus_root), Label(self.hw_bonus_root)
-			keybind_exp = btn_up, btn_down, btn_right, btn_left
-
-			keybind_title = Label(self.hw_bonus_root, text='Keybindings', font=self.titles_font)
-			arrows_description = Label(self.hw_bonus_root, text=arrows_desc, font='arial 8')
-			for index, arr in enumerate(keybind_dict.keys()):
-				keybind_exp[index].configure(text=f'{keybind_dict[arr]} : {arr}')
-
-			keybind_title.grid(row=0, column=1)
-
-			arrows_description.grid(row=1, column=1)
-			btn_up.grid(row=2, column=0)
-			btn_down.grid(row=2, column=2)
-			btn_right.grid(row=3, column=0)
-			btn_left.grid(row=3, column=2)
-
-			scroll_wheel_up, scroll_wheel_down = '🖱🡡', '🖱🡣'
-			scroll_wheel_desc = 'With your mouse scrollwheel you can change the\nthickness of the tool your using'
-
-			scroll_up, scroll_down = Label(self.hw_bonus_root, text=f'more thickness : {scroll_wheel_up}'), \
-				Label(self.hw_bonus_root, text=f'less thickness : {scroll_wheel_down}')
-			scroll_wheel_description = Label(self.hw_bonus_root, text=scroll_wheel_desc, font='arial 8')
-
-			scroll_wheel_description.grid(row=4, column=1)
-			scroll_up.grid(row=5, column=0)
-			scroll_down.grid(row=5, column=2)
-
-			settings_label = Label(self.hw_bonus_root, text='Settings', font=self.titles_font)
-			check_frame = Frame(self.hw_bonus_root)
-			last_tool_cords = Checkbutton(check_frame, text='Tool cords', variable=self.draw_tool_cords, command=cord_opt)
-			spin_shortcut = Checkbutton(check_frame, text='Mouse wheel\nshortcut', variable=self.mw_shortcut,
-										command=switch_sc)
-
-			settings_label.grid(row=6, column=1)
-			check_frame.grid(row=7, column=1)
-			last_tool_cords.grid(row=1, column=0)
-			spin_shortcut.grid(row=1, column=2)
-
-		def switch_sc():
-			if self.mw_shortcut.get():
-				self.draw_canvas.bind('<MouseWheel>', sizes_shortcuts_hw)
-				self.draw_canvas.unbind('<Control-Key-.>')
-				self.draw_canvas.unbind('<Control-Key-,>')
-			else:
-				self.draw_canvas.unbind('<MouseWheel>')
-				self.draw_canvas.bind('<Control-Key-.>', lambda event: sizes_shortcuts_hw('up'))
-				self.draw_canvas.bind('<Control-Key-,>', lambda event: sizes_shortcuts_hw('down'))
-
-		# drawing board
-		hw_root = self.make_pop_ups_window(self.handwriting, custom_title=self.title_struct + 'Draw and convert')
-		draw_frame = Frame(hw_root, bg=self.dynamic_overall)
-		buttons_frame = Frame(hw_root, bg=self.dynamic_overall)
-		self.draw_canvas = Canvas(draw_frame, width=canvas_x, height=canvas_y, bg=self.dynamic_bg, cursor='pencil')
-
-		undo_button = Button(buttons_frame, text='↩', command=undo_line, borderwidth=1, bg=self.dynamic_button,
-						fg=self.dynamic_text)
-		pencil = Button(buttons_frame, text='Pencil', command=draw_erase, borderwidth=1, bg=self.dynamic_button,
-						fg=self.dynamic_text)
-		eraser = Button(buttons_frame, text='Eraser', command=lambda: draw_erase('erase'), borderwidth=1, bg=self.dynamic_button,
-						fg=self.dynamic_text)
-		save_png = Button(buttons_frame, text='Save as png', command=save_canvas, borderwidth=1, bg=self.dynamic_button,
-						  fg=self.dynamic_text)
-		upload_writing = Button(buttons_frame, text='Upload', command=upload, state=tes, borderwidth=1,
-								bg=self.dynamic_button, fg=self.dynamic_text)
-		convert_to_writing = Button(buttons_frame, text='Convert to writing', command=convert,
-									borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)  # convert)
-		erase_all = Button(buttons_frame, text='Erase all', command=lambda: self.draw_canvas.delete('all'),
-						   borderwidth=1, bg=self.dynamic_button, fg=self.dynamic_text)
-		seperator, seperator_2, seperator_3 = [Label(buttons_frame, text='|', bg=self.dynamic_bg, fg=self.dynamic_text) for l in range(3)]
-		info_button = Button(buttons_frame, text='i', command=information, bg=self.dynamic_button, fg=self.dynamic_text)
-
-		self.pencil_size = ttk.Combobox(buttons_frame, width=10, textvariable=self.pnc_width, state='normal')
-		self.pencil_size['values'] = (1, 2, 3, 4, 6, 8)
-		self.pencil_size.current(self.pnc_current)
-		self.eraser_size = ttk.Combobox(buttons_frame, width=10, textvariable=self.ers_width, state='normal')
-		self.eraser_size['values'] = (3, 5, 8, 10, 12, 15)
-		self.eraser_size.current(self.ers_current)
-
-		cords_frame = Frame(hw_root, bg=self.dynamic_bg)
-		tool_lc = Label(cords_frame, text='', bg=self.dynamic_overall, fg=self.dynamic_text)
-		cords_label = Label(cords_frame, text='', bg=self.dynamic_overall, fg=self.dynamic_text)
-
-		buttons_frame.pack()
-		draw_frame.pack(fill=BOTH, expand=True)
-		self.draw_canvas.pack(fill=BOTH, expand=True)
-
-		grid_loop = (undo_button, seperator_3, pencil, self.pencil_size, eraser, self.eraser_size, seperator_2, erase_all, save_png
-					 , upload_writing, convert_to_writing, seperator, info_button)
-
-		for cul ,widget in enumerate(grid_loop):
-			widget.grid(row=0, column=cul, padx=2)
-
-		self.hw_bg = draw_frame, buttons_frame
-		self.hw_buttons = pencil, eraser, save_png, upload_writing, convert_to_writing, erase_all, info_button
-		self.hw_labels = tool_lc, cords_label
-		self.hw_seperator = seperator, seperator_2, seperator_3
-
-		cords_frame.pack(fill=BOTH)
-		cords_label.pack(fill=BOTH)
-
-		draw_erase()
-		self.draw_canvas.bind('<B1-Motion>', paint)
-		self.draw_canvas.bind('<ButtonRelease-1>', paint)
-		hw_root.bind('<Left>', lambda e: move(key='left'))
-		hw_root.bind('<Right>', lambda e: move(key='right'))
-		hw_root.bind('<Up>', lambda e: move(key='up'))
-		hw_root.bind('<Down>', lambda e: move(key='down'))
-		hw_root.bind('<Motion>', cords)
-		hw_root.bind('<Control-Key-z>', lambda e: self.undo())
-		self.pencil_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
-		self.eraser_size.bind('<<ComboboxSelected>>', lambda event: update_sizes())
-		self.draw_canvas.bind('<MouseWheel>', sizes_shortcuts_hw)
-		self.draw_canvas.bind('<ButtonPress-3>', move)
-		self.draw_canvas.bind('<ButtonRelease-3>', move)
-		hw_root.protocol('WM_DELETE_WINDOW', quit_hw)
-		# existing file to writing
-		self.record_list.append(f'> [{get_time()}] - Hand writing tool window opened')
 
 	def natural_language_process(self, function: str):
 		'''
@@ -5366,22 +6111,22 @@ class Window(Tk):
 		self.file_ = self.data['file_bar']
 		self.show_toolbar.set(self.data['toolbar'])
 		self.night_mode.set(self.data['night_mode'])
-		self.tt_sc.set(self.data['text_twisters'])
+		self.textwist_special_chars.set(self.data['text_twisters'])
 		self.nm_palette.set(self.data['night_type'])
 		self.cs.set(self.data['style'])
 		self.custom_cursor_v.set(self.data['cursor'])
-		self.word_wrap.set(self.data['word_wrap'])
-		self.aus.set(self.data['auto_save'])
-		self.ccc.set(self.data['preview_cc'])
-		self.awc.set(self.data['window_c_warning'])
+		self.word_wrap_v.set(self.data['word_wrap'])
+		self.auto_save_v.set(self.data['auto_save'])
+		self.corrector_check_changes.set(self.data['preview_cc'])
+		self.win_count_warn.set(self.data['window_c_warning'])
 		self.adw.set(self.data['allow_duplicate'])
 		self.fun_numbers.set(self.data['fun_numbers'])
-		self.us_rp.set(self.data['usage_report'])
-		self.check_v.set(self.data['check_version'])
+		self.usage_report_v.set(self.data['usage_report'])
+		self.check_ver_v.set(self.data['check_version'])
 		self.predefined_cursor = self.custom_cursor_v.get()
 		self.predefined_style = self.cs.get()
 		self.predefined_relief = self.data['relief']
-		if self.lf.get():
+		if self.last_file_v.get():
 			self.file_name = self.data['open_last_file']
 
 	def text_decorators(self):
@@ -6572,7 +7317,7 @@ class Window(Tk):
 		function, change / add things to capture the mode that the user selected for the program
 		'''
 		if mode == 'dev':
-			if self.dm.get():
+			if self.dev_mode.get():
 				self.app_menu.delete('Record')
 				self.app_menu.delete('Git')
 				self.options_menu.delete('prefer gpu')
@@ -6600,7 +7345,7 @@ class Window(Tk):
 
 				self.menus_components.append(self.git_menu)
 
-			self.dm.set(not (self.dm.get()))
+			self.dev_mode.set(not (self.dev_mode.get()))
 		elif mode == 'tools':
 			if not (self.sta.get()):
 				self.app_menu.delete('Colors+')
@@ -6613,14 +7358,14 @@ class Window(Tk):
 				self.app_menu.delete('Patch notes')
 				self.app_menu.delete('External links')
 
-				if self.dm.get():
+				if self.dev_mode.get():
 					self.app_menu.delete('Record')
 					self.app_menu.delete('Git')
 					self.options_menu.delete('prefer gpu')
 
 				self.create_menus(initial=False)
 
-				if self.dm.get():
+				if self.dev_mode.get():
 					self.app_menu.add_cascade(label='Record', command=self.call_record)
 		elif mode == 'python':
 			# python menu
@@ -7431,6 +8176,7 @@ class Window(Tk):
 			enter()
 
 		def configure_modes(event=False):
+			'''+ others and all doesnt work'''
 			insert_list = []
 			self.functions_list.delete(0, END)
 			if self.fn_mode.get() and self.fn_mode.get() != 'all':
@@ -7468,93 +8214,23 @@ class Window(Tk):
 					, {'Search': self.search_functions})
 
 
-
-		file_functions = {'new file': self.new_file, 'open file': self.open_file, 'save': self.save,
-						  'save as': self.save_as,
-						  'delete file': self.delete_file, 'change file type': self.change_file_ui,
-						  'new window': new_window,
-						  'screenshot content': lambda: self.save_images(self.EgonTE, self, self.toolbar_frame, 'main')
-			, 'file\'s info': self.file_info, 'content stats': self.content_stats, 'file\'s comparison': self.compare,
-						  'merge files': self.merge_files,
-						  'print file': self.print_file, 'copy file path': self.copy_file_path, 'exit': self.exit_app,
-						  'restart': lambda: self.exit_app(event='r'),
-						  }
-		# 'import local file', 'import global file'
-		edit_functions = {'cut': self.cut, 'copy': self.copy, 'paste': self.paste, 'correct writing': self.corrector,
-						  'undo': self.EgonTE.edit_undo, 'redo': self.EgonTE.edit_redo, 'select all': self.select_all,
-						  'clear all': self.clear,
-						  'find text': self.find_text,
-						  'replace': self.replace, 'go to': self.goto, 'reverse characters': self.reverse_characters,
-						  'reverse words': self.reverse_words, 'join words': self.join_words,
-						  'upper/lower': self.lower_upper,
-						  'sort by characters': self.sort_by_characters, 'sort by words': self.sort_by_words,
-						  'insert images': self.insert_image
-						  }
-		tool_functions = {'translate': self.translate, 'current datetime': get_time,
-						  'random numbers': self.ins_random, 'random names': self.ins_random_name,
-						  'url shorter': self.url,
-						  'generate sequence': self.generate, 'search online': self.search_www, 'sort input': self.sort,
-						  'dictionary': lambda: Thread(target=self.knowledge_window('dict')).start(),
-						  'wikipedia': lambda: Thread(target=self.knowledge_window('wiki')).start(),
-						  'web scrapping': self.web_scrapping, 'text decorators': self.text_decorators,
-						  'inspirational quote': self.insp_quote, 'get weather': self.get_weather,
-						  'send email': self.send_email,
-						  'use chatgpt': self.chatGPT, 'use dalle': self.dallE, 'transcript': self.transcript,
-						  'symbols translator': self.text_decorators, 'encryption \ decryption': self.encryption
-						  }
-		nlp_functions = {'get nouns': lambda: self.natural_language_process(function='nouns')
-			, 'get verbs': lambda: self.natural_language_process(function='verbs')
-			, 'get adjectives': lambda: self.natural_language_process(function='adjective')
-			, 'get adverbs': lambda: self.natural_language_process(function='adverbs')
-			, 'get pronouns': lambda: self.natural_language_process(function='pronouns')
-			, 'get stop words': lambda: self.natural_language_process(function='stop words')
-			,
-						 'get names': lambda: self.natural_language_process(function='names')
-			, 'get phone numbers': lambda: self.natural_language_process(function='phone numbers')
-			, 'entity recognitions': lambda: self.natural_language_process(function='entity recognition')
-			, 'dependency tree': lambda: self.natural_language_process(function='dependency')
-			, 'lemmatization': lambda: self.natural_language_process(function='lemmatization')
-			,
-						 'most common words': lambda: self.natural_language_process(function='most common words')
-						 }
-		color_functions = {'whole text': lambda: self.custom_ui_colors(components='text')
-			, 'background': lambda: self.custom_ui_colors(components='background')
-			, 'highlight': lambda: self.custom_ui_colors(components='highlight')
-			, 'buttons color': lambda: self.custom_ui_colors(components='buttons')
-			, 'menus color': lambda: self.custom_ui_colors(components='menus')
-			, 'app colors': lambda: self.custom_ui_colors(components='app')
-			, 'info page colors': lambda: self.custom_ui_colors(components='info_page')
-			, 'virtual keyboard colors': lambda: self.custom_ui_colors(components='v_keyboard'),
-						   'advance options colors': lambda: self.custom_ui_colors(components='advance_options')
-						   }
-		other_functions = {'advance options': self.call_settings, 'help': lambda: self.info_page('help'),
-						   'patch notes': lambda: self.info_page('patch_notes')}
-		links_functions = {'github link': lambda: ex_links('g'), 'discord link': lambda: ex_links('d')}
-
-		make_c_dict(file_functions, edit_functions, tool_functions, nlp_functions, color_functions
-					, other_functions, links_functions)
-
+		self.conjoined_functions_only['others'] = self.other_functions
 		self.functions_names = []
-		functions_names = []
-		functions_names.extend([list(file_functions.keys()), list(edit_functions.keys()), list(tool_functions.keys()),
-								list(nlp_functions.keys()), list(color_functions.keys()),
-								list(other_functions.keys()), list(links_functions.keys())])
-		for func in functions_names:
-			self.functions_names.extend(func)
+		for index, functions_groups in enumerate(self.conjoined_functions_only.values()):
+			if isinstance(functions_groups, dict):
+				self.functions_names.extend(functions_groups.keys())
+			else:
+				self.functions_names.append(list(self.conjoined_functions_only.keys())[index])
 
 		self.fn_mode = StringVar()
 
-		fn_root = Toplevel(bg=self.dynamic_bg)
+		fn_root = self.make_pop_ups_window(self.search_functions, external_variable=True)
 		self.search_active = True
 		fn_root.protocol('WM_DELETE_WINDOW', close_search)
-		self.opened_windows.append(fn_root)
-		self.make_tm(fn_root)
-		fn_root.title(self.title_struct + 'functions')
 		if self.limit_w_s.get():
 			fn_root.resizable(False, False)
 		else:
 			fn_root.maxsize(700, int(fn_root.winfo_screenheight()))
-		fn_root.attributes('-alpha', self.st_value)
 
 		title = Label(fn_root, text='Search functions', font='arial 14 underline', fg=self.dynamic_text,
 					  bg=self.dynamic_bg)
@@ -7661,7 +8337,7 @@ class Window(Tk):
 
 	def check_version(self):
 		try:
-			url = "https://raw.githubusercontent.com/Ariel4545/text_editor/main/version.txt"
+			url = 'https://raw.githubusercontent.com/Ariel4545/text_editor/main/version.txt'
 			response = requests.get(url=url)
 			updated_version = response.text.replace(' ', '').replace('\n', '')
 			print(updated_version, self.ver)
