@@ -7,4 +7,6 @@ openai
 youtube-transcript-api
 pyshorteners
 email
+tkhtmlview
+python-docx
 tktooltip
