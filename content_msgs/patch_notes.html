@@ -1,0 +1,1199 @@
+<h3>Version - name - release date</h3>
+
+<h3>[ 1.13 - The next level - 9/8/25 (major changes only) ]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>New "ui_builders" file with crucial methods like "make_pop_ups_window", plus new methods and upgrades</li>
+  <li>Library installer tool remade with a new UI and advanced functionalities for a safer, smoother experience</li>
+  <li>New "handwriting_popup.py" that stores the handwriting method with many additions, improvements, and bug fixes</li>
+  <li>HTML versions of help and patch notes that activate when conditions are right</li>
+  <li>File template generator tool for simple docs and PDF files (and more)</li>
+  <li>Clipboard history tool to inspect and manipulate clipboard content, with connectivity to the main window</li>
+  <li>Many algorithms added to the main file to improve reliability and readability</li>
+  <li>Auto-lists method to help create numbered or bulleted lists in the text box</li>
+  <li>Special right-click version of the Edit menu</li>
+  <li>Massive find and replace method with many features and real time events</li>
+  <li>Method that loads all app commands</li>
+  <li>New "large_variables" file for large autonomous or string variables</li>
+  <li>New "universal_functions" file for standalone static functions</li>
+  <li>Many new options in the Advanced options window</li>
+</ul>
+
+<h4>Improved / Fixed</h4>
+<ul>
+  <li>Naming improvements across the project</li>
+  <li>Speech to method improved and fixed to a high degree</li>
+  <li>Typefaces method fixed and improved</li>
+  <li>Many fixes and optimizations across the codebase</li>
+</ul>
+
+
+<h3>[1.12.6 - rise of windows - 9/3/24]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Side windows advanced settings:
+    <ul>
+      <li>Open at the middle of the screen</li>
+      <li>Cancel the limitation of window sizes</li>
+      <li>Transparency</li>
+      <li>Top most</li>
+      <li>Window count warning</li>
+      <li>Text corrector changes (moved from functional)</li>
+    </ul>
+  </li>
+  <li>Night mode for these tools:
+    <ul>
+      <li>Search functions</li>
+      <li>Record</li>
+      <li>Insert images</li>
+    </ul>
+  </li>
+  <li>Usage report file (saved setting) after closing the program, including:
+    <ul>
+      <li>Usage time</li>
+      <li>Start and end date/time</li>
+      <li>Record tool content</li>
+    </ul>
+  </li>
+  <li>Record window new functions:
+    <ul>
+      <li>Save records as a file</li>
+      <li>Copy record to clipboard</li>
+      <li>Paste records to ETE</li>
+    </ul>
+  </li>
+  <li>Check latest version (saved setting)</li>
+  <li>Window manager function:
+    <ul>
+      <li>Warn if too many windows are opened (can be disabled)</li>
+      <li>If opening an already open tool window, bring it to front (can be disabled)</li>
+    </ul>
+  </li>
+  <li>Remade insert image function (manage more than one image):
+    <ul>
+      <li>Manage a list of images and their current state</li>
+      <li>Show index</li>
+      <li>Add or remove a specific image</li>
+      <li>Rename an image (inside the program)</li>
+      <li>Remove all with one button</li>
+    </ul>
+  </li>
+  <li>More docstrings</li>
+</ul>
+
+<h4>Improved / Changed</h4>
+<ul>
+  <li>Record call - if the window is already open, show the running window instead of opening a new one</li>
+  <li>Combined advanced options saved settings into one save function</li>
+  <li>Added middle-ground function for restore defaults and new saved settings creation</li>
+  <li>Moved corrector preview to the new Pop-ups tab in advanced settings</li>
+  <li>Textual name fixes and clearer naming</li>
+  <li>More use of the general pop-up window title structure</li>
+  <li>Removed many useless print statements and improved some</li>
+  <li>Made unbinding of save by writing event specific to the function</li>
+  <li>Improved Wikipedia image tool conditions</li>
+  <li>Capitalized city names in the weather tool</li>
+  <li>Record tool now runs via a specialized thread function (prevents duplicates)</li>
+  <li>Improved widget placements to not be limited by window size</li>
+  <li>Improved compare file window UI</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>Record list was resetting in some cases</li>
+  <li>File info proceeded without a file</li>
+  <li>Some repo function conditions</li>
+  <li>Some search function modes</li>
+  <li>Inconsistent night mode colors in advanced settings</li>
+  <li>RuntimeError while downloading FFmpeg</li>
+  <li>Wikipedia images tool bytes conversion caused fewer images</li>
+  <li>Program main loop issues</li>
+  <li>Git command calls</li>
+</ul>
+
+<h3>[1.12.5 - getting ready for the Microsoft store]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Fun numbers saved setting - insert random numbers into useful text entries when opening tools</li>
+  <li>Search functions tool - search functions by menus or name, and run them</li>
+  <li>Advanced options for custom color functions</li>
+  <li>Restart function in the main window</li>
+  <li>Generate sequence options:
+    <ul>
+      <li>Insert at cursor or at end of text</li>
+      <li>Preview window to accept or dismiss content</li>
+    </ul>
+  </li>
+  <li>Binding settings in advanced options - enable or disable these shortcut categories:
+    <ul>
+      <li>File related common shortcuts</li>
+      <li>Typefaces shortcuts</li>
+      <li>Edit functions (goto, replace, etc.)</li>
+      <li>Text twisters shortcuts</li>
+      <li>Window actions shortcuts</li>
+    </ul>
+  </li>
+  <li>Topmost shortcut</li>
+</ul>
+
+<h4>Improved</h4>
+<ul>
+  <li>Tooltip replaced with a custom one - modern look, constant delay, follows mouse on widget borders</li>
+  <li>Tooltip adapts to night mode when app opens in night mode</li>
+  <li>Windows 11 and maybe 10 - title bar turns black in night mode and vice versa</li>
+  <li>Combined all typeface functions</li>
+  <li>Improved some menu function names</li>
+  <li>Calculator method changed from eval() to numexpr.evaluate() - safer and supports more operations; added tutorial link button</li>
+  <li>Generate sequence lag warning threshold changed from 25k to 20k</li>
+  <li>Knowledge window: mention of current tool moved from Enter button to title bar</li>
+  <li>HTTP links changed to HTTPS</li>
+  <li>Encryption window 5 percent transparent like other tools</li>
+  <li>Info window search highlight colors adapt to mode</li>
+  <li>Made some night mode variables conditional to reduce waste</li>
+  <li>Replaced some button command reconfigure calls with direct function placement</li>
+  <li>Insert random number UI: narrower, more organized layout</li>
+  <li>Generate sequence UI: more modern elements and consistent design</li>
+  <li>Slightly improved knowledge window UI</li>
+  <li>Encryption/decryption UI: more space for buttons, more modern look</li>
+  <li>Updated weather tool known cities list</li>
+  <li>Email tool: send window unresizable, custom text box scrollbar, and richer parameters</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>Dictionary tool UI elements not placed correctly</li>
+  <li>Variable scope error in info window</li>
+  <li>Polyglot name in library installer</li>
+  <li>Emoticon library name in import</li>
+  <li>Info root night mode: occurrences label showed color without output</li>
+  <li>custom_ui_colors night mode condition</li>
+  <li>Errors in known cities list in weather tool</li>
+</ul>
+
+<h3>[1.12.4 - improvements along the way]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Restart button in the library installer after installations finish</li>
+  <li>Bonus installations: upgrade pip and optional libraries</li>
+  <li>Encryption/decryption tool with symmetric and asymmetric methods</li>
+  <li>Night mode support for the advanced settings window</li>
+  <li>Night mode support for handwriting tool</li>
+  <li>Change text file type function, with option to delete previous extension version</li>
+  <li>Insert image function with specific deletion option</li>
+  <li>Find text tool: tag or untag all matches</li>
+  <li>Find text setting: focus result on every search</li>
+  <li>Interactive list of the most popular words in find text</li>
+  <li>Extra calculator UI: number, expression, and clear buttons</li>
+  <li>Another virtual keyboard characters mode focusing on symbols</li>
+  <li>External commands menu: GitHub and Discord links (and MS Store soon)</li>
+  <li>Support for Azure OpenAI keys</li>
+  <li>Text corrector: preview changes window (saved option)</li>
+</ul>
+
+<h4>Improved</h4>
+<ul>
+  <li>Wikipedia images show in an image viewer instead of text links (press image to open link)</li>
+  <li>open_status_name changed to a class variable</li>
+  <li>Find text tool input is interactive</li>
+  <li>Merged find search and result windows</li>
+  <li>Improved text split for words search in find text</li>
+  <li>Occurrences count now a live-updating label</li>
+  <li>AI tools support the new OpenAI library</li>
+  <li>ChatGPT tool UI improved to behave more like a chat</li>
+  <li>Improved writing of patch_notes.txt and help.txt; extended help.txt</li>
+  <li>Email and link shortener libraries moved from required to optional</li>
+  <li>Night mode support for info window search functions and improved existing night mode</li>
+  <li>Improved delete file function; added custom deletion support for function files</li>
+  <li>GitHub link function changed to external links function</li>
+  <li>Transcript function output/UI and event chain improved</li>
+  <li>Improved many function and variable names</li>
+  <li>Knowledge window: when a term is not found, insert closest match into input</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>Import of youtube_transcript_api</li>
+  <li>Night mode activation and variables made consistent with BooleanVar</li>
+  <li>clac misspelling corrected to calc</li>
+  <li>Replaced double quotes with single quotes for consistency</li>
+  <li>Emoji detection variable bug</li>
+  <li>File name variable bug on exit</li>
+  <li>Night mode not initially activated when set in options</li>
+  <li>Removed nonexisting DallE output size</li>
+  <li>Auto-save option not saving in options file</li>
+</ul>
+
+<h3>[1.12.3 - the big patch of support - 27/11/23]</h3>
+
+<h4>Added / Remade</h4>
+<ul>
+  <li>Auto-save via writing; choose this method in advanced options</li>
+  <li>More languages in speech-to-text:
+    <ul>
+      <li>English (US), English (UK), Spanish (Spain), French, Russian, Arabic (Egypt), Japanese, Italian, Korean, Indonesian, Hebrew</li>
+    </ul>
+  </li>
+  <li>Unique scroll bars in text decorators for vertical or horizontal modes</li>
+  <li>Advanced options split into two tabs: styles and functional</li>
+  <li>Information window find tool:
+    <ul>
+      <li>Scroll down by matches</li>
+      <li>Reset</li>
+      <li>Highlight or lowlight all</li>
+      <li>Number of occurrences</li>
+      <li>Reactive text box</li>
+    </ul>
+  </li>
+  <li>Semi-remade translate tool:
+    <ul>
+      <li>Has an output box (no longer auto pastes to ETE)</li>
+      <li>New two-side UI: input and output</li>
+      <li>Replaced copy to clipboard with paste to ETE</li>
+      <li>Random output language on start</li>
+    </ul>
+  </li>
+</ul>
+
+<h4>Changed / Improved</h4>
+<ul>
+  <li>Improved installation of fast_autocomplete via the library installer</li>
+  <li>Transparency scale updates live without a Set button</li>
+  <li>Improved exit app conditions for unsaved changes and quitting</li>
+  <li>Copy function updates program values</li>
+  <li>Improved find_text variable usage</li>
+  <li>Improved layout of information window widgets</li>
+  <li>Better documentation of advanced options</li>
+  <li>More unique text decorator symbols</li>
+  <li>If a required library is missing, prints which one</li>
+  <li>More messages in the record function</li>
+  <li>Detects main text box tags</li>
+  <li>Advanced options: if opened while already open, bring to front</li>
+  <li>Extended help.txt file</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>When asked to try installing again, it called import instead</li>
+  <li>Global libraries issues fixed by removing import_req</li>
+  <li>Misspelling warp to wrap</li>
+  <li>Text decorator horizontal mode mixed after filling text box</li>
+  <li>Text decorators vertical input was accidentally case sensitive</li>
+  <li>Many input lags in text decorator fixed with threads</li>
+  <li>Asterisk text decorator space bugs</li>
+  <li>Requests library treated as a built-in</li>
+  <li>Error when using library installer without sys installed (caught)</li>
+  <li>Type error with sys in library installer</li>
+  <li>Failed library installation did not skip to next</li>
+  <li>Removed ctypes from installation list</li>
+  <li>Fixed install command used for libraries</li>
+  <li>Save by time worked while auto-save option was disabled</li>
+</ul>
+
+<h3>[ 1.12.2 - absolute 1.12 part 2 - 18/11/23 ]</h3>
+
+<h4>Improved</h4>
+<ul>
+  <li>Improved accuracy of file type detection in many cases</li>
+  <li>Improved hide advanced settings conditions</li>
+  <li>Changed emoji detection activation from key release to key press</li>
+  <li>Made the usage time function more precise</li>
+  <li>Made the opening messages a bit more efficient</li>
+  <li>Made all window titles and many message box titles follow the general titles structure</li>
+  <li>Improved py-tesseract setup condition</li>
+  <li>Improved writing of some small things</li>
+  <li>Handwriting conversion works; improved some variables and the output box</li>
+  <li>Changed handwriting size shortcut binding from the whole window to the canvas</li>
+  <li>Screenshot function can capture only the text box or the canvas</li>
+  <li>Improved management of UI events in the dictionary and Wikipedia tools</li>
+  <li>Improved organization of output in Wikipedia related articles</li>
+  <li>Wikipedia and dictionary tools paste now use the displayed content (instead of searching)</li>
+  <li>Added a print statement that lists all libraries the installer went through</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>Git menu works with night mode</li>
+  <li>Status bars variable bug</li>
+  <li>Scope of some functions that were off (not many)</li>
+  <li>Saved settings variables bugs</li>
+  <li>Inaccuracies in buttons tooltips</li>
+  <li>Handwriting convert function type errors</li>
+  <li>Missing command to install libraries</li>
+</ul>
+
+<h4>Removed</h4>
+<ul>
+  <li>Old Discord usernames</li>
+  <li>Unused loading screen function</li>
+</ul>
+<h3>[ 1.12.1 - absolute 1.12 part 1 - 19/10/23 ]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Git functions (requires dev mode and GitPython)</li>
+  <li>Text decorators vertical output option</li>
+  <li>Text twisters new saved option: remove space and newline from some functions</li>
+  <li>Recovery for broken saved settings file (ask to close and reset)</li>
+</ul>
+
+<h4>Improved</h4>
+<h5>Windows placement</h5>
+<ul>
+  <li>Information window appears centered in the app</li>
+  <li>Virtual keyboard appears at the middle bottom of the app</li>
+</ul>
+<h5>Library installer and imports</h5>
+<ul>
+  <li>Library installer messages and threaded downloads</li>
+  <li>Better import distribution</li>
+  <li>On missing required libraries at startup, offer to reopen instead of crashing</li>
+</ul>
+<h5>Other functions</h5>
+<ul>
+  <li>Slightly optimized close function</li>
+  <li>Go to function now returns focus to the main text box</li>
+  <li>Text decorators UI improved; supports adjustable window size</li>
+  <li>Better sync between primary options menu, advanced settings, and saved settings</li>
+  <li>File compression improved a bit (UI and error handling)</li>
+</ul>
+
+<h4>Writing</h4>
+<ul>
+  <li>Expanded help content; fixed misspellings</li>
+  <li>Improved most comment writing</li>
+</ul>
+
+<h4>Fixed / Changed</h4>
+<ul>
+  <li>Library installer widgets not placed</li>
+  <li>Text decorators result stacked instead of replacing last one</li>
+  <li>Calc tool misspelling</li>
+  <li>DTT tool size shortcuts not synced</li>
+  <li>Some settings meant to save did not persist</li>
+  <li>Default DTT size shortcuts: moved from many keys to mouse wheel</li>
+  <li>Default folder in file explorer now main folder (for open files and merge files)</li>
+</ul>
+
+<h3>[ 1.12 - rebirth - 29/8/23 ]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Titles for all big versions</li>
+  <li>Tooltips for virtual keyboard and draw to text buttons</li>
+  <li>If night mode is on and custom colors are used, ask to change UI colors anyway</li>
+  <li>Custom colors on information window and virtual keyboard window</li>
+  <li>Night mode for virtual keyboard window</li>
+  <li>IDE functionality for Python files: compile and console, settings, more</li>
+  <li>Prompt to install all required libraries automatically if missing</li>
+  <li>Dates of versions in patch notes</li>
+  <li>Second night mode (blue focused), selectable in advanced options</li>
+  <li>Draw to text: line and eraser thickness options</li>
+  <li>Saved settings enabled</li>
+  <li>Virtual keyboard mode: symbols and numbers; more dynamic switching</li>
+  <li>New window function</li>
+  <li>Open last file setting on startup</li>
+  <li>Night mode on supported popups can work initially</li>
+  <li>Calculator drawn button added (menu button removed)</li>
+  <li>Virtual keyboard caps mode (toggle case)</li>
+  <li>Symbols translator: translator and Roman numerals list</li>
+  <li>Web scraping tool: examples and explanations</li>
+  <li>GPU option for some tasks (currently NLP only)</li>
+  <li>Weather pre-window remade, random known city option</li>
+  <li>Web scraping can use and update main editor content live</li>
+  <li>Calculator: insert and copy buttons, new result label</li>
+  <li>NLP: phone numbers and names</li>
+  <li>Restore default settings (as part of saved settings)</li>
+  <li>Web scraping supports XML via internet option</li>
+  <li>Handwriting tool: change pencil and eraser size</li>
+  <li>Handwriting extras window: more cords mode info and shortcuts</li>
+</ul>
+
+<h4>Changed / Improved</h4>
+<ul>
+  <li>Email tool: more defaults, bug fixes</li>
+  <li>Record window: more messages</li>
+  <li>Handwriting image upload centers regardless of window size changes</li>
+  <li>Combined some custom color functions</li>
+  <li>Optional libraries conditions improved</li>
+  <li>Black night mode button background improved</li>
+  <li>Tools icons replaced with original ones; added draw-to-text icon</li>
+  <li>Night mode optimized (less variable work inside conditions)</li>
+  <li>OpenAI image icon now works and used for ChatGPT tool</li>
+  <li>Exit function slightly optimized</li>
+  <li>Generate tool UI: title font matches program standard</li>
+  <li>Search tool title updated to be clearer</li>
+  <li>Advanced options UI: radio and check buttons centered better</li>
+  <li>Virtual keyboard layout remade; removed random spaces</li>
+  <li>Emoticons hub renamed to Symbols translator; design improved; moved to Tools menu</li>
+  <li>Symbols translator list improved; second display mode for Roman numerals</li>
+  <li>Web scraping UI clearer: show import method on the button</li>
+  <li>Web scraping warning improved</li>
+  <li>Virtual keyboard starts in lowercase mode</li>
+  <li>Opening message optimized (faster without API, slightly faster with)</li>
+  <li>Web scraping upload methods combined, features consistent</li>
+  <li>NLP results UI improved: font, textbox/tree, scrollbar, copy function</li>
+  <li>NLP will try to install missing package before erroring</li>
+  <li>Some variable names clarified</li>
+  <li>Calculator UI improved: layout, title, label</li>
+  <li>ChatGPT tool availability conditions improved</li>
+  <li>Default message shown in many tools when no content generated</li>
+  <li>Web scraping long links wrap in Quick information</li>
+  <li>Screenshot function: bring target window topmost when capturing</li>
+  <li>Help text extended</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>Opening file failure could clear previous content</li>
+  <li>Night mode did not track info pages close state</li>
+  <li>Record window close detection after initial open</li>
+  <li>Toolbar reappeared at bottom after toggling</li>
+  <li>Record menu duplicated after toggling special tools post dev mode</li>
+  <li>Content stats connected words bug</li>
+  <li>Usage time updated before widget existed (partly fixed)</li>
+  <li>Calculator generated items outside frame on show operators</li>
+  <li>Virtual keyboard button did not change colors when needed</li>
+  <li>Web scraping could open without preselection</li>
+  <li>Weather tool city name used + instead of space</li>
+  <li>Font size shortcuts overflowed min or max</li>
+  <li>Web scraping mode switching (all / text / attributes) did not work</li>
+  <li>Content stats conditional error</li>
+</ul>
+
+<h3>[ 1.11.2 - Emoji evolution and more - 29/4/23 ]</h3>
+
+<h4>Emojis and Emojis-like</h4>
+<ul>
+  <li>Automatic emoji detector with option to deactivate</li>
+  <li>Merged many emoji options into one window interface</li>
+  <li>Emoticons and Morse code detection: to and from</li>
+  <li>Emoji detection language support: Spanish, Portuguese, Italian, French, German, Farsi/Persian</li>
+  <li>Random emojis and Morse code</li>
+  <li>Morse list interface: Unicode letters and meanings in Morse</li>
+  <li>Bug fixes: symbol spam after emoji input; better detection precision; cursor jump issues fixed</li>
+</ul>
+
+<h4>Text twisters</h4>
+<ul>
+  <li>Now work with highlighted text</li>
+</ul>
+
+<h4>Record and Modes</h4>
+<ul>
+  <li>Record: major app events since launch shown in a list in a new menu</li>
+  <li>Modes to reduce overload:
+    <ul>
+      <li>Dev mode controls Record cascade</li>
+      <li>Special tools controls Tools and Colors+ cascades</li>
+    </ul>
+  </li>
+</ul>
+
+<h4>Others</h4>
+<ul>
+  <li>Extended help content</li>
+  <li>Bold font in Tools menu now marks the most original and good tools; font size adjusted</li>
+  <li>Names fixed</li>
+  <li>Fixed Colors+ -> App colors -> Frame colors not changing right edge of bottom area</li>
+  <li>Content stats word split improved (based on symbols, not only whitespace)</li>
+  <li>Fixed sort by characters whitespace and newline bug</li>
+  <li>Fixed reverse characters newline at first index</li>
+  <li>Consistent titles and fonts across tools</li>
+</ul>
+
+<h3>[ 1.11.1 - Content and file stats - 8/4/23 ]</h3>
+
+<h4>New content statistics</h4>
+<ul>
+  <li>Bar chart: top 8 most used words and all alphabet characters</li>
+  <li>Counts: words, characters, alphabetic characters, symbols, lines, paragraphs</li>
+  <li>Ratios: words per line, characters per word, lines per paragraph</li>
+  <li>Differences: number of different words and characters</li>
+</ul>
+
+<h4>Upgraded file information</h4>
+<ul>
+  <li>Added access time</li>
+  <li>Added owner name</li>
+  <li>Tool UI font changed</li>
+  <li>Error message opens a file picker</li>
+</ul>
+
+<h4>Small changes</h4>
+<ul>
+  <li>Open file is smoother: old content removed only after a file is opened</li>
+  <li>New blank files open more smoothly</li>
+</ul>
+
+<h3>[ 1.11 - EgonTE redemption - 1/4/23 ]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Reader mode</li>
+  <li>Emoji list</li>
+  <li>Changing font keeps font size</li>
+  <li>File information function</li>
+  <li>Autosave every minute</li>
+  <li>Compression between two files</li>
+  <li>Misspelling corrector tool</li>
+  <li>Error box for unsupported characters</li>
+  <li>Import special files by link</li>
+  <li>Local file import: PDF support</li>
+  <li>Opening HTML files prettified</li>
+  <li>Web scraping tool (early access): class, tag, text options</li>
+  <li>Lost internet error handling</li>
+  <li>Natural language processor:
+    <ul>
+      <li>Nouns, verbs, adjectives, adverbs, pronouns, stop words</li>
+      <li>Entity recognition, dependency tree, lemmatization</li>
+      <li>Most common words</li>
+    </ul>
+  </li>
+  <li>Handwriting to text: canvas and uploaded image</li>
+  <li>Text decorators: 4 options</li>
+  <li>Organized patch notes in app</li>
+  <li>Usage time in advanced options</li>
+  <li>Virtual keyboard: toggle capitals</li>
+  <li>More effective exit function</li>
+  <li>Night mode on help and patch notes</li>
+  <li>Quotes API: quotes function and chance on startup</li>
+  <li>File comparison</li>
+  <li>Delete current file option</li>
+  <li>Printing support beyond Windows</li>
+  <li>Weather tool</li>
+  <li>Fullscreen with F11</li>
+  <li>Topmost option</li>
+  <li>Wikipedia modes: content, image links, related article names</li>
+  <li>Email tool (Gmail only, no 2FA)</li>
+  <li>Flexible file merging</li>
+  <li>YouTube transcript API (WIP) and local transcript</li>
+  <li>Screenshot app window</li>
+  <li>Handwriting recognition (experimental)</li>
+</ul>
+
+<h4>Changed / Fixed / Improved</h4>
+<ul>
+  <li>Removed unused code</li>
+  <li>Optional module checks for translation and many functions</li>
+  <li>Custom style and cursor algorithms improved</li>
+  <li>Performance: modules and code optimization</li>
+  <li>Misspellings fixed</li>
+  <li>Copy file path works only when a file is open</li>
+  <li>Advanced options exit improved</li>
+  <li>Night mode fixes</li>
+  <li>Most tools UI improved and made more consistent</li>
+  <li>Code reformatted</li>
+</ul>
+
+<h4>Not available yet (in code)</h4>
+<ul>
+  <li>* Loading screen</li>
+  <li>* Settings files: custom options saved and reused</li>
+  <li>* Function to organize text better</li>
+  <li>** Main menu</li>
+  <li>*** Hyperlinks</li>
+  <li>*** Auto lists</li>
+</ul>
+
+<h3>[ 1.10 - cutting corners - 1/1/23 ]</h3>
+<ul>
+  <li>Quick submit content from dictionary</li>
+  <li>Copy button added to random name generator and translator</li>
+  <li>Unified special files import</li>
+  <li>More file types supported for file import</li>
+  <li>Sort by characters and words (including reversed)</li>
+  <li>App is now resizable</li>
+  <li>Emoji detection</li>
+  <li>Wikipedia tool</li>
+  <li>Help tool content updated</li>
+  <li>Status bar bug fixed</li>
+  <li>Copy/paste/cut improved and fixed</li>
+  <li>Transparency default set to 100 percent (not transparent)</li>
+  <li>Transparency limited to 90 percent maximum</li>
+</ul>
+
+<h3>[ 1.9.9 - virtual keyboard - 2/12/22 ]</h3>
+<ul>
+  <li>Exit function bug fixed</li>
+  <li>Help menu name fixed</li>
+  <li>Virtual keyboard added</li>
+</ul>
+
+<h3>[ 1.9.8 - dictionary and transparency - 23/11/22 ]</h3>
+<ul>
+  <li>Close button connected to exit function</li>
+  <li>Transparency options; tools slightly transparent</li>
+  <li>Exit function more efficient</li>
+  <li>Dictionary tool added</li>
+</ul>
+
+<h3>[ 1.9.6 - OOP revival - 1/11/22 ]</h3>
+<ul>
+  <li>Bug fixes and adoption of OOP</li>
+</ul>
+
+<h3>[ 1.9.4 - option2tools - 24/10/22 ]</h3>
+<ul>
+  <li>Sort numbers descending</li>
+  <li>Better sort tool text widget parameters</li>
+  <li>Scrollbar for sort tool input</li>
+  <li>Main editor options update sort and translate widgets</li>
+  <li><strong>Fixed</strong>: user could resize height below default</li>
+</ul>
+
+<h3>[ 1.9.3 - sort and word wrap tools and many fixes - 21/10/22 ]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>More emphasis on functions</li>
+  <li>Word wrap mode options</li>
+  <li>Sort tool</li>
+</ul>
+
+<h4>Changed</h4>
+<ul>
+  <li>Error messages clearer</li>
+  <li>Window can be extended 100px more on Y-axis</li>
+</ul>
+
+<h4>Fixed</h4>
+<ul>
+  <li>UI font size not linked to shortcut-selected font size</li>
+  <li>Help window not affected by any data type</li>
+  <li>Status bar not showing line numbers when empty</li>
+  <li>Unexpected blank lines added</li>
+  <li>Content manipulation edge cases</li>
+</ul>
+
+<h4>Removed</h4>
+<ul>
+  <li>Wasteful menu lines that did nothing</li>
+</ul>
+
+<h3>[ 1.9 - better + advanced settings and find text tools - 14/10/22 ]</h3>
+
+<h4>Added</h4>
+<ul>
+  <li>Advanced settings</li>
+  <li>Tools: text and file shortcuts</li>
+  <li>Go to tool</li>
+  <li>Help: more content and scrollbar additions</li>
+  <li>Lines counter in status bar</li>
+  <li>Find tool: navigate by marking occurrences</li>
+  <li>More error handling</li>
+  <li>Time and date shortcut</li>
+  <li>Selected cursor options work in translate window</li>
+  <li>Version number in program title</li>
+</ul>
+
+<h4>Changed</h4>
+<ul>
+  <li>Messages clearer</li>
+  <li>Default cursor changed</li>
+  <li>Default window sizes adjusted for status/file bars</li>
+  <li>Find tool conditions simplified</li>
+  <li>App colors no longer change text box color</li>
+  <li>Bug fixes:
+    <ul>
+      <li>Right align support condition</li>
+      <li>Double paste bug</li>
+      <li>Clipboard bug</li>
+    </ul>
+  </li>
+</ul>
+
+<h4>Deleted</h4>
+<ul>
+  <li>Irrelevant comments</li>
+  <li>Removed change style and relief change</li>
+</ul>
+
+<h3>[ 1.8 - all tk fonts and tools polish - 7/10/22 ]</h3>
+<ul>
+  <li>Copy, paste, cut bugs fixed</li>
+  <li>Messages clarified</li>
+  <li>Warn when generating 25000 characters</li>
+  <li>Calculation does not close tool on input</li>
+  <li>Special files changes to reduce confusion</li>
+  <li>Font UI remade; all Tk fonts available</li>
+  <li>Help for confusing features</li>
+  <li>More comments</li>
+  <li>Better support for right-aligned languages</li>
+  <li>Quick web search tool</li>
+</ul>
+
+<h3>[ 1.7 - special file support and auto selection for align/color - 3/10/22 ]</h3>
+<ul>
+  <li>Insert Excel, CSV, JSON, XML into your text file</li>
+  <li>Align: if nothing is marked, align current line</li>
+  <li>Color: if nothing is marked, apply to entire file</li>
+</ul>
+
+<h3>[ 1.6 - find tool remake - 30/9/22 ]</h3>
+<ul>
+  <li>Find tool remade</li>
+</ul>
+
+<h3>[ 1.5 - better buttons functionality and fonts available - 28/9/22 ]</h3>
+<ul>
+  <li>Big improvements in buttons functionality</li>
+  <li>Fonts fixed and enabled</li>
+  <li>Error handling bugs fixed</li>
+  <li>Color selection UI improved</li>
+</ul>
+
+<h3>[ 1.4 - colorful UI - 27/9/22 ]</h3>
+<ul>
+  <li>Night mode improved</li>
+  <li>Choose UI colors</li>
+  <li>Calc tool error handling improved</li>
+  <li>Random names tool UI improved</li>
+  <li>Font size shortcuts error handling improved</li>
+  <li>UI text improved</li>
+</ul>
+
+<h3>[ 1.3 - 26/9/22 ]</h3>
+<ul>
+  <li>Font size shortcuts added</li>
+</ul>
+
+<h3>[ 1.2 - 23/9/22 ]</h3>
+<ul>
+  <li>Six shortcuts added</li>
+</ul>
+<h3 id="ef67f9adbaafdf579195bea2e02e65e56">[ 1.1 - better tools U.I. - 17/9/22 ]</h3>
+<p><br>bug fixes<br>UI/UX improvement for tools</p>
+<p>&nbsp;</p>
+<h3 id="e6da3fb3ef9698e0db1bff6eb8f16bca1">[ 1.0 - &nbsp;text twisting function &amp; more functionalities - 16/9/22 ]</h3>
+<p><br>added functionality that warns for unsaved changes (file)<br>added fonts<br>added fun functions that reverse words, reverse characters, join words, lower/upper<br>added function that generates random characters<br>!</p>
+<p>&nbsp;</p>
+<h3 id="e7e9a3e45be7c6b1ab56ff385a7303ccc">[ 0.9.9 - 15/9/22]</h3>
+<p><br>added replace (text) function</p>
+<p>&nbsp;</p>
+<h3 id="e6ebde5b9baf3d4e198ba5a1431ba3ded">[ 0.9.8 - 14/9/22 ]</h3>
+<p><br>added URL shorter tool</p>
+<p>&nbsp;</p>
+<h3 id="eac7480b436afbd90a2517cf5eb3c5110">[ 0.9.7 - 13/9/22]</h3>
+<p><br>improved code writing<br>added advanced name generator tool<br>bug fixes</p>
+<p>&nbsp;</p>
+<h3 id="e965de344490dee644afd5685981cf8ad">[ 0.9.4 - better code + better open &amp; quit - 12/9/22 ]</h3>
+<p><br>optimized imports<br>improved code writing<br>improved window placement<br>improved exit function<br>added more opening msgs</p>
+<p>&nbsp;</p>
+<h3 id="e19ae0a5c4e1e5bb3866414ac84e57ddd">[ 0.9.3 - 11/9/22]</h3>
+<p><br>bug fixes<br>added space when inserting certain things from tools</p>
+<p>&nbsp;</p>
+<h3 id="ea57e2a784296d591d628e582b23e124a">[ 0.9.2 - adv random tool &amp; more - 10/9/22 ]</h3>
+<p><br>Advanced random numbers tool<br>added space when inserting certain things from tools<br>added reference to modulus in calc explanation<br>made random name root not resizable</p>
+<p>&nbsp;</p>
+<h3 id="eff5b7bca335c522ba82677b54331a53f">[ 0.9.1 - 9/9/22]</h3>
+<p><br>U.I. for the random names tool</p>
+<p>&nbsp;</p>
+<h3 id="e17a436fd50a068878a267b3f6b8e8c8d">[ 0.9 - 8/9/22 ]</h3>
+<p><br>added translate tool<br>bug fixes<br>changed Insert menu name to tool menu</p>
+<p>&nbsp;</p>
+<h3 id="e05822c7e43f414789a74434bb4f86469">[ 0.8.8 - 7/9/22 ]</h3>
+<p><br>added random name tool</p>
+<p>&nbsp;</p>
+<h3 id="e0f4e65a75e0af4afa0719ad817c2cc7c">[ 0.8.7 - 6/9/22 ]</h3>
+<p><br>added an option to change the cursor to the default one</p>
+<p>&nbsp;</p>
+<h3 id="e7b1f31e8d3bfb7fab0dba8ca2938fd24">[ 0.8.6 - 6/9/22]</h3>
+<p><br>added 3 new tooltip(s)<br>added four new shortcuts</p>
+<p>&nbsp;</p>
+<h3 id="ecabe85fd3913abfa12f4230e31d87eec">[ 0.8.4 - 4/9/22 ]</h3>
+<p><br>bug fixes<br>added error handling for - saving a file, changing text colors, calc, random numbers<br>copy file path function</p>
+<p>&nbsp;</p>
+<h3 id="e8402ec60401b844b06913ca869773a57">[ 0.8.3 - 3/9/22 ]</h3>
+<p><br>added an operation list for the calculation tool</p>
+<p>&nbsp;</p>
+<h3 id="e858704ad776e5c95cd818ade1edcbd58">[ 0.8.2 - 3/9/22 ]</h3>
+<p><br>experimented more with the fonts/size</p>
+<p>&nbsp;</p>
+<h3 id="ec29475332b557af27a97777c4e2b5229">[ 0.8.1 - 2/9/22 ]</h3>
+<p><br>added an option to insert a random number<br>improved calc U.I.</p>
+<p>&nbsp;</p>
+<h3 id="ed444a6397d6a32f730a1a756af8805f6">[ 0.8 - 1/9/22 ]</h3>
+<p><br>added option to insert datetime</p>
+<p>&nbsp;</p>
+<h3 id="e0934629b6fd509b0eeaa4e5c4a9e1fc9">[ 0.7.9 - 1/9/22 ]</h3>
+<p><br>optimized imports</p>
+<p>&nbsp;</p>
+<h3 id="e84209ef0ab16421bf949341756744527">[ 0.7.6 - 1/9/22 ]</h3>
+<p><br>option to insert a calculation</p>
+<p>&nbsp;</p>
+<h3 id="e9b9318a0f5e05efa2e1170cd42e83d16">[ 0.7.4 - 28/8/22 ]</h3>
+<p><br>bug fixes<br>speech-to-text variation of error &amp; goodbye sentences</p>
+<p>&nbsp;</p>
+<h3 id="e9e5f332389099188151f5a21132d1820">[ 0.7.3 - 28/8/22 ]</h3>
+<p><br>added option to open the respiratory page through the program<br>added option the tear of the edit menu</p>
+<p>&nbsp;</p>
+<h3 id="e31d37e562885191a2e1f44db19c3ac4d">[ 0.7.1 - 22/8/22 ]</h3>
+<p><br>added file bar - info about the file<br>bug fixes</p>
+<p>&nbsp;</p>
+<h3 id="edb63c8e5989230c134bbcbbe33103a66">[ 0.7 - 21/8/22 ]</h3>
+<p><br>bug fixes<br>optimized imports<br>improved exit function<br>improved shortcuts</p>
+<p>&nbsp;</p>
+<h3 id="ed396ee0827953914a881aec84bd90179">[ 0.6.8 - 20/8/22 ]</h3>
+<p><br>added search function</p>
+<p>&nbsp;</p>
+<h3 id="e8574503d54b23932bb5399d22f477c77">[ 0.6 - 7/8/22 ]</h3>
+<p><br>added advanced speech-to-text<br>added opening sentences<br>better exit<br>added option to hide the status bar &amp; toolbar<br>improved night mode U.I. &amp; Functionality<br>changed the status bar position in the bottom middle<br>!</p>
+<p>&nbsp;</p>
+<h3 id="e10f8a83f6995753c1e339f8c71b47c88">[ 0.5.9 - 5/8/22 ]</h3>
+<p><br>fixed message box for printing files<br>added a message box for quitting the app</p>
+<p>&nbsp;</p>
+<h3 id="e74d97ff1b0e23c03928656bbc3708ad9">[ 0.5.8 - 5/8/22 ]</h3>
+<p><br>fixed imports<br>fixed text-to-speech icon problems</p>
+<p>&nbsp;</p>
+<h3 id="e2ed194728c32c0926f30d4d7da0b71a8">[ 0.5.7 - 30/7/22 ]</h3>
+<p><br>added tooltip(s)</p>
+<p>&nbsp;</p>
+<h3 id="ea50e75b25019c2ebc50329bb6044f860">[ 0.5.5 - 30/7/22 ]</h3>
+<p><br>added six new shortcuts<br>bug fixes</p>
+<p>&nbsp;</p>
+<h3 id="ec1676ba01dfb4f555feca0da5d3e2aa1">[ 0.5.3 - 30/7/22 ]</h3>
+<p><br>added custom coordinates for the program when opening it</p>
+<p>&nbsp;</p>
+<h3 id="eabbcea0a3923f59f9d02ccdb10e40e4c">[ 0.5.2 - 30/7/22 ]</h3>
+<p><br>added text to speech<br>added thread</p>
+<p>&nbsp;</p>
+<h3 id="e41e1a438e4c9eaf4afd9e11b610cacdf">[ 0.5 - 30/7/22 ]</h3>
+<p><br>added custom cursor</p>
+<p>&nbsp;</p>
+<h3 id="ecc1c07dcec6cfccfea91b1e648ab038d">[ 0.4.8 - 30/7/22 ]</h3>
+<p><br>added use to the status bar</p>
+<p>&nbsp;</p>
+<h3 id="ed43666fce4002ab8cfbafa239b857356">[ 0.4.6 - 29/7/22 ]</h3>
+<p><br>night mode improvement</p>
+<p>&nbsp;</p>
+<h3 id="e2a4ee01882cf8339b9bf8dfd84805686">[ 0.4.4 - 29/7/22 &nbsp;]</h3>
+<p><br>added images to the buttons</p>
+<p>&nbsp;</p>
+<h3 id="e92a1f23c9dd148d36f5238d8beee7454">[ 0.4.1 - 29/7/22 &nbsp;]</h3>
+<p><br>added separator to the color menu</p>
+<p>&nbsp;</p>
+<h3 id="ebcb14636812b25ad08ea0e9f7e3d0c8d">[ 0.4 - 29/7/22 &nbsp;]</h3>
+<p><br>made buttons flat (more modern style)</p>
+<p>&nbsp;</p>
+<h3 id="e64bbd8de234656e2c01d8bdc73bf3187">[ 0.3.8 - 29/7/22 &nbsp;]</h3>
+<p><br>changed font default size<br>bug fix</p>
+<p>&nbsp;</p>
+<h3 id="eef871d75dd02ef6ac56c6e7d3817d38b">[ 0.3.6 - 28/7/22 ]</h3>
+<p><br>added one new shortcut</p>
+<p>&nbsp;</p>
+<h3 id="ee91b539648d1be8214e0cd1e8227325d">[ 0.3.4 - 28/7/22 ]</h3>
+<p><br>Added message box when you attempt to print</p>
+<p>&nbsp;</p>
+<h3 id="edf63e3ffefb3715c02d78b222e05bce9">[ 0.3.2 - 28/7/22 ]</h3>
+<p><br>bug fixes</p>
+<p>&nbsp;</p>
+<h3 id="e5e083bb93c682e1ad40c4dc90a095d56">[ 0.3 (initial commit) - 18/7/22 ]</h3>
+<h3 id="ee6826cec8a79047fd4ab5179ef48c571">&nbsp;</h3>
+<h2 id="e1c1ef207edcba0b040bc4297ad7b44f1"><u>BEFORE GITHUB</u></h2>
+<p>&nbsp;</p>
+<h3 id="e6b8771f197427a5ee9cc85db551f3d2f">[ 0.3 (p0.8) - 18/7/22 ]</h3>
+<p><br>added underline<br>added text alignments<br>improved night mode with button colors<br>improved U.I.</p>
+<p>&nbsp;</p>
+<h3 id="e37bb531fe499389d2b7bc5174a4ef3af">[ 0.2.5 (p0.7) - 18/7/22 ]</h3>
+<p><br>added underline<br>added font U.I.</p>
+<p>&nbsp;</p>
+<h3 id="ef039f93f0eebdd7d4b64c7679e1115d5">[ 0.2 (median) - text design &amp; more functions - 17/7/22 ]</h3>
+<p><br>added bold text<br>added italics slant<br>added custom text color<br>added custom background colors<br>added custom highlight color<br>added the option to print a file<br>added select all function<br>added clear function<br>added night mode<br>added three new shortcuts</p>
+<p>&nbsp;</p>
+<h3 id="e07208fce9f9781e9a4c367f514b1bb96">[ 0.1 (basic/first version) 15-16/7/22]</h3>
+<p><br>have the ability to open &amp; save files<br>also have two different save functions: save &amp; save as<br>have the three most basic edit tools: cut, copy &amp; paste<br>&nbsp;</p>```
+<h3>[ 1.1 - better tools UI - 17/9/22 ]</h3>
+<ul>
+  <li>Bug fixes</li>
+  <li>UI/UX improvements for tools</li>
+</ul>
+
+<h3>[ 1.0 - text twisting function and more functionalities - 16/9/22 ]</h3>
+<ul>
+  <li>Warn for unsaved file changes</li>
+  <li>Added fonts</li>
+  <li>Text twisting functions:
+    <ul>
+      <li>Reverse words</li>
+      <li>Reverse characters</li>
+      <li>Join words</li>
+      <li>Lower and upper case</li>
+    </ul>
+  </li>
+  <li>Generate random characters</li>
+</ul>
+
+<h3>[ 0.9.9 - 15/9/22 ]</h3>
+<ul>
+  <li>Replace text function</li>
+</ul>
+
+<h3>[ 0.9.8 - 14/9/22 ]</h3>
+<ul>
+  <li>URL shortener tool</li>
+</ul>
+
+<h3>[ 0.9.7 - 13/9/22 ]</h3>
+<ul>
+  <li>Improved code writing</li>
+  <li>Advanced name generator tool</li>
+  <li>Bug fixes</li>
+</ul>
+
+<h3>[ 0.9.4 - better code + better open and quit - 12/9/22 ]</h3>
+<ul>
+  <li>Optimized imports</li>
+  <li>Improved code writing</li>
+  <li>Improved window placement</li>
+  <li>Improved exit function</li>
+  <li>More opening messages</li>
+</ul>
+
+<h3>[ 0.9.3 - 11/9/22 ]</h3>
+<ul>
+  <li>Bug fixes</li>
+  <li>Added a space when inserting certain things from tools</li>
+</ul>
+
+<h3>[ 0.9.2 - advanced random tool and more - 10/9/22 ]</h3>
+<ul>
+  <li>Advanced random numbers tool</li>
+  <li>Added a space when inserting certain things from tools</li>
+  <li>Added reference to modulus in calculator explanation</li>
+  <li>Random name window is not resizable</li>
+</ul>
+
+<h3>[ 0.9.1 - 9/9/22 ]</h3>
+<ul>
+  <li>UI for the random names tool</li>
+</ul>
+
+<h3>[ 0.9 - 8/9/22 ]</h3>
+<ul>
+  <li>Translate tool</li>
+  <li>Bug fixes</li>
+  <li>Insert menu renamed to Tools menu</li>
+</ul>
+
+<h3>[ 0.8.8 - 7/9/22 ]</h3>
+<ul>
+  <li>Random name tool</li>
+</ul>
+
+<h3>[ 0.8.7 - 6/9/22 ]</h3>
+<ul>
+  <li>Option to change the cursor to the default one</li>
+</ul>
+
+<h3>[ 0.8.6 - 6/9/22 ]</h3>
+<ul>
+  <li>Three new tooltips</li>
+  <li>Four new shortcuts</li>
+</ul>
+
+<h3>[ 0.8.4 - 4/9/22 ]</h3>
+<ul>
+  <li>Bug fixes</li>
+  <li>Error handling for: saving a file, changing text colors, calculator, random numbers</li>
+  <li>Copy file path function</li>
+</ul>
+
+<h3>[ 0.8.3 - 3/9/22 ]</h3>
+<ul>
+  <li>Operation list for the calculator tool</li>
+</ul>
+
+<h3>[ 0.8.2 - 3/9/22 ]</h3>
+<ul>
+  <li>Experimented with fonts and sizes</li>
+</ul>
+
+<h3>[ 0.8.1 - 2/9/22 ]</h3>
+<ul>
+  <li>Option to insert a random number</li>
+  <li>Calculator UI improved</li>
+</ul>
+
+<h3>[ 0.8 - 1/9/22 ]</h3>
+<ul>
+  <li>Option to insert datetime</li>
+</ul>
+
+<h3>[ 0.7.9 - 1/9/22 ]</h3>
+<ul>
+  <li>Optimized imports</li>
+</ul>
+
+<h3>[ 0.7.6 - 1/9/22 ]</h3>
+<ul>
+  <li>Option to insert a calculation</li>
+</ul>
+
+<h3>[ 0.7.4 - 28/8/22 ]</h3>
+<ul>
+  <li>Bug fixes</li>
+  <li>Speech-to-text: variations of error and goodbye sentences</li>
+</ul>
+
+<h3>[ 0.7.3 - 28/8/22 ]</h3>
+<ul>
+  <li>Open the repository page through the program</li>
+  <li>Option to tear off the Edit menu</li>
+</ul>
+
+<h3>[ 0.7.1 - 22/8/22 ]</h3>
+<ul>
+  <li>File bar: info about the file</li>
+  <li>Bug fixes</li>
+</ul>
+
+<h3>[ 0.7 - 21/8/22 ]</h3>
+<ul>
+  <li>Bug fixes</li>
+  <li>Optimized imports</li>
+  <li>Improved exit function</li>
+  <li>Improved shortcuts</li>
+</ul>
+
+<h3>[ 0.6.8 - 20/8/22 ]</h3>
+<ul>
+  <li>Search function</li>
+</ul>
+
+<h3>[ 0.6 - 7/8/22 ]</h3>
+<ul>
+  <li>Advanced speech-to-text</li>
+  <li>Opening sentences</li>
+  <li>Better exit</li>
+  <li>Option to hide the status bar and toolbar</li>
+  <li>Night mode UI and functionality improved</li>
+  <li>Status bar moved to bottom middle</li>
+</ul>
+
+<h3>[ 0.5.9 - 5/8/22 ]</h3>
+<ul>
+  <li>Fixed message box for printing files</li>
+  <li>Added message box for quitting the app</li>
+</ul>
+
+<h3>[ 0.5.8 - 5/8/22 ]</h3>
+<ul>
+  <li>Fixed imports</li>
+  <li>Fixed text-to-speech icon issues</li>
+</ul>
+
+<h3>[ 0.5.7 - 30/7/22 ]</h3>
+<ul>
+  <li>Tooltips added</li>
+</ul>
+
+<h3>[ 0.5.5 - 30/7/22 ]</h3>
+<ul>
+  <li>Six new shortcuts</li>
+  <li>Bug fixes</li>
+</ul>
+
+<h3>[ 0.5.3 - 30/7/22 ]</h3>
+<ul>
+  <li>Custom window coordinates on startup</li>
+</ul>
+
+<h3>[ 0.5.2 - 30/7/22 ]</h3>
+<ul>
+  <li>Text to speech</li>
+  <li>Threading added</li>
+</ul>
+
+<h3>[ 0.5 - 30/7/22 ]</h3>
+<ul>
+  <li>Custom cursor</li>
+</ul>
+
+<h3>[ 0.4.8 - 30/7/22 ]</h3>
+<ul>
+  <li>Added use to the status bar</li>
+</ul>
+
+<h3>[ 0.4.6 - 29/7/22 ]</h3>
+<ul>
+  <li>Night mode improvement</li>
+</ul>
+
+<h3>[ 0.4.4 - 29/7/22 ]</h3>
+<ul>
+  <li>Images on buttons</li>
+</ul>
+
+<h3>[ 0.4.1 - 29/7/22 ]</h3>
+<ul>
+  <li>Separator in the color menu</li>
+</ul>
+
+<h3>[ 0.4 - 29/7/22 ]</h3>
+<ul>
+  <li>Buttons made flat (modern style)</li>
+</ul>
+
+<h3>[ 0.3.8 - 29/7/22 ]</h3>
+<ul>
+  <li>Changed default font size</li>
+  <li>Bug fix</li>
+</ul>
+
+<h3>[ 0.3.6 - 28/7/22 ]</h3>
+<ul>
+  <li>One new shortcut</li>
+</ul>
+
+<h3>[ 0.3.4 - 28/7/22 ]</h3>
+<ul>
+  <li>Message box when attempting to print</li>
+</ul>
+
+<h3>[ 0.3.2 - 28/7/22 ]</h3>
+<ul>
+  <li>Bug fixes</li>
+</ul>
+
+<h3>[ 0.3 (initial commit) - 18/7/22 ]</h3>
+
+<h2><u>BEFORE GITHUB</u></h2>
+
+<h3>[ 0.3 (p0.8) - 18/7/22 ]</h3>
+<ul>
+  <li>Underline</li>
+  <li>Text alignments</li>
+  <li>Night mode with button colors improved</li>
+  <li>UI improvements</li>
+</ul>
+
+<h3>[ 0.2.5 (p0.7) - 18/7/22 ]</h3>
+<ul>
+  <li>Underline</li>
+  <li>Font UI</li>
+</ul>
+
+<h3>[ 0.2 (median) - text design and more functions - 17/7/22 ]</h3>
+<ul>
+  <li>Bold text</li>
+  <li>Italics slant</li>
+  <li>Custom text color</li>
+  <li>Custom background colors</li>
+  <li>Custom highlight color</li>
+  <li>Print a file</li>
+  <li>Select all</li>
+  <li>Clear</li>
+  <li>Night mode</li>
+  <li>Three new shortcuts</li>
+</ul>
+
+<h3>[ 0.1 (basic/first version) - 15-16/7/22 ]</h3>
+<ul>
+  <li>Open and save files</li>
+  <li>Save and Save As</li>
+  <li>Cut, Copy, Paste</li>
+</ul>

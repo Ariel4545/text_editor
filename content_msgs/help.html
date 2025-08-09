@@ -1,0 +1,192 @@
+<h1>Egon Text Editor - Help</h1>
+
+<h2 id="marking">Marking</h2>
+<p>Egon Text Editor works quite differently from other text editing programs, something that can work differently between each character you will choose to change. The simplest way to change something text-related is by marking it.</p>
+<p>If you do not mark something, Egon Text Editor will select automatically for you what it will affect depending on what tool you're willing to use:</p>
+<ul>
+  <li><strong>Bold</strong>, <em>Italics</em>, <u>Underline</u>, text color, text to speech, and text twisting function - selects the entire file.</li>
+  <li>Align right, Align center, Align left - selects the current line.</li>
+</ul>
+
+<h2 id="import">Import non-text file</h2>
+<p>Egon-Text-Editor lets you import some nontext file types to your text file. Press the "import file" button in the file menu and select a supported file (Excel, CSV, JSON, XML). The file is converted to text and appended at the current cursor position.</p>
+<p><strong>Local vs. Global file</strong></p>
+<ul>
+  <li><strong>Local:</strong> a file on your computer, accessed via a menu.</li>
+  <li><strong>Global:</strong> a file available on the internet, accessed via a link.</li>
+</ul>
+
+<h2 id="bars">File bar &amp; Status bar</h2>
+<p>The File bar and status bar are two labels at the bottom of the program. They notify you about:</p>
+<ul>
+  <li><strong>Status bar:</strong> number of words and characters.</li>
+  <li><strong>File bar:</strong> file name, date and time of the last save, file state, etc.</li>
+</ul>
+<p>You can turn off these labels in Settings.</p>
+
+<h2 id="search-online">Search online</h2>
+<p>Search Online opens a new tab in your default browser and searches by domain.</p>
+<p>The "copy from file" button has two behaviors:</p>
+<ol>
+  <li>If text is marked, only the marked text is copied to the text box.</li>
+  <li>If text is not marked, the whole text file is copied to the text box.</li>
+</ol>
+
+<h2 id="custom-ui-colors">Custom U.I. colors</h2>
+<p>There are three options to change predefined colors to your custom ones (aside from text color):</p>
+<ol>
+  <li>Button colors - buttons' background color.</li>
+  <li>Menu colors - menus' background and text colors.</li>
+  <li>App colors - text box color, status &amp; file bar colors, toolbar colors, frame color, text color (until version 1.0.9).</li>
+</ol>
+
+<h2 id="emoji-detection">Emoji detection</h2>
+<p>The emoji detection feature is automatic by default. You can also detect emojis manually via the "detect emojis" button in the settings menu.</p>
+
+<h2 id="sort">Sort by words/characters</h2>
+<p>These functions sort values that aren't numbers by using their ASCII values.</p>
+
+<h2 id="nlp">N.L.P. menu</h2>
+<p>The N.L.P. menu is attributed to the Natural Language Processor: it processes the main text box widget's text and finds something based on the command you pressed.</p>
+
+<h2 id="top-most">Top most</h2>
+<p>The Top most setting is in the options menu. When activated, it makes the main window's Z-order above any other window.</p>
+
+<h2 id="openai-connection">Connection with OpenAI products</h2>
+<p>In the program, you can use OpenAI products, which include ChatGPT and DallE. You connect via a login window that requests your OpenAI / Azure-OpenAI keys. After this, a special window opens for the specific A.I. you chose.</p>
+<p>Note: API usage may incur costs charged by the provider.</p>
+
+<h2 id="text-decorators">Text decorators</h2>
+<p>Text decorators are styles of large text using regular text. Available styles: <code>binary</code>, <code>bash</code>, and <code>astrix</code>.</p>
+<ul>
+  <li>Outputs can be vertical or horizontal.</li>
+  <li>Convert text from the main text box or use the tool's own text box.</li>
+  <li>Paste results directly to the main text box.</li>
+</ul>
+
+<h2 id="text-twisting">Text twisting functions</h2>
+<p>Text twisting functions change the order of parts of the text in straightforward ways (for fun or exploration). Located at the bottom of the Edit menu.</p>
+<ul>
+  <li>Reverse characters</li>
+  <li>Reverse words</li>
+  <li>Join words</li>
+  <li>Upper / Lower</li>
+  <li>Sort by characters / Sort by words</li>
+</ul>
+
+<h2 id="dev-mode">Dev mode</h2>
+<p>Dev mode can be activated via Options. When activated, it lets you access the Record function.</p>
+
+<h2 id="record">Record</h2>
+<p>The Record function keeps track of main events that occur in the app. When you open the tool, events are written in an organized manner with time and details on different lines.</p>
+
+<h2 id="special-tools">Special tools option</h2>
+<p>The "special tool" option (enabled by default) appears in Options. If you turn it off, you will no longer have access to the Tools and Colors+ menus.</p>
+
+<h2 id="tools-font">Tools' font</h2>
+<p>Some tools' font is bold while others are not. Bold indicates tools that are the finest and most original.</p>
+
+<h2 id="ide">IDE</h2>
+<p>If the program detects that you are using a Python file, it will add several options:</p>
+<ol>
+  <li>Run the code directly from the program.</li>
+  <li>The main text box will share space with a console.</li>
+  <li>Additional options to ease usage.</li>
+</ol>
+
+<h2 id="saved-settings">Saved settings</h2>
+<p>Most program options are saved in a file in your E.T.E. directory. Reset all options via Advanced options -> Restore defaults.</p>
+<p>If the saved settings file prevents the program from opening/working, a special window will ask for permission to delete it and create a new default file.</p>
+
+<h2 id="night-modes">Night modes</h2>
+<p>There are two night modes: one with mainly blue colors and one with mainly black colors (the original "Dracula" mode, which is the default).</p>
+<p>Affected windows include:</p>
+<ul>
+  <li>Main EgonTE window</li>
+  <li>Advanced options window</li>
+  <li>Help &amp; Patch notes "information" window</li>
+</ul>
+
+<h2 id="opening-sentence">Opening sentence</h2>
+<p>If the program doesn't automatically open your last saved file, it will write a sentence for you at startup. The sentence can be one written for you or one from an API showcasing quotes by special individuals.</p>
+<p>You can also get a sentence directly in the main text box via Tools -> "Inspirational quote".</p>
+
+<h2 id="random-name">Random name</h2>
+<p>The program contains a random name function. On first opening the tool, you can generate names immediately, copy the name, or re-roll.</p>
+<p><strong>Advanced re-rolling</strong></p>
+<ul>
+  <li>Choose the gender.</li>
+  <li>Choose the part of the name you want to get.</li>
+</ul>
+
+<h2 id="dictionary-wikipedia">Dictionary/Wikipedia</h2>
+<p>Expand your knowledge using the Dictionary/Wikipedia tools (Tools menu). Search with a term and see results in the tool's text box, with a button to paste directly to the main text box.</p>
+<p>Wikipedia tool only: includes filtering options based on which part of the page you want.</p>
+
+<h2 id="generate-sequence">Generate sequence</h2>
+<p>Accessed via the Tools menu. In a small control window, you can determine the number of characters and whether to include/exclude symbols. Use the Generate button to create characters.</p>
+
+<h2 id="correct-writing">Correct writing</h2>
+<p>Accessed via the Edit menu. This function takes your text and replaces it with a corrected version using a corrector from a library.</p>
+<p>Important: Not recommended when your text is already correct, as it may change words you intended.</p>
+
+<h2 id="calculator-ui">Calculator tool bonus U.I.</h2>
+<p>The calculator tool has extra U.I.: number buttons and clear buttons appear on the left when you press "Calculator U.I.". In the "show expression" frame, press them to add to the entry.</p>
+
+<h2 id="youtube-transcript">YouTube transcript</h2>
+<p>The program has transcript functions: YouTube transcript and W.A.V. file transcript (file transcript is W.I.P.).</p>
+<p>For YouTube transcript, provide the video's ID (the part at the end of the link). The program opens a text box showing what is spoken, start times, and iteration of items.</p>
+
+<h2 id="library-installer">Library installer</h2>
+<p>This tool opens when not all required libraries are installed. From there, install required and optional libraries, and upgrade pip.</p>
+<p>When the process completes, it will show how many libraries failed to install. The Install button is then replaced with a Restart button.</p>
+
+<h2 id="search-tools">Search tools</h2>
+<p>Search tools include "Find text" and the U.I. at the bottom of the "knowledge window".</p>
+<ul>
+  <li>Automatic search box shows matching terms count and provides navigation: down, reset, tag/untag all occurrences.</li>
+  <li>"Find text" also includes an interactive list of the most used terms.</li>
+</ul>
+
+<h2 id="shortcuts">Shortcuts</h2>
+<h3>Main window</h3>
+<ul>
+  <li>Ctrl + O - open file</li>
+  <li>Ctrl + S - save file</li>
+  <li>Ctrl + N - new file</li>
+  <li>Alt + F4 - close the app</li>
+  <li>Ctrl + A - select all text</li>
+  <li>Ctrl + B - bold text</li>
+  <li>Ctrl + I - italics text</li>
+  <li>Ctrl + U - underline text</li>
+  <li>Ctrl + L - align text left</li>
+  <li>Ctrl + E - align text center</li>
+  <li>Ctrl + R - align text right</li>
+  <li>Ctrl + P - print file</li>
+  <li>Ctrl + Delete - clear text</li>
+  <li>Ctrl + F - find text tool</li>
+  <li>Ctrl + H - replace text</li>
+  <li>Ctrl + G - go to (text item)</li>
+  <li>Ctrl + Shift + J - join words</li>
+  <li>Ctrl + Shift + U - lower / upper text</li>
+  <li>Ctrl + Shift + R - reverse characters</li>
+  <li>Ctrl + Shift + C - reverse words</li>
+  <li>Alt + D - copy file path name</li>
+  <li>Ctrl + + - font size up</li>
+  <li>Ctrl + - - font size down</li>
+  <li>F5 - output current date/time</li>
+  <li>F11 - fullscreen mode</li>
+</ul>
+
+<h3>Tools</h3>
+<p><strong>Drawing tool</strong></p>
+<ul>
+  <li>Arrow keys - move the drawing around</li>
+  <li>Ctrl + . - pen size up (alt via settings: mouse wheel up)</li>
+  <li>Ctrl + , - pen size down (alt via settings: mouse wheel down)</li>
+</ul>
+<p><strong>Wikipedia tool (image mode)</strong></p>
+<ul>
+  <li>Ctrl + . - move image forwards</li>
+  <li>Ctrl + , - move image backwards</li>
+</ul>
