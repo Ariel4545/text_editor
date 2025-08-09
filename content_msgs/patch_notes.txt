@@ -1,131 +1,28 @@
 Version - name - release date
 
-[ 1.13 p4 - New dawn - 29/06/25 ]
-Added:
-Added a new file for the global/static methods.
-Added an algorithm that organizes most of the different UI widgets' color options into one system for the "custom_ui_colors" method.
-Added a Tab (virtual keyboard) indent method selection, in the advanced options method.
-
-Changed/Improved:
-Replaced the exit app function text compare conditions with the new "check text difference" (comparing the text’s editor text to its file) function.
-Improved the options of the "find_text" method, both with code efficiency and UI management.
-Improved the placement of the widgets in the "find_text" method.
-Made the "popular terms" listbox only appear if useful enough and made the content always synchronized with the text editor.
-Made a Label widget that informs about the text changes in the "replace" method.
-Made the "text formatter" method deal with the content before and after the newly added text position, contrary to only adding punctuation.
-Improved the navigation of the results in the "find_text" method by preventing many errors and looping through the results again when reaching the tip of the values.
-Made that if the DateTime method content is about to be inserted into joined content it will put a space to separate the content.
-Made the option to drag with the mouse the "handwriting" drawings.
-
-Fixed:
-Fixed a variable error with the "popular terms" "list-box" in the "find_text" function.
-Fixed the "tag_all" and "untag_all" function's parameters in the "find_text" method.
-Removed expressions that don't include existing references in different methods.
-Fixed "bold" and "italic" typefaces not working.
-Fixed a widget error in the "git" method.
-Fixed a count error in the "git" method "commit data" function.
-Fixed lower/upper case words method's marking system.
-
-Code:
-Merged the two navigation functions at the "find_text" method into one more efficient function.
-Shortened/improved some more widgets creation, by making a loop make the buttons for the virtual keyboard and calculator tools.
-Optimized the options' menu labels parameters.
-Optimized some of the night's mode color variables.
-Moved the "large_variables" and the new "universal_functions" files to a new directory called "dependencies".
-Switched many global variables to class variables for better and more efficient management.
-Removed unused function in the "handwriting" method.
-Changed the names of many variables to make their purpose more clear without searching for the reference in the code.
-Changed the way that the "check_file_changes" is getting the desired content via parameters instead of defining them inside the method.
-
-W.I.P:
-Added a new method for retrieving the text files.
-Mixed the "replace text" and "find text" functions into one.
-"Egon" directory option in the "open_file" function.
-
-
-[ 1.13 p3 - the clarity update p3 - 26/04/25 ]
+[ 1.13 - The next level - 9/8/25  (major changes only) ]
 
 Added:
-Added a new binding (function to widgets) algorithm, that uses dictionaries to make it less repetitive and more structured to the initial and the advanced options functions.
-Completed the making of the redo functionality in the handwriting tool.
-Added a function that checks if you saved the previous file before opening an existing/blank file.
-Added a record tool message to make a new blank file.
+Added a new "ui_builders" file that stores many crucial methods like "make_pop_ups_window" and brings them to the next level, and there's new methods there.
+Remade the "library installer" tool with a new UI and many advanced functionalities to ensure a safe and smooth experience.
+Added a new "handwriting_popup.py", which stores the handwriting method, which also got many additions, improvements, and bug fixes.
+Added an "HTML" version to the informative content (help and patch notes) that activates if the conditions are right.
+Added a file template generator tool, which generates simple yet nifty docs and PDF (and more) files.
+Added "clipboard history" tool, which allows you to check on your clipboard, play with its content, and has connectivity to the main window.
+Added many algorithms to the main file to improve reliability and make the code more readable.
+Added an "auto-lists" method that can help with making numbered or bulleted lists (and more) in the text box.
+Added a special version of the edit (drop-down) menu as a right-click menu.
+Added a massive find & replace text method, with a lot of features and in real time events.
+Added a method that loads all the commands of the app.
+Added "large_variables" file, that stores large variables that contain mainly  autonomous or string variables.
+Added "universal_functions" file that stores all the the standalone functions that are also static.
+Added many options in the "advanced options" window.
 
-Changed/Improved:
-Made many handwriting tool variables be at the init level, causing many options not to reset every time you open the tool
-Optimized error handling at the open (existing) file function
-Optimized typefaces function
-Optimized some of the paint's function (handwriting) events
-Used list comprehensions to make separators widgets more efficiently
-
-Fixed:
-Fixed handwriting tool's night mode
-Added an error-catching statement to the undo function, to prevent an error if there's nothing to undo
-Fixed "underline" and "italic" typefaces not working
-Fixed some variables names errors caused by the new "large_variables" file
-Fixed "biggest top/bottom" font size options not automatically made with the current color palate
-Fixed the virtual keyboard's window management bugs
-Fixed draw mode being not mainly accessible in the handwriting tool
-
-
-[ 1.13 p2 - the clarity update p2 - 22/04/25 ]
-
-Added:
-Added a new file "large_variables.py", this file is used for storing large variables that do not have any dependencies - and saves 300 lines!
-Added a new function that creates the "complex" text widget (with frame and scroll bar) - this function shortens repetitive content and allows to expand upon these improved text widgets for other tools
-
-Changed/improved:
-Changed GPT-API tool window creation to "make_pop_ups_window" function
-
-[ 1.13 p1 - the clarity update p1 - 21/04/25 ]
-
-Added:
-added a new binding option to disable (and enable) - automatic (pressing any button mostly in the EgonTE text widget)
-added a new reset binding button
-added the option to choose text's font size values orientation - highest value at the top or the bottom of the combo-box
-added a "show characters" window for the text decorators tool
-added a message when closing a pop-up window in the record tool and added a thread stopper for some functions.
-added a universal window-creating function, that binds the window to all the window-related settings and events
-added a universal internet links opener
-added the option to choose both or none auto-saving method instead of one of them
-added a global "fill by click" function
-W.I.P draw to text tool - redo functionality and night mode
-W.I.P added a text formater to the output of the "speech to text" tool
-
-Changed \ improved:
-more specific libraries importing
-made some widget placing shorter with loops
-optimized many conditions with the usage of a dictionary
-added a ton of type and return hintings
-started to use @staticmethod, and in bulk
-optimized conditions with repetitive content
-matched some arguments with their parameters
-improved some functions, arguments, parameters, and variables names
-Flipped text's font sizes combo box
-made balloon-tips creation shorter
-made the ballon-tips library an optional feature, and returned the classic ballon-tips in case of not installing the library
-started to use less error-catching and more conditions to prevent errors
-shorten many lines with list comprehensions - making groups of variables, checking conditions, etc
-made the virtual keyboard code organization better
-improved the NLP's function conditions
-improved wiki-image images' size adjustment conditions
-merged the text's highlight color function with the general function that manages color-changing events
-improved a bit the text decorator function
-removed some useless comments
-organized variables creation in the init function
-made some widget creation consume less space
-merged some functions with the same usage but different options (for example: text alignment functions are now one)
-made more variables belong to the class to fix possible scope error
-optimized the "advance" section in the "random names" function
-made drawing in the draw-to-text tool more power-efficient
-
-Fixed:
-fixed the library installer's widget placement error
-fixed many misspellings
-fixed youtube-transcript window creation
-fixed font size wasn't applying to a newer text
-fixed a bug with the text decorator's text scroll
-fixed a condition and a method call in the git tool
+Improved / fixed:
+Naming improvements all across the project.
+Improved and fixed the "speech to method" to an high degree.
+Fixed and improved the "typefaces" method.
+Fixed and optimaized a lot of stuff.
 
 [1.12.6 - rise of windows - 9/3/24]
 
