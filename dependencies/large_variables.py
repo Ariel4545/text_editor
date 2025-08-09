@@ -286,11 +286,57 @@ op_msgs = ('Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Beli
                        'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback',
                        f'hi {gethostname()}')
 
-library_list = ['bs4', 'emoji', 'keyboard', 'matplotlib', 'names', 'pandas', 'PIL',
-                            'pyaudio', 'pydub', 'ffmpeg-downloader', 'PyPDF2', 'nltk', 'PyDictionary', 'tkinter-tooltip',
-                            'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
-                            'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
-                            'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr']
+# Base packages (your canonical list)
+library_list = [
+    'bs4', 'emoji', 'keyboard', 'matplotlib', 'names', 'pandas', 'PIL',
+    'pyaudio', 'pydub', 'ffmpeg-downloader', 'PyPDF2', 'nltk', 'PyDictionary',
+    'tkinter-tooltip', 'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
+    'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
+    'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr'
+]
+
+# Optional extras (kept here so "most" lives in this file—
+# you can append more in the main file if you must)
+library_optional = [
+    'openai',
+    'youtube-transcript-api',
+    'pyshorteners',
+    'cryptography',
+    'rsa',
+    'GitPython',
+    'emoticon',
+    'tkhtmlview',
+    'python-docx',
+    'tktooltip'
+]
+
+# Aliases and canonical names for pip (no runtime, pure data)
+# Keys are lowercased; values are the canonical pip name or version-pinned spec
+library_alias_map = {
+    'pil': 'Pillow',
+    'pillow': 'Pillow',
+    'pypdf2': 'PyPDF2',
+    'py-pdf2': 'PyPDF2',
+    'tkinter-tooltip': 'tkinter-tooltip',   # this is a real project
+    'tktooltip': 'tktooltip',               # different project, included only if used
+    'ffmpeg-downloader': 'ffmpeg-downloader',
+    # Known better pin for many envs:
+    'googletrans': 'googletrans==4.0.0rc1',
+}
+
+# Things we should NOT attempt to pip install (stdlib or core)
+# all checked as lowercased tokens
+library_blocklist = {
+    'urllib', 'webbrowser', 'email', 'ssl', 'sys', 'tkinter',
+}
+
+# Optional pins (explicit versions you prefer, if needed)
+# Keys are lowercased canonical names
+# Values are exact spec strings (e.g., 'package==1.2.3' or 'package>=1.0')
+library_pins = {
+    # 'numpy': 'numpy==1.26.4',
+    # 'spacy': 'spacy>=3.7',
+}
 
 data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
                      'style': 'clam',
@@ -305,3 +351,4 @@ special_files = (('excel', '*.xlsx'), ('csv', '*.csv'), ('pdf', '*.pdf')
 
 night_mode_colors = {'black' : ['#110022', '#373737', '#27374D', 'green'], 'blue' : ['#041C32', '#04293A', '#064663', '#ECB365']
     , 'default' : ['SystemButtonFace', 'SystemButtonFace', 'SystemButtonFace', 'black']}
+
