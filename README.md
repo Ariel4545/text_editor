@@ -1,11 +1,8 @@
-Hello guys, I've released now a beta of the new version with most of the original features to relieve myself from the development hell.  
-I'm planning to patch it as soon as possible with some kind of beta stage with small updates.  
-The other features include many more algorithms and a new file that will help organize the project better.  
-I've planned this in detail but can't guarantee too much because I'll be busy with other stuff and my time to pull this off is also limited.  
-
-![ETE1 12 7 poster (1)](https://github.com/Ariel4545/text_editor/assets/95249974/30e5da02-23f4-4bf2-b6ed-8203c5391ff4)  
-
-**Important message: the next update will mostly focus on improved code quality: more readable and structured. and because this is a hard thing to do and it is very boring there is a slight chance that it will be delayed as well**  
+Hello dear viewers,  
+After a lot of struggle, I finally managed to release the update.
+The biggest one, by far, added a lot of new concepts, features, improvements, and fixes to the program and to the project as well.  
+Many mechanics and programming principles that were nonexistent until recently have been introduced within the project.  
+I’m in a very stressful period but I’ll try to do my best and continue building upon the foundation that the update established.  
 
 ![ETE_logo](https://user-images.githubusercontent.com/95249974/181734159-96e38456-fd13-44e2-907b-83b8b45f5dbc.png)
 
