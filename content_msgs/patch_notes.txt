@@ -1,5 +1,31 @@
 Version - name - release date
 
+[ 1.13.1 - Tools revolution - 16/8/25  (Summery) ]
+Git tool:
+The tool is safer (secret/size checks, allowlists, confirmations), more reliable (validation and guarded GitPython usage), more responsive (threading for long tasks), and cleaner (modular and easier to maintain), while keeping the familiar UI and workflow.
+Encryption tool:
+A faster, more robust encryption/decryption pop-up that:
+Doesn’t freeze under RSA workloads.
+Produces clean, portable results.
+Has a consistent look-and-feel and better usability.
+Offers full local clipboard controls (copy/cut/paste/select all) in the tool itself.
+Maintains compatibility with existing code by preserving public member names.
+Web scraping tool:
+The tool is safer (legal and technical), clearer (initial window), more robust (validation, scoping, and limits), and easier to extend (IDs and hooks). It provides a cleaner UI/UX with organized tabs and a single output area that reports results and HTTP status succinctly.
+Find and replace tool (detailed & summarized):
+Moved into a new file ("EgonTE.py" to find_replace_popup.py").
+Replaced many `Tk` widgets with `ttk`.
+File template generator:
+Descriptive names and structured helpers.
+Themed controls, keyboard shortcuts, and better messaging.
+Stronger validation and safer file handling.
+Transcript tool (no new standalone file):
+The method is safer (no destructive file operations), clearer (better names/structure), and more user-friendly (interactive selection window).
+YouTube input is integrated into the selection window.
+Overall reliability improved through dedicated error handling paths and resource cleanup.
+Other additions:
+Fixed and improved some threading to make the program smoother and stable (including "stopwatch" and "check version" threads ).
+
 [ 1.13 - The next level - 9/8/25  (major changes only) ]
 
 Added:
