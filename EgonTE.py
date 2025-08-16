@@ -3,6 +3,11 @@ from dependencies.large_variables import *
 from dependencies.universal_functions import *
 from UI import ui_builders
 from pop_ups.handwriting_popup import open_handwriting
+from pop_ups.encryption_popup import open_encryption
+from pop_ups.find_replace_popup import open_find_replace
+from pop_ups.file_template_generator_popup import open_document_template_generator
+from pop_ups.git_tool_popup import open_git_tool
+from pop_ups.web_scrapping_popup import open_web_scrapping_popup
 from UI.library_installer_ui import show_library_installer
 from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
 from tkinter import *
@@ -167,12 +172,6 @@ try:
 except (ImportError, AttributeError, ModuleNotFoundError) as e:
 	google_trans = ''
 
-try:
-	import git.Repo
-
-	gstate = ACTIVE
-except (ImportError, AttributeError, ModuleNotFoundError) as e:
-	gstate = DISABLED
 
 symmetric_dec = True
 try:
@@ -378,7 +377,7 @@ class Window(Tk):
 		# connecting the prees of the exit button the a custom exit function
 		self.protocol('WM_DELETE_WINDOW', self.exit_app)
 		# threads for a stopwatch function that works on advance option window and a function that loads images from the web
-		Thread(target=self.stopwatch, daemon=True).start()
+		self.start_stopwatch()
 		# Thread(target=self.load_links, daemon=True).start()
 		self.load_links()
 		# variables for the (UI) style of the program
@@ -554,10 +553,11 @@ class Window(Tk):
 		self.singular_colors_d = {'background': [self.EgonTE, 'bg'], 'text': [self.EgonTE, 'fg'],
 								  'menus': [self.menus_components, 'bg-fg'],
 								  'buttons': [self.toolbar_components, 'bg'], 'highlight': [self.EgonTE, 'selectbackground']}
-		if self.check_ver_v.get():
-			Thread(target=self.check_version, daemon=True).start()
+
 		if RA:
 			self.right_align_language_support()
+		if self.check_ver_v.get():
+			self.after_idle(self.check_version)
 
 	def load_images(self):
 		'''
@@ -1958,7 +1958,7 @@ class Window(Tk):
 		for it, and make sure that everything closes
 		'''
 		self.saved_settings(special_mode='save')
-
+		self._stopwatch_running = False
 		if self.usage_report_v.get():
 			self.usage_report()
 
@@ -1982,6 +1982,7 @@ class Window(Tk):
 		self.record_list.append(f'> [{get_time()}] - {root} tool window closed')
 		root.destroy()
 
+		'''+ need fixing'''
 		if th:
 			try:
 				th.join()
@@ -1989,527 +1990,7 @@ class Window(Tk):
 				pass
 
 
-	def find_replace(self, event=None):
 
-		'''+ the tool is a bit too advanced, so we will probably preserve somehow also the origianl one'''
-
-		"""
-		Unified Find & Replace dialog for self.EgonTE.
-
-		Features:
-		  - Case sensitive, Regex, Wrap, Partial (characters) vs Whole word
-		  - In selection (stable snapshot), Highlight all
-		  - Live search, Popular terms (conditional), Auto focus editor
-		  - Prev/Next, Reset, All (tag all matches), Nothing (clear that tag)
-		  - Replace current / Replace All (regex backrefs supported)
-		  - Shortcuts: Enter=Next, Shift+Enter=Prev, Ctrl+Enter=Replace, Ctrl+Shift+Enter=Replace All, Esc=Close
-		  - Occurrences counter (current/total) between Prev and Next
-		"""
-		text = self.EgonTE
-
-		# --- State container kept on self ---
-		State = getattr(self, '_fr', None)
-		if State is None:
-			class _FR:
-				pattern = ""
-				replace = ""
-				case = False
-				regex = False
-				partial = True  # True => "characters sensitive" (partial matches); False => whole word
-				wrap = True
-				in_selection = False
-				highlight_all = True
-				matches: list[tuple[str, str]] = []
-				current = -1
-				# Selection snapshot for "In selection"
-				sel_start: str | None = None
-				sel_end: str | None = None
-				# Popular list cache
-				popular: list[str] = []
-
-			self._fr = _FR()
-			State = self._fr
-
-		# --- Popup creation (singleton behavior via name) ---
-		root = self.make_pop_ups_window(function=self.find_replace, name='find_replace', title='Find & Replace')
-
-		# --- Variables bound to UI ---
-		find_var = StringVar(value=State.pattern)
-		repl_var = StringVar(value=State.replace)
-		case_var = BooleanVar(value=State.case)
-		regex_var = BooleanVar(value=State.regex)
-		partial_var = BooleanVar(value=State.partial)
-		wrap_var = BooleanVar(value=State.wrap)
-		in_sel_var = BooleanVar(value=State.in_selection)
-		all_var = BooleanVar(value=State.highlight_all)
-
-		# Attempt to use app-wide auto focus var if present
-		try:
-			auto_focus_var = self.auto_focus_v if isinstance(self.auto_focus_v, BooleanVar) else BooleanVar(False)
-		except Exception:
-			auto_focus_var = BooleanVar(False)
-
-		# --- Layout ---
-		Label(root, text='Find & Replace', font=('Segoe UI', 12, 'underline')).grid(
-			row=0, column=0, columnspan=10, pady=(6, 2)
-		)
-		e_find = Entry(root, textvariable=find_var, width=46)
-		e_repl = Entry(root, textvariable=repl_var, width=46)
-		e_find.grid(row=1, column=0, columnspan=10, padx=8, pady=(6, 2), sticky='ew')
-		e_repl.grid(row=2, column=0, columnspan=10, padx=8, pady=(0, 8), sticky='ew')
-
-		# Options
-		Checkbutton(root, text='Case sensitive', variable=case_var).grid(row=3, column=0, sticky='w', padx=8)
-		Checkbutton(root, text='Regex', variable=regex_var).grid(row=3, column=1, sticky='w')
-		Checkbutton(root, text='Wrap', variable=wrap_var).grid(row=3, column=2, sticky='w')
-		Checkbutton(root, text='In selection', variable=in_sel_var).grid(row=3, column=3, sticky='w')
-		Checkbutton(root, text='Highlight all', variable=all_var).grid(row=3, column=4, sticky='w')
-
-		# Matching mode and behavior
-		Checkbutton(root, text='Partial match (characters)', variable=partial_var).grid(row=4, column=0, sticky='w',
-																						   padx=8)
-		Checkbutton(root, text='Auto focus editor', variable=auto_focus_var).grid(row=4, column=1, sticky='w')
-
-		# Navigation and actions
-		btn_prev = Button(root, text='Prev')
-		# Occurrences counter (current/total)
-		occ_counter = Label(root, text='0/0', width=8, anchor='center')
-		btn_next = Button(root, text='Next')
-		btn_all_tag = Button(root, text='All')
-		btn_none_tag = Button(root, text='Nothing')
-		btn_reset = Button(root, text='Reset')
-		btn_replace = Button(root, text='Replace')
-		btn_replace_all = Button(root, text='Replace All')
-
-		# Row 5 layout with counter between Prev and Next
-		btn_prev.grid(row=5, column=0, padx=4, pady=6, sticky='ew')
-		occ_counter.grid(row=5, column=1, padx=2, pady=6, sticky='ew')
-		btn_next.grid(row=5, column=2, padx=4, pady=6, sticky='ew')
-		btn_all_tag.grid(row=5, column=3, padx=4, pady=6, sticky='ew')
-		btn_none_tag.grid(row=5, column=4, padx=4, pady=6, sticky='ew')
-		btn_reset.grid(row=5, column=5, padx=4, pady=6, sticky='ew')
-		btn_replace.grid(row=6, column=3, padx=4, pady=(0, 8), sticky='ew')
-		btn_replace_all.grid(row=6, column=4, padx=4, pady=(0, 8), sticky='ew')
-
-		status = Label(root, text="", anchor='w')
-		status.grid(row=7, column=0, columnspan=10, sticky='ew', padx=8, pady=(2, 6))
-
-		# Popular terms (conditionally visible)
-		terms_frame = Frame(root)
-		terms_list = Listbox(terms_frame, height=3, width=30)
-		pt_scroll = ttk.Scrollbar(terms_frame, command=terms_list.yview)
-		terms_list.configure(yscrollcommand=pt_scroll.set)
-		pt_scroll.pack(side='right', fill='y')
-		terms_list.pack(side='left', fill='both', expand=True)
-
-		# Column weights
-		for c in range(10):
-			root.grid_columnconfigure(c, weight=1)
-
-		# Tooltips if available
-		try:
-			if hasattr(self, 'ToolTip') and hasattr(self.ToolTip, 'bind_widget'):
-				self.ToolTip.bind_widget(btn_prev, balloonmsg='Previous match (Shift+Enter)')
-				self.ToolTip.bind_widget(btn_next, balloonmsg='Next match (Enter)')
-				self.ToolTip.bind_widget(btn_all_tag, balloonmsg='Tag all matches')
-				self.ToolTip.bind_widget(btn_none_tag, balloonmsg="Clear 'All' tag")
-				self.ToolTip.bind_widget(btn_reset, balloonmsg='Clear inputs and tags')
-				self.ToolTip.bind_widget(btn_replace, balloonmsg='Replace current (Ctrl+Enter)')
-				self.ToolTip.bind_widget(btn_replace_all, balloonmsg='Replace all (Ctrl+Shift+Enter)')
-		except Exception:
-			pass
-
-		# --- Tags ---
-		TAG_ALL = 'fr_match_all'  # all matches
-		TAG_CUR = 'fr_match_cur'  # current match
-		TAG_SEL = 'fr_all_select'  # selection tag for 'All' button
-		try:
-			text.tag_configure(TAG_ALL, background='#ffe08a')
-			text.tag_configure(TAG_CUR, background='#ffd24a')
-			text.tag_configure(TAG_SEL, background='#ffe8b3')
-		except Exception:
-			pass
-
-		def _clear_tags():
-			try:
-				text.tag_remove(TAG_ALL, '1.0', 'end')
-				text.tag_remove(TAG_CUR, '1.0', 'end')
-				text.tag_remove(TAG_SEL, '1.0', 'end')
-			except Exception:
-				pass
-
-		# --- Helpers ---
-		def _bounds():
-			"""
-			Respect a stable selection snapshot if 'In selection' is enabled.
-			If no snapshot exists, try to create one from current selection; otherwise full range.
-			"""
-			if in_sel_var.get():
-				# Establish or reuse stable snapshot
-				if not State.sel_start or not State.sel_end:
-					try:
-						State.sel_start = text.index('sel.first')
-						State.sel_end = text.index('sel.last')
-					except Exception:
-						State.sel_start, State.sel_end = '1.0', 'end-1c'
-				return State.sel_start, State.sel_end
-			# When turning off 'In selection', discard snapshot
-			State.sel_start, State.sel_end = None, None
-			return '1.0', 'end-1c'
-
-		def _to_tk_pattern(literal: str, partial: bool, allow_regex: bool) -> tuple[str, bool]:
-			"""
-			Returns (pattern, use_regex_flag) for Tk's Text.search.
-			- partial=True: use literal or raw regex as-is
-			- partial=False: enforce whole word with \\m...\\M
-			"""
-			if allow_regex:
-				pat = literal
-				if not partial:
-					pat = fr'\\m(?:{pat})\\M'
-				return pat, True
-			if not partial:
-				esc = escape(literal)
-				return fr'\\m{esc}\\M', True
-			return literal, False
-
-		def _sync_state_from_ui():
-			State.pattern = find_var.get()
-			State.replace = repl_var.get()
-			State.case = case_var.get()
-			State.regex = regex_var.get()
-			State.partial = partial_var.get()
-			State.wrap = wrap_var.get()
-			State.in_selection = in_sel_var.get()
-			State.highlight_all = all_var.get()
-
-		def _set_status_found(n: int):
-			status.config(text=f"{n} match{'es' if n != 1 else ''}")
-
-		def _set_status_not_found():
-			status.config(text='No matches')
-
-		def _update_counter():
-			total = len(State.matches)
-			if total == 0 or State.current < 0:
-				occ_counter.configure(text='0/0')
-			else:
-				occ_counter.configure(text=f'{State.current + 1}/{total}')
-
-		def _set_nav_enabled(enabled: bool):
-			state = ('!disabled',) if enabled else ('disabled',)
-			try:
-				btn_prev.config(state='normal' if enabled else 'disabled')
-				btn_next.config(state='normal' if enabled else 'disabled')
-				btn_all_tag.config(state='normal' if enabled else 'disabled')
-				btn_none_tag.config(state='normal' if enabled else 'disabled')
-				btn_replace.config(state='normal' if enabled else 'disabled')
-				btn_replace_all.config(state='normal' if enabled else 'disabled')
-			except Exception:
-				pass
-
-		# --- Core: collect matches and highlight ---
-		def _collect_matches():
-			_sync_state_from_ui()
-			_clear_tags()
-			State.matches.clear()
-			State.current = -1
-
-			pat = State.pattern
-			if not pat:
-				status.config(text='Enter text to find')
-				_update_counter()
-				_set_nav_enabled(False)
-				_update_terms()
-				return
-
-			start, stop = _bounds()
-			pat_tk, use_regex = _to_tk_pattern(pat, State.partial, State.regex)
-
-			options = {}
-			if not State.case:
-				options['nocase'] = 1
-			if use_regex:
-				options['regexp'] = 1
-
-			idx = start
-			count = IntVar(value=0)
-			cap = 40000  # safety cap
-
-			while True:
-				pos = text.search(pat_tk, idx, stopindex=stop, count=count, **options)
-				if not pos:
-					break
-				length = count.get()
-				if length <= 0:
-					# avoid infinite loops on zero-length matches (e.g., empty regex)
-					idx = text.index(f'{pos}+1c')
-					continue
-				end = text.index(f'{pos}+{length}c')
-				State.matches.append((pos, end))
-				idx = end
-				if len(State.matches) >= cap:
-					break
-
-			# Highlight all and select first
-			if State.highlight_all:
-				for s, e in State.matches:
-					text.tag_add(TAG_ALL, s, e)
-
-			if State.matches:
-				State.current = 0
-				_focus_current()
-				_set_status_found(len(State.matches))
-				_set_nav_enabled(True)
-			else:
-				_set_status_not_found()
-				_set_nav_enabled(False)
-
-			_update_counter()
-			_update_terms()
-
-		def _focus_current():
-			try:
-				text.tag_remove(TAG_CUR, '1.0', 'end')
-			except Exception:
-				pass
-			if 0 <= State.current < len(State.matches):
-				s, e = State.matches[State.current]
-				try:
-					text.tag_add(TAG_CUR, s, e)
-					text.see(s)
-					text.mark_set('insert', s)
-					if auto_focus_var.get():
-						text.focus_set()
-				except Exception:
-					pass
-			_update_counter()
-
-		def _goto(delta: int):
-			if not State.matches:
-				_collect_matches()
-				if not State.matches:
-					return
-			nxt = State.current + delta
-			if 0 <= nxt < len(State.matches):
-				State.current = nxt
-			else:
-				if State.wrap and State.matches:
-					State.current = nxt % len(State.matches)
-				else:
-					return
-			_focus_current()
-
-		def _tag_all_matches():
-			try:
-				text.tag_remove(TAG_SEL, '1.0', 'end')
-			except Exception:
-				pass
-			for s, e in State.matches:
-				text.tag_add(TAG_SEL, s, e)
-
-		def _clear_all_tag():
-			try:
-				text.tag_remove(TAG_SEL, '1.0', 'end')
-			except Exception:
-				pass
-
-		def _reset():
-			find_var.set("")
-			repl_var.set("")
-			State.matches.clear()
-			State.current = -1
-			State.sel_start, State.sel_end = None, None
-			_clear_tags()
-			status.config(text="")
-			_update_counter()
-			_set_nav_enabled(False)
-			_update_terms()
-
-		# --- Replace operations ---
-		def _replace_current():
-			if not (0 <= State.current < len(State.matches)):
-				return
-			s, e = State.matches[State.current]
-			try:
-				frag = text.get(s, e)
-			except Exception:
-				_collect_matches()
-				if not (0 <= State.current < len(State.matches)):
-					return
-				s, e = State.matches[State.current]
-				frag = text.get(s, e)
-
-			repl = State.replace
-			if State.regex:
-				try:
-					flags = 0 if State.case else IGNORECASE
-					compiled = compile(State.pattern, flags)
-					new_frag = compiled.sub(repl, frag, count=1)
-				except Exception:
-					new_frag = repl
-			else:
-				new_frag = repl
-
-			text.edit_separator()
-			text.delete(s, e)
-			text.insert(s, new_frag)
-			text.edit_separator()
-
-			_collect_matches()
-
-		def _replace_all():
-			if not State.matches:
-				_collect_matches()
-			if not State.matches:
-				return
-
-			compiled = None
-			if State.regex:
-				try:
-					flags = 0 if State.case else IGNORECASE
-					compiled = compile(State.pattern, flags)
-				except Exception:
-					compiled = None
-
-			text.edit_separator()
-			for s, e in reversed(State.matches):
-				try:
-					frag = text.get(s, e)
-				except Exception:
-					continue
-				if compiled:
-					new = compiled.sub(State.replace, frag)
-				else:
-					new = State.replace
-				text.delete(s, e)
-				text.insert(s, new)
-			text.edit_separator()
-
-			_collect_matches()
-
-		# --- Popular terms ---
-		def _tokenize_for_popular():
-			full = text.get('1.0', 'end-1c')
-			tokens = findall(r'\w+', full)
-			if not case_var.get():
-				tokens = [t.lower() for t in tokens]
-			return tokens
-
-		def _update_terms():
-			try:
-				terms_list.delete(0, END)
-			except Exception:
-				return
-
-			tokens = _tokenize_for_popular()
-			if not tokens:
-				terms_frame.grid_forget()
-				return
-
-			cnt = Counter(tokens)
-			popular = [t for (t, _) in cnt.most_common(10)]
-			State.popular = popular
-
-			# Respect case option
-			entry = find_var.get()
-			entry_norm = entry if case_var.get() else entry.lower()
-			popular_norm = popular if case_var.get() else [p.lower() for p in popular]
-
-			for t in popular:
-				terms_list.insert(END, t)
-
-			# Heuristics
-			if not entry:
-				show = len(popular) > 2
-			else:
-				show = len(popular) > 1 and entry_norm not in popular_norm
-
-			if show:
-				terms_frame.grid(row=8, column=0, columnspan=10, sticky='ew', padx=8, pady=(0, 6))
-			else:
-				terms_frame.grid_forget()
-
-		def _fill_from_popular(_evt=None):
-			try:
-				sel = terms_list.curselection()
-				if not sel:
-					return
-				term = terms_list.get(sel[0])
-				find_var.set(term)
-				e_find.icursor('end')
-				_schedule()
-			except Exception:
-				pass
-
-		# --- Debounced live search ---
-		_pending = {'id': None}
-
-		def _schedule(_evt=None):
-			if _pending['id']:
-				try:
-					root.after_cancel(_pending['id'])
-				except Exception:
-					pass
-			_pending['id'] = root.after(120, _collect_matches)
-
-		# --- Bindings ---
-		e_find.bind('<KeyRelease>', _schedule)
-		terms_list.bind('<<ListboxSelect>>', _fill_from_popular)
-
-		for var in (case_var, regex_var, partial_var, wrap_var, in_sel_var, all_var, auto_focus_var):
-			var.trace_add('write', lambda *args: _schedule())
-
-		btn_prev.configure(command=lambda: _goto(-1))
-		btn_next.configure(command=lambda: _goto(+1))
-		btn_all_tag.configure(command=_tag_all_matches)
-		btn_none_tag.configure(command=_clear_all_tag)
-		btn_reset.configure(command=_reset)
-		btn_replace.configure(command=_replace_current)
-		btn_replace_all.configure(command=_replace_all)
-
-		# Keyboard shortcuts
-		def _on_enter(evt=None):
-			_goto(+1)
-			return 'break'
-
-		def _on_shift_enter(evt=None):
-			_goto(-1)
-			return 'break'
-
-		def _on_ctrl_enter(evt=None):
-			_replace_current()
-			return 'break'
-
-		def _on_ctrl_shift_enter(evt=None):
-			_replace_all()
-			return 'break'
-
-		def _on_escape(evt=None):
-			try:
-				root.destroy()
-			except Exception:
-				pass
-			return 'break'
-
-		root.bind('<Return>', _on_enter)
-		root.bind('<Shift-Return>', _on_shift_enter)
-		root.bind('<Control-Return>', _on_ctrl_enter)
-		root.bind('<Control-Shift-Return>', _on_ctrl_shift_enter)
-		root.bind('<Escape>', _on_escape)
-
-		# Seed from current selection if find is empty
-		try:
-			if not find_var.get() and text.tag_ranges('sel'):
-				sel = text.get('sel.first', 'sel.last')
-				if sel:
-					find_var.set(sel)
-		except Exception:
-			pass
-
-		# Initial compute
-		_collect_matches()
-		e_find.focus_set()
 
 	# Backward-compatible entry points
 	def find_text(self, event=None):
@@ -4786,424 +4267,12 @@ class Window(Tk):
 
 
 
-	def file_template_generator(self):
+	def file_template_generator(self, event=None):
 		"""
-		Open a popup that contains both the UI and the generation logic.
-
-		Features:
-		- File type: PDF | WORD | JINJA
-		- Subject: resume | personal info | computer stats | letter | Egon stats
-		- Optional: Use docxtpl with a provided .docx template file
-		- Edit placeholders prior to generation (context form)
-		- [Generate], [Open Folder], [Open File], [Copy Path], [Close]
+		Delegate to the standalone Document Template Generator popup implementation.
 		"""
+		return open_document_template_generator(self, event)
 
-		# ------------ validation helpers (nested) ------------
-		def ensure_python_docx():
-			"""
-			Ensure the correct 'python-docx' package is installed (not the legacy 'docx').
-			Returns: (Document, Pt)
-			"""
-			try:
-				import docx  # provided by python-docx
-				from docx import Document
-				from docx.shared import Pt
-			except ImportError as e:
-				raise RuntimeError(
-					"Word generation requires the 'python-docx' package.\n"
-					"Install it using:\n"
-					"  pip install python-docx"
-				) from e
-
-			bad = False
-			if not hasattr(docx, "Document"):
-				bad = True
-			else:
-				try:
-					from docx import shared  # noqa: F401
-					_ = Pt  # ensure available
-				except Exception:
-					bad = True
-
-			if bad:
-				raise RuntimeError(
-					"It looks like the legacy 'docx' package is installed instead of 'python-docx'.\n"
-					"Please run:\n"
-					"  pip uninstall -y docx\n"
-					"  pip install python-docx"
-				)
-			return Document, Pt
-
-		def ensure_fpdf():
-			try:
-				from fpdf import FPDF
-				return FPDF
-			except ImportError as e:
-				raise RuntimeError(
-					"PDF generation requires the 'fpdf' package.\n"
-					"Install it using:\n"
-					"  pip install fpdf"
-				) from e
-
-		def ensure_jinja():
-			try:
-				from jinja2 import Template
-				return Template
-			except ImportError as e:
-				raise RuntimeError(
-					"Jinja rendering requires the 'jinja2' package.\n"
-					"Install it using:\n"
-					"  pip install jinja2"
-				) from e
-
-		def ensure_docxtpl():
-			try:
-				from docxtpl import DocxTemplate
-				return DocxTemplate
-			except ImportError as e:
-				raise RuntimeError(
-					"Using a .docx template requires the 'docxtpl' package.\n"
-					"Install it using:\n"
-					"  pip install docxtpl"
-				) from e
-
-		# ------------ generation helpers (nested) ------------
-		def choose_context(subj):
-			if subj == "resume":
-				return "Resume", {
-					"full_name": "<FULL_NAME>",
-					"title": "<JOB_TITLE>",
-					"email": "<EMAIL>",
-					"phone": "<PHONE>",
-					"summary": "<ONE_SENTENCE_SUMMARY>",
-					"skills": "<SKILL_1>, <SKILL_2>, <SKILL_3>",
-				}
-			if subj == "personal info":
-				return "Personal Information", {
-					"full_name": "<FULL_NAME>",
-					"address": "<ADDRESS_LINE>",
-					"city": "<CITY>",
-					"country": "<COUNTRY>",
-					"email": "<EMAIL>",
-					"phone": "<PHONE>",
-					"dob": "<YYYY-MM-DD>",
-				}
-			if subj == "computer stats":
-				return "Computer Stats", {
-					"os": "<OS_NAME_VERSION>",
-					"cpu": "<CPU_MODEL>",
-					"ram": "<RAM_GB> GB",
-					"storage": "<STORAGE_TOTAL_GB> GB",
-					"gpu": "<GPU_MODEL>",
-					"python": "<PYTHON_VERSION>",
-				}
-			if subj == "letter":
-				return "Letter", {
-					"date": "<YYYY-MM-DD>",
-					"recipient_name": "<RECIPIENT_NAME>",
-					"recipient_company": "<RECIPIENT_COMPANY>",
-					"greeting": "Dear <RECIPIENT_NAME>,",
-					"body": "<LETTER_BODY>",
-					"closing": "Sincerely,",
-					"sender_name": "<SENDER_NAME>",
-				}
-			if subj == "Egon stats":
-				return "Egon Stats", {
-					"level": "<LEVEL>",
-					"hp": "<HP>",
-					"mp": "<MP>",
-					"strength": "<STR>",
-					"agility": "<AGI>",
-					"intelligence": "<INT>",
-					"notes": "<NOTES>",
-				}
-			return subj.title(), {"note": "<PLACEHOLDER>"}
-
-		def out_dir():
-			p = Path("outputs")
-			p.mkdir(parents=True, exist_ok=True)
-			return p
-
-		def make_filename(prefix, ext):
-			ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-			safe = str(prefix).replace(" ", "_").lower()
-			return out_dir() / f"{safe}_{ts}.{ext}"
-
-		def write_pdf(title, context):
-			FPDF = ensure_fpdf()
-			pdf = FPDF()
-			pdf.set_auto_page_break(auto=True, margin=15)
-			pdf.add_page()
-			pdf.set_font("Arial", "B", 16)
-			pdf.cell(0, 10, txt=title, ln=True)
-			pdf.ln(4)
-			pdf.set_font("Arial", size=12)
-			for k, v in context.items():
-				pdf.multi_cell(0, 8, f"{k.replace('_', ' ').title()}: {v}")
-			path = make_filename(title, "pdf")
-			pdf.output(str(path))
-			return str(path)
-
-		def write_word(title, context):
-			Document, Pt = ensure_python_docx()
-			doc = Document()
-			heading = doc.add_heading(title, level=1)
-			for run in heading.runs:
-				try:
-					run.font.size = Pt(18)
-				except Exception:
-					pass
-			for k, v in context.items():
-				p = doc.add_paragraph()
-				p.add_run(f"{k.replace('_', ' ').title()}: ").bold = True
-				p.add_run(str(v))
-			path = make_filename(title, "docx")
-			doc.save(str(path))
-			return str(path)
-
-		def write_jinja_docx(title, context):
-			Template = ensure_jinja()
-			Document, _Pt = ensure_python_docx()
-
-			template_text = (
-				"{{ title }}\n"
-				"{% for _ in range(title|length) %}={% endfor %}\n\n"
-				"{% for k, v in context.items() %}{{ k.replace('_',' ') | title }}: {{ v }}\n{% endfor %}"
-			)
-			rendered = Template(template_text).render(title=title, context=context)
-
-			doc = Document()
-			lines = rendered.splitlines()
-			if lines:
-				doc.add_heading(lines[0], level=1)
-				body = "\n".join(lines[2:]) if len(lines) > 2 else ""
-			else:
-				body = rendered
-			for line in body.split("\n"):
-				doc.add_paragraph(line)
-
-			path = make_filename(title, "docx")
-			doc.save(str(path))
-			return str(path)
-
-		def write_docxtpl(title, context, template_path: str):
-			DocxTemplate = ensure_docxtpl()
-			template_file = Path(template_path)
-			if not template_file.exists():
-				raise FileNotFoundError(f"Template file not found:\n{template_file}")
-			doc = DocxTemplate(str(template_file))
-			# Add title into context to allow {{ title }} usage in template
-			render_ctx = {"title": title, **context}
-			doc.render(render_ctx)
-			path = make_filename(title, "docx")
-			doc.save(str(path))
-			return str(path)
-
-		def generate(filetype, subject, use_tpl: bool, tpl_path: str, context_override: dict | None = None):
-			allowed_types = {"PDF", "WORD", "JINJA"}
-			allowed_subjects = {"resume", "personal info", "computer stats", "letter", "Egon stats"}
-			if filetype not in allowed_types:
-				raise ValueError(f"filetype must be one of {sorted(allowed_types)}")
-			if subject not in allowed_subjects:
-				raise ValueError(f"subject must be one of {sorted(allowed_subjects)}")
-
-			title, context = choose_context(subject)
-			# Allow UI-edited context to override defaults
-			if context_override:
-				context = {**context, **context_override}
-
-			if use_tpl:
-				if not tpl_path:
-					raise ValueError("Please select a .docx template file or turn off 'Use docxtpl'.")
-				# docxtpl always outputs a .docx
-				return write_docxtpl(title, context, tpl_path)
-
-			if filetype == "PDF":
-				return write_pdf(title, context)
-			if filetype == "WORD":
-				return write_word(title, context)
-			return write_jinja_docx(title, context)
-
-		# ------------ UI (uses make_pop_ups_window) ------------
-		root = self.make_pop_ups_window(self.file_template_generator, title="Template Generator")
-
-		# State variables
-		filetype_var = StringVar(value="WORD")
-		subject_var = StringVar(value="resume")
-		use_tpl_var = BooleanVar(value=False)
-		tpl_path_var = StringVar(value="")
-		result_path_var = StringVar(value="")
-		status_var = StringVar(value="Select options and click Generate")
-
-		# Choices
-		filetypes = ("PDF", "WORD", "JINJA")
-		subjects = ("resume", "personal info", "computer stats", "letter", "Egon stats")
-
-		# Context dynamic form state
-		context_vars: dict[str, StringVar] = {}
-
-		# Callbacks
-		def rebuild_context_fields(*_):
-			# Clear existing widgets
-			for w in context_frame.grid_slaves():
-				w.destroy()
-			context_vars.clear()
-
-			_title, ctx = choose_context(subject_var.get())
-			ttk.Label(context_frame, text="Placeholders (editable):", font=("Segoe UI", 9, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", padx=2, pady=(0, 4))
-
-			r = 1
-			for k, v in ctx.items():
-				ttk.Label(context_frame, text=k.replace("_", " ").title() + ":").grid(row=r, column=0, sticky="e", padx=4, pady=2)
-				sv = StringVar(value=v)
-				context_vars[k] = sv
-				ttk.Entry(context_frame, textvariable=sv, width=40).grid(row=r, column=1, sticky="we", padx=4, pady=2)
-				r += 1
-
-			context_frame.grid_columnconfigure(1, weight=1)
-
-		def do_generate(event=None):
-			ft = filetype_var.get()
-			sbj = subject_var.get()
-			use_tpl = bool(use_tpl_var.get())
-			tpl_path = tpl_path_var.get().strip()
-			try:
-				# Pull edited context overrides from UI
-				context_override = {k: sv.get() for k, sv in context_vars.items()}
-				path = generate(ft, sbj, use_tpl, tpl_path, context_override=context_override)
-				result_path_var.set(str(path))
-				status_var.set("Generated successfully.")
-				open_folder_btn.config(state=NORMAL)
-				open_file_btn.config(state=NORMAL)
-				copy_btn.config(state=NORMAL)
-				result_entry.configure(state="normal")
-				result_entry.select_range(0, END)
-				result_entry.configure(state="readonly")
-			except Exception as e:
-				status_var.set("Generation failed.")
-				messagebox.showerror("Generation error", str(e))
-
-		def open_folder():
-			p = result_path_var.get()
-			if not p:
-				return
-			folder = str(Path(p).resolve().parent)
-			try:
-				if os.name == "nt":
-					os.startfile(folder)  # type: ignore[attr-defined]
-				elif sys.platform == "darwin":
-					subprocess.Popen(["open", folder])
-				else:
-					subprocess.Popen(["xdg-open", folder])
-			except Exception as e:
-				messagebox.showwarning("Open Folder", f"Could not open folder:\n{e}")
-
-		def open_file():
-			p = result_path_var.get()
-			if not p:
-				return
-			file_path = str(Path(p).resolve())
-			try:
-				if os.name == "nt":
-					os.startfile(file_path)  # type: ignore[attr-defined]
-				elif sys.platform == "darwin":
-					subprocess.Popen(["open", file_path])
-				else:
-					subprocess.Popen(["xdg-open", file_path])
-			except Exception as e:
-				messagebox.showwarning("Open File", f"Could not open file:\n{e}")
-
-		def copy_path():
-			p = result_path_var.get()
-			if not p:
-				return
-			try:
-				root.clipboard_clear()
-				root.clipboard_append(p)
-				status_var.set("Path copied to clipboard.")
-			except Exception:
-				pass
-
-		def browse_tpl():
-			path = filedialog.askopenfilename(
-				title="Select .docx template",
-				filetypes=[("Word Template", "*.docx"), ("All Files", "*.*")]
-			)
-			if path:
-				tpl_path_var.set(path)
-
-		def on_use_tpl_toggle():
-			state = "normal" if use_tpl_var.get() else "disabled"
-			tpl_path_entry.configure(state=state)
-			browse_btn.configure(state=state)
-			# If using template, filetype choice still matters (output remains .docx).
-			# No change needed here; we just let generate() route to docxtpl.
-
-		# Layout
-		pad = {"padx": 8, "pady": 6}
-		ttk.Label(root, text="Document Template Generator", font=("Segoe UI", 12, "bold")).grid(row=0, column=0, columnspan=3, **pad)
-
-		# File type
-		ttk.Label(root, text="File type:").grid(row=1, column=0, sticky="e", **pad)
-		filetype_cb = ttk.Combobox(root, textvariable=filetype_var, values=filetypes, state="readonly", width=12)
-		filetype_cb.grid(row=1, column=1, sticky="w", **pad)
-
-		# Subject
-		ttk.Label(root, text="Subject:").grid(row=2, column=0, sticky="e", **pad)
-		subject_cb = ttk.Combobox(root, textvariable=subject_var, values=subjects, state="readonly", width=20)
-		subject_cb.grid(row=2, column=1, sticky="w", **pad)
-
-		# DocxTpl controls
-		use_tpl_chk = ttk.Checkbutton(root, text="Use docxtpl (.docx template)", variable=use_tpl_var, command=on_use_tpl_toggle)
-		use_tpl_chk.grid(row=3, column=0, columnspan=2, sticky="w", **pad)
-
-		ttk.Label(root, text="Template path:").grid(row=4, column=0, sticky="e", **pad)
-		tpl_path_entry = ttk.Entry(root, textvariable=tpl_path_var, width=40, state="disabled")
-		tpl_path_entry.grid(row=4, column=1, sticky="we", **pad)
-		browse_btn = ttk.Button(root, text="Browse...", command=browse_tpl, state="disabled")
-		browse_btn.grid(row=4, column=2, sticky="w", padx=(0, 8), pady=6)
-
-		# Status line
-		status_label = ttk.Label(root, textvariable=status_var, foreground="gray30")
-		status_label.grid(row=5, column=0, columnspan=3, sticky="w", **pad)
-
-		# Result path
-		ttk.Label(root, text="Result path:").grid(row=6, column=0, sticky="e", **pad)
-		result_entry = ttk.Entry(root, textvariable=result_path_var, width=48, state="readonly")
-		result_entry.grid(row=6, column=1, columnspan=2, sticky="we", **pad)
-
-		# Context editor frame
-		context_frame = ttk.LabelFrame(root, text="Context")
-		context_frame.grid(row=7, column=0, columnspan=3, sticky="nsew", padx=8, pady=(0, 8))
-		rebuild_context_fields()
-
-		# Buttons
-		btn_frame = ttk.Frame(root)
-		btn_frame.grid(row=8, column=0, columnspan=3, sticky="e", **pad)
-
-		generate_btn = ttk.Button(btn_frame, text="Generate", command=do_generate)
-		open_folder_btn = ttk.Button(btn_frame, text="Open Folder", command=open_folder, state=DISABLED)
-		open_file_btn = ttk.Button(btn_frame, text="Open File", command=open_file, state=DISABLED)
-		copy_btn = ttk.Button(btn_frame, text="Copy Path", command=copy_path, state=DISABLED)
-		close_btn = ttk.Button(btn_frame, text="Close", command=root.destroy)
-
-		generate_btn.grid(row=0, column=0, padx=4)
-		open_folder_btn.grid(row=0, column=1, padx=4)
-		open_file_btn.grid(row=0, column=2, padx=4)
-		copy_btn.grid(row=0, column=3, padx=4)
-		close_btn.grid(row=0, column=4, padx=4)
-
-		# Bindings
-		root.bind("<Return>", do_generate)
-		root.bind("<Control-Return>", do_generate)
-		root.bind("<Escape>", lambda e: root.destroy())
-
-		# React to subject change by rebuilding context fields
-		subject_cb.bind("<<ComboboxSelected>>", lambda e: rebuild_context_fields())
-
-		# Stretch columns
-		root.grid_columnconfigure(1, weight=1)
-		context_frame.grid_columnconfigure(1, weight=1)
 
 	def auto_save_press(self, event=False):
 		if self.file_name and self.auto_save_v.get() and (self.autosave_by_p.get()):
@@ -5570,300 +4639,20 @@ class Window(Tk):
 	def web_scrapping(self):
 		'''
 		web scrapping tool allows you to scrape a website, your workspace, and a local file.
-		the return types are: all, text and attributes
-		you can filter more precisely with specific classes and attributes
+		This method now delegates to the new popup implementation in web_scrapping_popup.py
 		'''
-		global chosen_init
-		sub_titles_font = 'arial 12 underline'
-		return_type = StringVar()
-		return_type.set('text')
-		connection = True
-		file_via_internet = False
-		limit = None
-		self.wbs_auto_update = False
-		self.pre_bd_this, self.pre_bd_link, self.pre_bd_file = 1, 1, 1
-		chosen_init = 'link'
-
-		def ex(subject: str):
-			if subject == 'tag':
-				explanation = 'HTML tags are simple instructions that tell a web browser how to format text'
-				example = '<b> Bold Tag </b>'
-			else:
-				explanation = 'The HTML class attribute is used to specify a class for an HTML element'
-				example = '<p class="ThisIsAClassName">HI</p>'
-
-			messagebox.showinfo(self.title_struct + 'web scrapping',
-								f'Explanation:\n{explanation}.\nExample:\n{example}')
-
-		def get_html_web():
-			try:
-				web_url = urllib.request.Request(self.wbs_path, headers={'User-Agent': 'Mozilla/5.0'})
-				content = urllib.request.urlopen(web_url).read()
-				return content
-			except urllib.error.HTTPError as e:
-				messagebox.showerror(self.title_struct + 'error', str(e))
-
-		def comb_upload(via: str, initial_ws: bool = False):
-			global file_via_internet, connection, response, chosen_init, title_text
-			file_ready = False
-
-			bd_list = [self.pre_bd_file, self.pre_bd_link, self.pre_bd_this]
-
-			for pre_bd in bd_list:
-				pre_bd = 1
-
-			if initial_ws:
-				self.init_root.destroy()
-
-			if via == 'this':
-				file_via_internet = False
-				self.wbs_auto_update = True
-				self.pre_bd_this = 2
-				try:
-					self.wbs_path = self.file_name
-				except NameError:
-					self.wbs_path = '(File is not named)'
-				try:
-					self.soup = BeautifulSoup(self.EgonTE.get('1.0', 'end'), 'html.parser')
-					file_ready = True
-				except:
-					pass
-			elif via == 'link':
-				self.wbs_path = simpledialog.askstring('EgonTE', 'Enter a path')
-				if self.wbs_path:
-					messagebox.showinfo('EgonTE', 'web scrapping can be problematic because of the website\'s policy \n'
-												  'be sure to check it up and be careful!\nit\'s your responsibility')
-					try:
-						response = requests.get(self.wbs_path)
-						file_type = response.headers['content-type']
-						file_type = file_type.split(';')[0].split('/')[1]
-						self.soup = BeautifulSoup(get_html_web(), f'{file_type}.parser')
-						file_ready = True
-						self.wbs_auto_update = False
-						file_via_internet = True
-						self.pre_bd_link = 2
-					except requests.exceptions.ConnectionError:
-						messagebox.showerror('EgonTE', 'Device not connected to internet')
-						connection = False
-					except requests.exceptions.InvalidSchema:
-						messagebox.showerror('EgonTE', 'Invalid link')
-						connection = False
-					except requests.exceptions.InvalidURL:
-						messagebox.showerror('EgonTE', 'Invalid URL')
-					except requests.exceptions.MissingSchema:  # not works all the time
-						try:
-							response = requests.get(f'https://{self.wbs_path}')
-							self.soup = BeautifulSoup(get_html_web(), 'html.parser')
-						except:
-							messagebox.showerror('EgonTE', 'congrats you got an unique error without explanation')
-			else:
-				file_via_internet = False
-				try:
-					self.wbs_path = filedialog.askopenfilename(title='Open file to scrape',
-															   filetypes=(
-																   ('HTML FILES', '*.html'), ('Text Files', '*.txt')))
-					if self.wbs_path:
-						file = open(self.wbs_path).read()
-						self.soup = BeautifulSoup(file, 'html.parser')
-						self.pre_bd_file = 2
-						self.wbs_auto_update = False
-						file_ready = True
-					else:
-						raise FileNotFoundError
-				except FileNotFoundError:
-					messagebox.showerror('EgonTE', 'file not found')
-
-			if initial_ws:
-
-				if not (via == 'link'):
-					title_text = 'file name:'
-				else:
-					title_text = 'website link:'
-
-				if file_ready:
-					lambda: self.open_windows_control(main_ui)
-			else:
-				file_name_output.configure(text=self.wbs_path)
-
-				for index, btn in enumerate(upload_btns):
-					btn.configure(bd=bd_list[index])
-
-				if not (via == 'link'):
-					file_title.configure(text='file name:')
-				else:
-					file_title.configure(text='website link:')
-
-			au()
-			search()
-
-		def au():
-			if self.wbs_auto_update:
-				self.soup = BeautifulSoup(self.EgonTE.get('1.0', 'end'), 'html.parser')
-			else:
-				self.EgonTE.unbind('<KeyRelease>')
-				self.EgonTE.bind('<KeyRelease>', self.emoji_detection)
-
-		def search():
-			global file_via_internet
-			au()
-			output_frame = Frame(self.ws_root)
-			text_frame = Frame(output_frame)
-			scroll = ttk.Scrollbar(text_frame)
-			output_box = Text(text_frame)
-
-			output_frame.grid(row=100, column=1)
-			text_frame.pack(fill=BOTH, expand=True)
-			scroll.pack(side=RIGHT, fill=Y)
-			output_box.pack(fill=BOTH, expand=True)
-			scroll.config(command=output_box.yview)
-			output_box.config(yscrollcommand=scroll.set)
-
-			# adding copy & insert functions
-			copy_button = Button(output_frame, text='Copy', command=lambda: copy(output_box.get('1.0', 'end')))
-			copy_button.pack()
-			insert_button = Button(output_frame, text='Insert', command=lambda: self.EgonTE.insert(self.get_pos(),
-																								   output_box.get('1.0',
-																												  'end')))
-			insert_button.pack()
-
-			output_content = 'Nothing found / the tool isn\'t support this type of search yet!'
-			# work on these conditions!
-			if tag_input.get() and class_input.get():
-				scraped_content = self.soup.find_all(tag_input.get(), class_=class_input.get())
-				output_content = scraped_content
-
-			elif tag_input.get() and not (class_input.get()):
-				html_tags = self.soup.find_all(tag_input.get())
-				for html_tag in html_tags:
-					if return_type.get() == 'text':
-						output_content = html_tag.text
-					elif return_type.get() == 'attrs':
-						output_content = html_tag.attrs
-					else:
-						output_content = html_tag
-
-			elif class_input.get() and not (tag_input.get()):  ### check this
-				class_list = set()
-				tags = {tag.name for tag in self.soup.find_all()}
-				for tag in tags:
-					# find all element of tag
-					for i in self.soup.find_all(tag):
-						# if tag has attribute of class
-						if i.has_attr('class'):
-							if len(i['class']) != 0:
-								class_list.add(' '.join(i['class']))
-				output_content = ''.join(class_list)
-			else:
-				if return_type.get() == 'text':
-					output_content = self.soup.text
-				elif return_type.get() == 'attrs':
-					output_content = self.soup.attrs
-				elif return_type.get() == 'content':
-					output_content = self.soup.contents
-				else:
-					output_content = self.soup.prettify()
-
-			output_box.insert('end', output_content)
-
-			output_box.configure(state=DISABLED)
-
-		def main_ui():
-			global tag_input, file_name_output, file_via_internet, chosen_init, class_input, upload_btns, file_title
-			if connection:
-				self.ws_root = self.make_pop_ups_window(main_ui, 'web scrapping')
-				info_title = Label(self.ws_root, text='Quick information', font=self.titles_font)
-				file_title = Label(self.ws_root, text=title_text, font=sub_titles_font)
-				file_name_output = Label(self.ws_root, text=self.wbs_path)
-
-				upload_title = Label(self.ws_root, text='Upload a new content', font=self.titles_font)
-				upload_file = Button(self.ws_root, text='Upload via file', command=lambda: comb_upload(via='file'),
-									 bd=self.pre_bd_file)
-				upload_this = Button(self.ws_root, text='Upload this file', command=lambda: comb_upload(via='this'),
-									 bd=self.pre_bd_this)
-				upload_link = Button(self.ws_root, text='Upload via link', command=lambda: comb_upload(via='link'),
-									 bd=self.pre_bd_link)
-				identifiers_title = Label(self.ws_root, text='Identifiers', font=self.titles_font)
-				tag_title = Label(self.ws_root, text='tags:', font=sub_titles_font)
-				tag_input = Entry(self.ws_root)
-				tag_ex = Button(self.ws_root, text='?', command=lambda: ex('tag'), bd=0)
-				class_title = Label(self.ws_root, text='classes:', font=sub_titles_font)
-				class_input = Entry(self.ws_root)
-				class_ex = Button(self.ws_root, text='?', command=lambda: ex('class'), bd=0)
-				return_title = Label(self.ws_root, text='Return', font=self.titles_font)
-				only_text_rb = Radiobutton(self.ws_root, text='Only text', variable=return_type, value='text')
-				only_attrs_rb = Radiobutton(self.ws_root, text='Only attributes', variable=return_type, value='attrs')
-				only_cntn_rb = Radiobutton(self.ws_root, text='All content', variable=return_type, value='content')
-				search_button = Button(self.ws_root, text='Search', command=search)
-
-				upload_btns = [upload_file, upload_this, upload_link]
-
-				try:
-					if file_via_internet:
-						if len(self.wbs_path) > 50:
-							quotient, remainder = divmod(len(self.wbs_path), 2)
-							res_first = self.wbs_path[:quotient + remainder]
-							res_second = self.wbs_path[quotient + remainder:]
-							self.wbs_path = f'{res_first}\n{res_second}'
-
-						file_name_output.configure(text=self.wbs_path)
-						code_title = Label(self.ws_root, text='Status code:', font=sub_titles_font)
-						status_code = Label(self.ws_root, text=response.status_code)
-						file_title.grid(row=1, column=0)
-						file_name_output.grid(row=2, column=0)
-						code_title.grid(row=1, column=2)
-						status_code.grid(row=2, column=2)
-					else:
-						file_title.grid(row=1, column=1)
-						file_name_output.grid(row=2, column=1)
-
-					info_title.grid(row=0, column=1)
-					upload_title.grid(row=3, column=1)
-					upload_file.grid(row=4, column=0)
-					upload_this.grid(row=4, column=1)
-					upload_link.grid(row=4, column=2)
-					identifiers_title.grid(row=5, column=1)
-					tag_title.grid(row=6, column=0)
-					class_title.grid(row=6, column=2)
-					tag_input.grid(row=7, column=0)
-					class_input.grid(row=7, column=2)
-					tag_ex.grid(row=8, column=0)
-					class_ex.grid(row=8, column=2)
-					return_title.grid(row=9, column=1)
-					only_cntn_rb.grid(row=10, column=0)
-					only_text_rb.grid(row=10, column=1)
-					only_attrs_rb.grid(row=10, column=2)
-					search_button.grid(row=11, column=1)
-				except NameError as e:
-					self.ws_root.destroy()
-					messagebox.showerror('EgonTE', 'the program had an error')
-
-			def change_initial_mode(mode: str):
-				global chosen_init
-				chosen_init = mode
-				for b in init_b_dict.values():
-					b.configure(background='SystemButtonFace')
-				init_b_dict[mode].configure(bg='light grey')
-
-			# init window to not delay / limit users
-
-			self.init_root = self.make_pop_ups_window(change_initial_mode, custom_title=f'{self.title_struct} web scrapping')
-			title_label = Label(self.init_root, text='What you would like to scrape?', font='arial 10 underline')
-			web_button = Button(self.init_root, text='A website', command=lambda: change_initial_mode('link'))
-			this_button = Button(self.init_root, text='This file', command=lambda: change_initial_mode('this'))
-			loc_button = Button(self.init_root, text='A Local file', command=lambda: change_initial_mode('file'))
-			enter_button = Button(self.init_root, text='Enter', command=lambda: comb_upload(chosen_init, True),
-								  font='arial 10 bold')
-			title_label.grid(row=1, column=1)
-			web_button.grid(row=2, column=0, padx=5)
-			this_button.grid(row=2, column=1)
-			loc_button.grid(row=2, column=2, padx=5)
-			enter_button.grid(row=3, column=1, pady=5)
-
-			init_b_dict = {'link': web_button, 'file': loc_button, 'this': this_button}
+		open_web_scrapping_popup(self)
 
 
 	def handwriting(self):
 		open_handwriting(self)
+
+	def encryption(self):
+		open_encryption(self)
+
+	def find_replace(self, event=False):
+		return open_find_replace(self, event)
+
 
 
 	def natural_language_process(self, function: str):
@@ -6303,15 +5092,27 @@ class Window(Tk):
 		td_root.update_idletasks()
 		print(td_root.winfo_width(), td_root.winfo_height())
 
-	def stopwatch(self):
-		self.start_time = time.time()
+
+	def start_stopwatch(self):
+		if getattr(self, "_stopwatch_running", False):
+			return
+		self.start_time = time.perf_counter()
 		self.start_date = datetime.now().strftime('%Y-%m-%d')
-		self.stt = timedelta(seconds=int(time.time() - self.start_time))
-		while True:
-			time.sleep(0.5)
-			self.ut = timedelta(seconds=int(time.time() - self.start_time))
-			if self.op_active:
-				self.usage_time.configure(text=f' Usage time: {self.ut}')
+		self._stopwatch_running = True
+		self._update_stopwatch()
+
+	def _update_stopwatch(self):
+		if not getattr(self, "_stopwatch_running", False):
+			return
+		elapsed = time.perf_counter() - self.start_time
+		td = timedelta(seconds=elapsed)
+		hh = int(td.total_seconds()) // 3600
+		mm = (int(td.total_seconds()) % 3600) // 60
+		ss = int(td.total_seconds()) % 60
+		if self.op_active:
+			self.usage_time.configure(text=f"Usage time: {hh:02}:{mm:02}:{ss:02}")
+		self.after(500, self._update_stopwatch)
+
 
 	def merge_files(self):
 		'''
@@ -6968,67 +5769,205 @@ class Window(Tk):
 		self.tm_value = not (self.tm_value)
 		self.attributes('-topmost', self.tm_value)
 
+
+
 	def transcript(self):
 		'''
-		this function will attempt to return you the transcript of a youtube video or a wav file
-		note: wasnt tested because of venv errors
+		Get a transcript from YouTube (if available) or from a local audio file (wav/mp3).
+		- No imports inside this method.
+		- Pop-up roots are created via make_pop_ups_window.
+		- Text areas are created via make_rich_textbox.
+		- Everything is nested in this main method.
+		- Selection window is an actual, interactive UI (no simpledialog).
 		'''
 
-		def youtube():
+		def _render_text_with_copy(result_root, text_output: str):
+			text_frame, text_widget, scroll = self.make_rich_textbox(result_root)
+			text_widget.insert('1.0', text_output)
+			text_widget.configure(state=DISABLED)
+			Button(result_root, text='Copy',
+				   command=lambda: (result_root.clipboard_clear(), result_root.clipboard_append(text_output))).pack(pady=6)
 
-			video_id = simpledialog.askstring('EgonTE', 'please enter the video ID')
-			tr_root = self.make_pop_ups_window(youtube)
-			if video_id:
-				tr = YouTubeTranscriptApi.get_transcript(video_id)
-				tr_str = ''
-				for count, t in enumerate(tr):
-					tr_str += f'time: {t["start"]}, iteration: {count} | content: {t["text"]} \n'
+		def _compose_youtube_transcript_text(transcript_items):
+			lines = []
+			for index, item in enumerate(transcript_items):
+				start_time = item.get('start', 0)
+				line_text = item.get('text', '')
+				lines.append(f'time: {start_time:.2f}, iteration: {index} | content: {line_text}')
+			return '\n'.join(lines)
 
+		def _transcribe_youtube_from_entry(video_id: str, parent_root):
+			if not video_id:
+				messagebox.showerror(self.title_struct + 'transcript', 'Please enter a YouTube video ID.')
+				return
 
-				text_frame, tr_text, scroll = self.make_rich_textbox(tr_root)
-				tr_text.insert('1.0', tr_str)
-				tr_text.configure(state=DISABLED)
-				copy_button = Button(tr_root, text='Copy', command=lambda: copy(tr_str))
-				copy_button.pack()
+			try:
+				items = YouTubeTranscriptApi.get_transcript(video_id)
+			except Exception as e:
+				messagebox.showerror(self.title_struct + 'transcript', f'Failed to fetch YouTube transcript:\n{e}')
+				return
 
-		def file_trans():
-			file_name = filedialog.askopenfilename(title='Open file to Transcribe', filetypes=[('mp3 file', '*.mp3')])
-			if file_name:
-				sound = AudioSegment.from_mp3(file_name)
-				pre, ext = os.path.splitext(file_name)
-				os.rename(file_name, pre + '.wav')
-				sound.export(file_name, format='wav')
+			result_root = self.make_pop_ups_window(_transcribe_youtube_from_entry, custom_title='YouTube transcript')
+			try:
+				_render_text_with_copy(result_root, _compose_youtube_transcript_text(items))
+			except Exception as e:
+				messagebox.showerror(self.title_struct + 'transcript', f'Failed to display transcript:\n{e}')
+				try:
+					self.close_pop_ups(result_root)
+				except Exception:
+					pass
 
-				# transcribe audio file
-				AUDIO_FILE = f'{pre}.wav'
+		def _transcribe_local_audio_file():
+			audio_path = filedialog.askopenfilename(
+				title='Open audio file to transcribe',
+				filetypes=[('Audio files', '*.mp3 *.wav'), ('mp3 file', '*.mp3'), ('wav file', '*.wav')]
+			)
+			if not audio_path:
+				return
 
-				# use the audio file as the audio source
-				r = Recognizer()
-				with AudioFile(AUDIO_FILE) as source:
-					audio = r.record(source)  # read the entire audio file
+			result_root = self.make_pop_ups_window(_transcribe_local_audio_file, custom_title='File transcript')
 
-					content = r.recognize_google(audio)
+			# Prepare a non-destructive WAV path if needed
+			base_name, extension = os.path.splitext(audio_path)
+			extension = extension.lower()
+			created_temp_wav = False
+			wav_path = audio_path
 
-				file_trans_root = Toplevel()
-				self.make_tm(file_trans_root)
-				file_trans_root.title(self.title_struct + 'file transcript')
-				transcript = Text(file_trans_root)
-				transcript.insert('1.0', content)
-				transcript.configure(state=DISABLED)
+			try:
+				if extension == '.mp3':
+					# Convert mp3 -> wav into a sibling file; do not rename the original
+					wav_path = base_name + '_converted.wav'
+					AudioSegment.from_mp3(audio_path).export(wav_path, format='wav')
+					created_temp_wav = True
+				elif extension != '.wav':
+					messagebox.showerror(self.title_struct + 'transcript', 'Unsupported file type. Choose an mp3 or wav file.')
+					self.close_pop_ups(result_root)
+					return
+			except Exception as e:
+				messagebox.showerror(self.title_struct + 'transcript', f'Failed preparing audio:\n{e}')
+				try:
+					self.close_pop_ups(result_root)
+				except Exception:
+					pass
+				return
 
+			# Transcribe the prepared WAV
+			try:
+				recognizer = Recognizer()
+				with AudioFile(wav_path) as source:
+					audio_blob = recognizer.record(source)
+				text_output = recognizer.recognize_google(audio_blob)
+				_render_text_with_copy(result_root, text_output)
+			except Exception as e:
+				messagebox.showerror(self.title_struct + 'transcript', f'Failed to transcribe audio:\n{e}')
+				try:
+					self.close_pop_ups(result_root)
+				except Exception:
+					pass
+			finally:
+				# Clean up temporary wav if created
+				try:
+					if created_temp_wav and wav_path and os.path.exists(wav_path):
+						os.remove(wav_path)
+				except Exception:
+					pass
+
+		# Interactive selection window UI (root created via make_pop_ups_window)
 		if yt_api:
-			trans_option = Toplevel()
-			self.make_tm(trans_option)
-			buttons_frame = Frame(trans_option)
-			op_label = Label(trans_option, text='Take the content from', font='arial 12 underline')
-			youtube_button = Button(buttons_frame, text='Youtube', command=youtube, bd=1)
-			file_button = Button(buttons_frame, text='File', bd=1, command=file_trans)
-			op_label.pack()
-			buttons_frame.pack(pady=8)
-			youtube_button.grid(row=0, column=0, padx=10)
-			file_button.grid(row=0, column=2, padx=10)
+			selection_root = self.make_pop_ups_window(self.transcript, custom_title='Transcript')
+			# Title
+			title_label = Label(selection_root, text='Transcript source', font='arial 13 bold')
+			title_label.pack(pady=(6, 2))
+
+			# Description
+			desc_label = Label(selection_root, text='Choose a source and proceed. For YouTube, paste a video ID and press Enter or Fetch.',
+							   font='arial 9')
+			desc_label.pack(pady=(0, 8))
+
+			# Main container
+			main_frame = Frame(selection_root)
+			main_frame.pack(padx=10, pady=6)
+
+			# YouTube section
+			youtube_frame = LabelFrame(main_frame, text='YouTube', padx=8, pady=8, font='arial 10 bold')
+			youtube_frame.grid(row=0, column=0, sticky='nsew', padx=(0, 8))
+
+			youtube_id_label = Label(youtube_frame, text='Video ID:', font='arial 10')
+			youtube_id_entry = Entry(youtube_frame, width=36)
+			youtube_status_label = Label(youtube_frame, text='', font='arial 9')
+
+			def _update_status(msg: str, good=False):
+				try:
+					youtube_status_label.configure(fg=('dark green' if good else 'red'), text=msg)
+				except Exception:
+					pass
+
+			def _on_fetch_click():
+				_update_status('Fetching transcript...', good=False)
+				selection_root.update_idletasks()
+				_transcribe_youtube_from_entry(youtube_id_entry.get().strip(), selection_root)
+				_update_status('Done (or see error dialog).', good=True)
+
+			def _on_clear_click():
+				youtube_id_entry.delete(0, END)
+				_update_status('', good=False)
+
+			def _on_paste_click():
+				try:
+					clip = selection_root.clipboard_get()
+				except Exception:
+					clip = ''
+				if clip:
+					youtube_id_entry.delete(0, END)
+					youtube_id_entry.insert(0, clip.strip())
+					_update_status('Pasted from clipboard.', good=True)
+				else:
+					_update_status('Clipboard is empty.', good=False)
+
+			def _on_youtube_entry_return(event=None):
+				_on_fetch_click()
+
+			youtube_id_label.grid(row=0, column=0, sticky='w', pady=(0, 4))
+			youtube_id_entry.grid(row=0, column=1, sticky='ew', padx=(6, 0), pady=(0, 4))
+			youtube_frame.grid_columnconfigure(1, weight=1)
+
+			youtube_buttons_frame = Frame(youtube_frame)
+			youtube_buttons_frame.grid(row=1, column=0, columnspan=2, sticky='w')
+			youtube_fetch_btn = Button(youtube_buttons_frame, text='Fetch', bd=1, command=_on_fetch_click)
+			youtube_clear_btn = Button(youtube_buttons_frame, text='Clear', bd=1, command=_on_clear_click)
+			youtube_paste_btn = Button(youtube_buttons_frame, text='Paste', bd=1, command=_on_paste_click)
+			youtube_fetch_btn.grid(row=0, column=0, padx=(0, 8))
+			youtube_clear_btn.grid(row=0, column=1, padx=(0, 8))
+			youtube_paste_btn.grid(row=0, column=2, padx=(0, 0))
+
+			youtube_status_label.grid(row=2, column=0, columnspan=2, sticky='w', pady=(6, 0))
+
+			# Bindings for better UX
+			youtube_id_entry.bind('<Return>', _on_youtube_entry_return)
+			youtube_id_entry.focus_set()
+
+			# File section
+			file_frame = LabelFrame(main_frame, text='Local audio file', padx=8, pady=8, font='arial 10 bold')
+			file_frame.grid(row=0, column=1, sticky='nsew')
+
+			file_hint_label = Label(file_frame, text='Choose an mp3 or wav file and transcribe it.', font='arial 10')
+			file_browse_btn = Button(file_frame, text='Browse...', bd=1, command=_transcribe_local_audio_file)
+
+			file_hint_label.grid(row=0, column=0, sticky='w', pady=(0, 6))
+			file_browse_btn.grid(row=1, column=0, sticky='w')
+
+			# Bottom controls
+			bottom_frame = Frame(selection_root)
+			bottom_frame.pack(fill='x', padx=10, pady=(8, 10))
+			close_btn = Button(bottom_frame, text='Close', bd=1, command=lambda: self.close_pop_ups(selection_root))
+			close_btn.pack(side='right')
+
+			# Resize behavior
+			main_frame.grid_columnconfigure(0, weight=1)
+			main_frame.grid_columnconfigure(1, weight=1)
 		else:
-			file_trans()
+			_transcribe_local_audio_file()
+
 
 	def content_stats(self):
 		'''
@@ -7336,9 +6275,9 @@ class Window(Tk):
 				self.git_menu.add_command(label='Commit', command=lambda: self.gitp('commit'))
 				self.git_menu.add_command(label='Add', command=lambda: self.gitp('add'))
 				self.git_menu.add_separator()
-				self.git_menu.add_command(label='Clone', state=gstate, command=lambda: self.gitp('clone'))
-				self.git_menu.add_command(label='Commit data', state=gstate, command=lambda: self.gitp('commit data'))
-				self.git_menu.add_command(label='Repository Information', state=gstate,
+				self.git_menu.add_command(label='Clone', command=lambda: self.gitp('clone'))
+				self.git_menu.add_command(label='Commit data', command=lambda: self.gitp('commit data'))
+				self.git_menu.add_command(label='Repository Information',
 										  command=lambda: self.gitp('repo info'))
 				self.git_menu.add_separator()
 				self.git_menu.add_command(label='Custom command', command=lambda: self.gitp('execute'))
@@ -7620,107 +6559,8 @@ class Window(Tk):
 
 		:param action:
 		'''
+		open_git_tool(self, action)
 
-		git_ui = False
-		if (action == 'repo info') or (action == 'commit data'):
-			git_ui = True
-			git_root = Toplevel()
-			self.make_tm(git_root)
-			git_root.title(self.title_struct + 'Git window')
-			title = Label(git_root, text='', font='arial 14 bold')
-			(text_frame, git_text, text_scroll) = self.make_rich_textbox(git_root, place=False)
-
-		if not (action == 'commit data' and action == 'clone'):
-			# repo = simpledialog.askstring('Git', 'enter the repo link')
-			repo = filedialog.askopenfilename(title='Open repo')
-			if repo:
-				repo = Repo(repo)
-			else:
-				repo = False
-				messagebox.showerror('EgonTE', 'failed to open the selected repo')
-
-		# actions that need the repo variable
-		if repo:
-			if action == 'repo info':
-				title.configure(text='Respiratory information')
-				status = repo.git.status()
-				repo_description = repo.description
-				active_branch = repo.active_branch
-
-				git_text.insert('1.0',
-								f'Status:\n{status}\nDescription:\n{repo_description}\nActive branch:\n{active_branch}\nRemotes:\n')
-
-				remote_dict = {}
-				for remote in repo.remotes:
-					remote_dict[remote] = remote.url
-
-				for remote, url in remote_dict.items():
-					git_text.insert('end', f'{remote} - {url}\n')
-
-				last_commit = str(repo.head.commit.hexsha)
-
-				git_text.insert('end', f'Last commit:\n{last_commit}')
-
-			elif action == 'execute':
-				command = simpledialog.askstring('Git', 'enter custom command')
-				repo.git.excute(command)  # used to execute git command on repo object
-
-			elif action == 'pull':
-				repo.git.pull()
-
-			elif action == 'add':
-				repo.git.add(all=True)
-
-			elif action == 'commit':
-				def commit_enter():
-					try:
-						message, author_ = message_entry.get(), author_entry.get()
-						if message and author_:
-							repo.git.commit(m=message, author=author_)
-						elif message or author_:
-							if message:
-								repo.git.commit(m=message)
-							elif author_:
-								repo.git.commit(author=author_)
-						else:
-							repo.git.commit()
-						commit_window.destroy()
-					except:
-						messagebox.showerror(self.title_struct + 'git', 'an error has occurred')
-		# doesn't need repo
-		if action == 'clone':
-			link = simpledialog.askstring('EgonTE', 'please enter the repo\'s link')
-			file_location = filedialog.asksaveasfilename(title='Where do you want to save the repo?')
-			git.Repo.clone_from(link, file_location)
-		elif action == 'commit data':
-			title.configure(text='Commit data')
-			commit = str(repo.head.commit.hexsha)
-			by = f'\"{commit.summary}\" by {commit.author.name} ({commit.author.email})'
-			date_time = str(commit.authored_datetime)
-
-			count_size = str(f'count: {len(str(commit))} and size: {commit.size}')
-
-			git_text.insert('1.0',
-							f'Commit:\n{commit}\nSummery & author:\n{by}\nDate/time:\n{date_time}\nCount & size:\n{count_size}')
-
-			commit_window = Toplevel()
-			self.make_tm(commit_window)
-			commit_window.title(self.title_struct + 'Git commit window')
-			message_title = Label(commit_window, text='Message:', font='arial 10 underline')
-			message_entry = Entry(commit_window)
-			author_title = Label(commit_window, text='Author:', font='arial 10 underline')
-			author_entry = Entry(commit_window)
-			enter = Button(commit_window, text='Commit', command=commit_enter)
-
-			git_widget_list = (message_title, message_entry, author_title, author_entry, enter)
-			for widget in git_widget_list:
-				widget.pack(pady=1)
-
-		if git_ui:
-			title.pack()
-			text_frame.pack(fill=BOTH, expand=True)
-			text_scroll.pack(side=RIGHT, fill=Y)
-			git_text.pack(fill=BOTH, expand=True)
 
 	def call_settings(self):
 		'''
@@ -7981,159 +6821,6 @@ class Window(Tk):
 		delete_last_combo.pack()
 		change.pack(pady=3)
 
-	def encryption(self):
-
-		'''
-		encryption / decryption tool with a separate window, that have 2 encryption methods:
-		1. symmetric
-		2. asymmetric
-		'''
-
-		def get_method():
-			self.enc_dec_method = False
-			if self.enc_methods_var.get():
-				if self.enc_methods_var.get() == 'Symmetric key':
-					self.enc_dec_method = 'symmetric'
-				elif self.enc_methods_var.get() == 'Asymmetric key':
-					self.enc_dec_method = 'asymmetric'
-
-		'''+ overflow error'''
-
-		def configure_modes(event=False):
-			global last_mode
-			get_method()
-			entry_title.grid_forget()
-			self.enc_entry.grid_forget()
-			if self.is_enc.get():
-				if self.enc_dec_method == 'symmetric':
-					pass
-				# entry_title.configure(text='Key length:')
-				# self.enc_entry.configure(show='')
-				elif self.enc_dec_method == 'asymmetric':
-					entry_title.grid(row=5, column=1)
-					self.enc_entry.grid(row=6, column=1)
-					entry_title.configure(text='Key length:')
-					self.enc_entry.configure(show='')
-			else:
-				if self.enc_dec_method == 'symmetric':
-					# entry_title.configure(text='Key length:')
-					# self.enc_entry.configure(show='')
-					pass
-				elif self.enc_dec_method == 'asymmetric':
-					entry_title.configure(text='Private Key\n(saves the last one):')
-					self.enc_entry.configure(show='*')
-					entry_title.grid(row=5, column=1)
-					self.enc_entry.grid(row=6, column=1)
-			last_mode = self.enc_dec_method
-
-		def redirect_enc():
-			if self.is_enc.get():
-				enc_text()
-			else:
-				dec_text()
-
-		def enc_text():
-			get_method()
-			content = input_box.get('1.0', END)
-			if content and self.enc_dec_method:
-				if self.enc_dec_method == 'symmetric':
-					key = Fernet.generate_key()
-					self.fernet = Fernet(key)
-					self.encrypted_message = self.fernet.encrypt(content.encode())
-				elif self.enc_dec_method == 'asymmetric':
-					key_length = int(self.enc_entry.get())
-					if not (key_length):
-						key_length = randint(10, 20)
-					publicKey, self.private_key = rsa.newkeys(key_length)
-					self.encrypted_message = rsa.encrypt(content.encode(), publicKey)
-
-				if self.encrypted_message:
-					output_box_.configure(state=NORMAL)
-					output_box_.delete('1.0', END)
-					output_box_.insert('1.0', self.encrypted_message)
-					output_box_.configure(state=DISABLED)
-
-		def dec_text():
-			get_method()
-			if self.enc_dec_method == 'symmetric':
-				decrypted_message = self.fernet.decrypt(self.encrypted_message).decode()
-			elif self.enc_dec_method == 'asymmetric':
-				if self.enc_entry.get():
-					self.private_key = self.enc_entry.get()
-				if self.private_key:
-					decrypted_message = rsa.decrypt(self.encrypted_message, self.private_key).decode()
-				else:
-					messagebox.showerror(self.title_struct + 'decryption', 'You don\'t have the private key!')
-
-			if decrypted_message:
-				output_box_.configure(state=NORMAL)
-				output_box_.delete('1.0', END)
-				output_box_.insert('1.0', decrypted_message)
-				output_box_.configure(state=DISABLED)
-
-		def copy_from():
-			content = self.EgonTE.get(self.get_indexes)
-			if content:
-				input_box.insert(END, content)
-
-		def paste_to():
-			content = output_box_.get('1.0', END)
-			if content:
-				self.EgonTE.insert(self.get_pos(), content)
-
-		self.encryption_methods = []
-		if symmetric_dec:
-			self.encryption_methods.append('Symmetric key')
-		if asymmetric_dec:
-			self.encryption_methods.append('Asymmetric key')
-		self.enc_methods_var = StringVar()
-
-		self.is_enc = BooleanVar()
-		self.private_key = ''
-
-		enc_root = self.make_pop_ups_window(self.encryption)
-		title = Label(enc_root, text='Encrypt and decrypt', font='arial 12 underline')
-		box_frame = Frame(enc_root)
-		input_title = Label(box_frame, text='Input text', font='arial 10 underline')
-		output_title = Label(box_frame, text='Output text', font='arial 10 underline')
-		input_box = Text(box_frame, width=30, height=15)
-		output_box_ = Text(box_frame, state=DISABLED, width=30, height=15)
-		method_title = Label(enc_root, text='Method / key', font='arial 10 underline')
-		method_frame = Frame(enc_root)
-		self.enc_methods = ttk.Combobox(method_frame, textvariable=self.enc_methods_var)
-		self.enc_methods['values'] = self.encryption_methods
-		enc_radio = Radiobutton(method_frame, text='Encrypt', variable=self.is_enc, value=True, command=configure_modes)
-		dec_radio = Radiobutton(method_frame, text='Decrypt', variable=self.is_enc, value=False,
-								command=configure_modes)
-		entry_title = Label(enc_root, text='Key length:', font='arial 10 underline')
-		self.enc_entry = Entry(enc_root)
-		buttons_frame = Frame(enc_root)
-		copy_from_ete = Button(buttons_frame, text='Copy from', command=copy_from, bd=1)
-		enter_button = Button(buttons_frame, text='Enter', command=redirect_enc, bd=1)
-		paste_to_ete = Button(buttons_frame, text='Paste to', command=paste_to, bd=1)
-
-		title.grid(row=0, column=1)
-		box_frame.grid(row=2, column=1)
-		method_title.grid(row=3, column=1)
-		method_frame.grid(row=4, column=1)
-		entry_title.grid(row=5, column=1)
-		self.enc_entry.grid(row=6, column=1)
-		buttons_frame.grid(row=7, column=1)
-
-		input_title.grid(row=1, column=0)
-		output_title.grid(row=1, column=2)
-		input_box.grid(row=2, column=0)
-		output_box_.grid(row=2, column=2)
-
-		enc_radio.grid(row=4, column=0)
-		self.enc_methods.grid(row=4, column=1)
-		dec_radio.grid(row=4, column=2)
-
-		copy_from_ete.grid(row=4, column=0, padx=5)
-		enter_button.grid(row=4, column=1, padx=5, pady=5)
-		paste_to_ete.grid(row=4, column=2, padx=5)
-
-		self.enc_methods.bind('<<ComboboxSelected>>', configure_modes)
 
 	def determine_highlight(self):
 		'''
@@ -8336,17 +7023,27 @@ class Window(Tk):
 			f.write(final_line)
 
 	def check_version(self):
-		try:
-			url = 'https://raw.githubusercontent.com/Ariel4545/text_editor/main/version.txt'
-			response = requests.get(url=url)
-			updated_version = response.text.replace(' ', '').replace('\n', '')
-			print(updated_version, self.ver)
-			if updated_version != self.ver:
-				messagebox.showwarning('EgonTE', 'You are not using the latest version')
-		except:
-			pass
+		current_ver = getattr(self, "ver", None)
+		if not current_ver:
+			return
 
-	def other_transparency(self, event=False):
+		def worker(ver):
+			try:
+				resp = requests.get("https://raw.githubusercontent.com/Ariel4545/text_editor/main/version.txt", timeout=5)
+				resp.raise_for_status()
+				remote = resp.text.strip()
+			except Exception:
+				return
+			if remote and ver and remote != ver:
+				# post back to main thread
+				self.after(0, lambda: messagebox.showwarning("EgonTE", "You are not using the latest version"))
+
+		th = Thread(target=worker, args=(current_ver,), daemon=True)
+		th.start()
+		self._ver_thread = th  # optional: keep a handle
+
+
+def other_transparency(self, event=False):
 		self.st_value = int(self.transparency_s.get()) / 100
 		for window in self.opened_windows:
 			window.attributes('-alpha', self.st_value)
