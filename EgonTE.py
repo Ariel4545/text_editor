@@ -4293,19 +4293,19 @@ class Window(Tk):
 			# Bulleted item at line start:
 			# - Capture indent (group 1) and bullet (group 2)
 			# - Allow optional space after bullet, but require some non-space later
-			compiled_patterns['bullet'] = re.compile(rf'^(\s*)([{bullet_chars}])(?:\s+|)(?=\S)')
+			compiled_patterns['bullet'] = compile(rf'^(\s*)([{bullet_chars}])(?:\s+|)(?=\S)')
 
 			# Numbered item at line start: 1., 1), 1:, 1-, 1], 1} + required space after separator
-			compiled_patterns['number'] = re.compile(r'^(\s*)(\d+)([.\):\-\]\}])\s+')
+			compiled_patterns['number'] = compile(r'^(\s*)(\d+)([.\):\-\]\}])\s+')
 
 			# Lettered item at line start: [a-z]+. or [A-Z]+. or ) variants, space required after separator
 			# Accept multi-letter sequences (aa, ab, AA, AB) to support rollover
-			compiled_patterns['letter'] = re.compile(r'^(\s*)([A-Z]+|[a-z]+)([.)])\s+')
+			compiled_patterns['letter'] = compile(r'^(\s*)([A-Z]+|[a-z]+)([.)])\s+')
 
 			# Only-marker lines (no non-space content after marker)
-			compiled_patterns['only_bullet'] = re.compile(rf'^\s*([{bullet_chars}])\s*$')
-			compiled_patterns['only_number'] = re.compile(r'^\s*\d+[.\):\-\]\}]\s*$')
-			compiled_patterns['only_letter'] = re.compile(r'^\s*[A-Za-z]+[.)]\s*$')
+			compiled_patterns['only_bullet'] = compile(rf'^\s*([{bullet_chars}])\s*$')
+			compiled_patterns['only_number'] = compile(r'^\s*\d+[.\):\-\]\}]\s*$')
+			compiled_patterns['only_letter'] = compile(r'^\s*[A-Za-z]+[.)]\s*$')
 
 			pattern_state['ready'] = True
 
