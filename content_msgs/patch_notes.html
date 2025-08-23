@@ -1,5 +1,39 @@
 <h3>Version - name - release date</h3>
 
+<h3>[ 1.13.2 - Tools revolution 2 - 23/8/25 (Summary) ]</h3>
+
+<h4>OpenAI interfaces (ChatGPT and Dall-E)</h4>
+<ul>
+  <li>Unified into a single standalone module: ai_popups.py</li>
+  <li>No UI freezes, safer threading, and proper streaming</li>
+  <li>Cleaner, more discoverable controls; faster iteration with bypass mode</li>
+  <li>Consistent with enhanced popup builders and modernized across both tools</li>
+</ul>
+
+<h4>Natural language processor</h4>
+<ul>
+  <li>Same feature set, faster and more reliable</li>
+  <li>Single entry function to open the tool; fewer moving parts</li>
+  <li>Better error handling with time and size safety</li>
+  <li>Consistent UI using standard popup builders; improved naming for maintainability</li>
+</ul>
+
+<h4>Email tool</h4>
+<ul>
+  <li>Modernized: safer connection, better validation</li>
+  <li>Supports CC, BCC, attachments, and body statistics</li>
+  <li>Saved fields, login test, and friendlier UI</li>
+  <li>Standalone file with a one-line forwarder for easy access</li>
+</ul>
+
+<h4>Auto-lists</h4>
+<ul>
+  <li>No thread and no full-buffer scan; logic is local to the current line at the caret</li>
+  <li>Reliable Tk indices and correct event signature (handler receives event and returns "break" when handled)</li>
+  <li>Flexible marker support with clear rules; simple to extend</li>
+  <li>Clean on/off via self.aul without duplicating bindings</li>
+</ul>
+
 <h3>[ 1.13.1 - Tools revolution - 16/8/25 (Summary) ]</h3>
 
 <h4>Git tool</h4>
