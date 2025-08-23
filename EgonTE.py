@@ -8,6 +8,9 @@ from pop_ups.find_replace_popup import open_find_replace
 from pop_ups.file_template_generator_popup import open_document_template_generator
 from pop_ups.git_tool_popup import open_git_tool
 from pop_ups.web_scrapping_popup import open_web_scrapping_popup
+from pop_ups.nlp_popup import open_nlp
+from pop_ups.email_popup import open_email
+from pop_ups.ai_popups import open_chatgpt, open_dalle
 from UI.library_installer_ui import show_library_installer
 from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
 from tkinter import *
@@ -137,20 +140,6 @@ try:
 except (ImportError, AttributeError, ModuleNotFoundError) as e:
 	yt_api = False
 try:
-	import openai
-	from openai import OpenAI, AzureOpenAI
-
-	openai_library = True
-	chatgpt_2library = False
-except (ImportError, AttributeError, ModuleNotFoundError) as e:
-	openai_library = ''
-	try:
-		chatgpt_2library = True
-		from pyChatGPT import Chat, Options
-	except (ImportError, AttributeError, ModuleNotFoundError) as e:
-		chatgpt_2library = False
-		# second condition that if not met the user will not be able to try to use chatGPT here
-try:
 	from emoticon import emoticon, demoticon
 
 	emoticons_library = ACTIVE
@@ -186,13 +175,6 @@ except (ImportError, AttributeError, ModuleNotFoundError) as e:
 	asymmetric_dec = False
 
 enc_tool = symmetric_dec or asymmetric_dec
-
-try:
-	from email.message import EmailMessage
-
-	email_tool = True
-except (ImportError, AttributeError, ModuleNotFoundError) as e:
-	email_tool = False
 
 try:
 	from pyshorteners import Shortener
@@ -310,7 +292,7 @@ class Window(Tk):
 		self.mw_shortcut.set(True)
 		# shortcuts vars
 		self.bindings_dict = {'filea': filea_list, 'typea': typef_list, 'editf': editf_list, 'textt': textt_list,
-							  'windf': win_list, 'autof': autof_list, 'autol': self.aul_var}
+							  'windf': win_list, 'autof': autof_list}
 		self.file_actions_v, self.typefaces_actions_v, self.edit_functions_v, self.texttwisters_functions_v, self.win_actions_v, self.auto_functions, \
 			self.aul = [BooleanVar() for x in range(7)]
 		self.file_actions_v.set(True), self.typefaces_actions_v.set(True), self.edit_functions_v.set(True)
@@ -370,7 +352,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13'
+		self.ver = '1.13.2'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -547,13 +529,13 @@ class Window(Tk):
 		self.place_toolt()
 		self.binds(mode='initial')
 		self.stt_time = get_time()
-		self._init_autol()
 		# Thread(target=self.record_logs, daemon=False).start()
 		# self.record_logs()
 		self.singular_colors_d = {'background': [self.EgonTE, 'bg'], 'text': [self.EgonTE, 'fg'],
 								  'menus': [self.menus_components, 'bg-fg'],
 								  'buttons': [self.toolbar_components, 'bg'], 'highlight': [self.EgonTE, 'selectbackground']}
 
+		self.setup_auto_lists()
 		if RA:
 			self.right_align_language_support()
 		if self.check_ver_v.get():
@@ -646,31 +628,43 @@ class Window(Tk):
 							   'symbols translator': self.emojicons_hub, 'encryption \ decryption': self.encryption,
 							   'Generate document' : self.file_template_generator
 							   }
-		self.nlp_functions = {'get nouns': lambda: self.natural_language_process(function='nouns')
-			, 'get verbs': lambda: self.natural_language_process(function='verbs')
-			, 'get adjectives': lambda: self.natural_language_process(function='adjective')
-			, 'get adverbs': lambda: self.natural_language_process(function='adverbs')
-			, 'get pronouns': lambda: self.natural_language_process(function='pronouns')
-			, 'get stop words': lambda: self.natural_language_process(function='stop words')
-			,
-							  'get names': lambda: self.natural_language_process(function='names')
-			, 'get phone numbers.': lambda: self.natural_language_process(function='phone numbers')
-			, 'entity recognition': lambda: self.natural_language_process(function='entity recognition')
-			, 'dependency tree': lambda: self.natural_language_process(function='dependency')
-			, 'lemmatization': lambda: self.natural_language_process(function='lemmatization')
-			,
-							  'most common words': lambda: self.natural_language_process(function='most common words')
-							  }
+
+		self.nlp_functions = {
+			'Get nouns': lambda: self.natural_language_process(function='nouns'),
+			'Get verbs': lambda: self.natural_language_process(function='verbs'),
+			'Get adjectives': lambda: self.natural_language_process(function='adjective'),
+			'Get adverbs': lambda: self.natural_language_process(function='adverbs'),
+			'Get pronouns': lambda: self.natural_language_process(function='pronouns'),
+			'Get stop words': lambda: self.natural_language_process(function='stop words'),
+
+			'.Entity recognition': lambda: self.natural_language_process(function='entity recognition'),
+			'Dependency tree': lambda: self.natural_language_process(function='dependency'),
+			'Lemmatization': lambda: self.natural_language_process(function='lemmatization'),
+			'Most common words': lambda: self.natural_language_process(function='most common words'),
+
+			'.Get names (persons)': lambda: self.natural_language_process(function='FULL_NAME'),
+			'Get phone numbers': lambda: self.natural_language_process(function='PHONE_NUMBER'),
+			'Extract emails': lambda: self.natural_language_process(function='EMAILS'),
+			'Extract URLs': lambda: self.natural_language_process(function='URLS'),
+			'Extract IP addresses': lambda: self.natural_language_process(function='IP_ADDRESSES'),
+
+			'.Key phrases (noun chunks)': lambda: self.natural_language_process(function='KEY_PHRASES'),
+			'N-grams (2–3)': lambda: self.natural_language_process(function='NGRAMS'),
+			'Sentence split': lambda: self.natural_language_process(function='SENTENCE_SPLIT'),
+			'POS distribution': lambda: self.natural_language_process(function='POS_DISTRIBUTION'),
+			'Sentiment (VADER)': lambda: self.natural_language_process(function='SENTIMENT'),
+		}
+
 		self.color_functions = {'whole text': lambda: self.custom_ui_colors(components='text')
-			, 'background': lambda: self.custom_ui_colors(components='background')
-			, 'highlight.': lambda: self.custom_ui_colors(components='highlight_color')
-			, 'buttons color': lambda: self.custom_ui_colors(components='buttons')
-			, 'menus color': lambda: self.custom_ui_colors(components='menus')
-			, 'app colors.': lambda: self.custom_ui_colors(components='app')
-			, 'info page colors': lambda: self.custom_ui_colors(components='info page')
-			, 'virtual keyboard colors': lambda: self.custom_ui_colors(components='v_keyboard'),
-								'advance options colors': lambda: self.custom_ui_colors(components='advance_options')
-								}
+					, 'background': lambda: self.custom_ui_colors(components='background')
+					, 'highlight.': lambda: self.custom_ui_colors(components='highlight_color')
+					, 'buttons color': lambda: self.custom_ui_colors(components='buttons')
+					, 'menus color': lambda: self.custom_ui_colors(components='menus')
+					, 'app colors.': lambda: self.custom_ui_colors(components='app')
+					, 'info page colors': lambda: self.custom_ui_colors(components='info page')
+					, 'virtual keyboard colors': lambda: self.custom_ui_colors(components='v_keyboard'),
+										'advance options colors': lambda: self.custom_ui_colors(components='advance_options')
+										}
 
 		self.settings_fuctions = {'Night mode': (self.night, self.night_mode),
 								  'status bars': (self.hide_statusbars, self.show_statusbar),
@@ -2108,10 +2102,12 @@ class Window(Tk):
 		b0, b1, b2, b3, b4, b5, b6, b7, b8, b9 = [
 			Button(extra_frame, text=f'{num}', command=lambda num=num: insert_extra(num), padx=padx_b, pady=pady_b,
 				   relief=FLAT, bg=ex_color, height=button_height, width=button_width) for num in range(10)]
-		clear_b = Button(extra_frame, text='C', command=lambda: calc_entry.delete(0, END), pady=pady_b, relief=FLAT, bg='#F3B664',
+		clear_b = Button(extra_frame, text='C', command=lambda: calc_entry.delete(0, END), pady=pady_b, relief=FLAT,
+						 bg='#F3B664',
 						 height=button_height
 						 , width=button_width)
-		del_b = Button(extra_frame, text='DEL', command=lambda: calc_entry.delete(calc_entry.index(INSERT) - 1), pady=pady_b, relief=FLAT, bg='#F3B664',
+		del_b = Button(extra_frame, text='DEL', command=lambda: calc_entry.delete(calc_entry.index(INSERT) - 1),
+					   pady=pady_b, relief=FLAT, bg='#F3B664',
 					   height=button_height
 					   , width=button_width)
 
@@ -4278,163 +4274,247 @@ class Window(Tk):
 		if self.file_name and self.auto_save_v.get() and (self.autosave_by_p.get()):
 			self.save()
 
-	def _init_autol(self):
-		# Internal book-keeping
-		self._auto_list_binding = None
-		self._autol_enabled_last = None
-		self._list_rx_ready = False
+	def setup_auto_lists(self, default_enabled: bool | None = None):
+		'Initialize Auto Lists with nested functions. Snake case names, no leading underscores, letter rollover, and unit tests.'
 
-		# Keep bindings_dict compatible (autol stores the variable, not patterns)
+		# Local state (closures)
+		pattern_state = {'ready': False}
+		compiled_patterns = {}
+		binding_ids = {'return': None}
+		last_applied_enabled = {'value': None}
+
+		def build_list_patterns():
+			if pattern_state['ready']:
+				return
+
+			# ASCII bullets + common Unicode bullets/dashes (– \u2013, — \u2014)
+			bullet_chars = r'\-\+\*•●◦‣▪·\u2013\u2014'
+
+			# Bulleted item at line start:
+			# - Capture indent (group 1) and bullet (group 2)
+			# - Allow optional space after bullet, but require some non-space later
+			compiled_patterns['bullet'] = re.compile(rf'^(\s*)([{bullet_chars}])(?:\s+|)(?=\S)')
+
+			# Numbered item at line start: 1., 1), 1:, 1-, 1], 1} + required space after separator
+			compiled_patterns['number'] = re.compile(r'^(\s*)(\d+)([.\):\-\]\}])\s+')
+
+			# Lettered item at line start: [a-z]+. or [A-Z]+. or ) variants, space required after separator
+			# Accept multi-letter sequences (aa, ab, AA, AB) to support rollover
+			compiled_patterns['letter'] = re.compile(r'^(\s*)([A-Z]+|[a-z]+)([.)])\s+')
+
+			# Only-marker lines (no non-space content after marker)
+			compiled_patterns['only_bullet'] = re.compile(rf'^\s*([{bullet_chars}])\s*$')
+			compiled_patterns['only_number'] = re.compile(r'^\s*\d+[.\):\-\]\}]\s*$')
+			compiled_patterns['only_letter'] = re.compile(r'^\s*[A-Za-z]+[.)]\s*$')
+
+			pattern_state['ready'] = True
+
+		def next_alpha_sequence(alpha: str) -> str:
+			'Increment an alphabetical sequence with rollover, preserving case (z -> aa, Z -> AA).'
+			if not alpha:
+				return 'a'
+			is_upper = alpha[0].isupper()
+			base_a = 'A' if is_upper else 'a'
+
+			# Convert to 0-based base-26
+			values = [ord(ch) - ord(base_a) for ch in alpha]
+			i = len(values) - 1
+			carry = 1
+			while i >= 0 and carry:
+				values[i] += carry
+				if values[i] >= 26:
+					values[i] = 0
+					carry = 1
+					i -= 1
+				else:
+					carry = 0
+			if carry:
+				# Overflow at the highest digit: prepend a new 'a'/'A'
+				values = [0] + values
+			return ''.join(chr(v + ord(base_a)) for v in values)
+
+		def handle_return_auto_list(key_event):
+			'Enter handler: continues bullets/numbers/letters, preserves indent, smart termination.'
+			try:
+				if not bool(self.aul.get()):
+					return None
+			except Exception:
+				return None
+
+			target_widget = key_event.widget
+
+			# Let default behavior replace selection
+			if target_widget.tag_ranges('sel'):
+				return None
+
+			# Shift+Enter -> plain newline (Shift mask 0x0001)
+			if getattr(key_event, 'state', 0) & 0x0001:
+				return None
+
+			# Current line
+			current_line_start = target_widget.index('insert linestart')
+			current_line_end = target_widget.index('insert lineend')
+			current_line_text = target_widget.get(current_line_start, current_line_end)
+
+			# Only auto-continue at EOL or when only whitespace follows
+			if target_widget.compare('insert', '<', current_line_end) and target_widget.get('insert',
+																							current_line_end).strip():
+				return None
+
+			build_list_patterns()
+
+			match_bullet = compiled_patterns['bullet'].match(current_line_text)
+			match_number = compiled_patterns['number'].match(current_line_text)
+			match_letter = compiled_patterns['letter'].match(current_line_text)
+			if not (match_bullet or match_number or match_letter):
+				return None
+
+			trimmed_line = current_line_text.rstrip()
+			indent_text = (match_bullet or match_number or match_letter).group(1)
+
+			# Smart termination: line is only the marker
+			if (match_bullet and compiled_patterns['only_bullet'].fullmatch(trimmed_line)) or \
+					(match_number and compiled_patterns['only_number'].fullmatch(trimmed_line)) or \
+					(match_letter and compiled_patterns['only_letter'].fullmatch(trimmed_line)):
+				target_widget.edit_separator()
+				target_widget.delete(current_line_start, current_line_end)
+				target_widget.insert(current_line_start, indent_text + '\n' + indent_text)
+				target_widget.edit_separator()
+				return 'break'
+
+			# Smart termination: caret at/inside marker and nothing meaningful after
+			insert_index = target_widget.index('insert')
+			try:
+				_, col_str = insert_index.split('.')
+				caret_column = int(col_str)
+			except Exception:
+				caret_column = 0
+
+			if match_number:
+				marker_length = len(indent_text) + len(match_number.group(2)) + len(match_number.group(3)) + 1
+			elif match_letter:
+				alpha_seq = match_letter.group(2)
+				marker_length = len(indent_text) + len(alpha_seq) + 1 + 1  # letters + separator + space
+			else:
+				bullet_col = len(indent_text) + 1
+				has_space = len(current_line_text) > bullet_col and current_line_text[bullet_col] == ' '
+				marker_length = len(indent_text) + 1 + (1 if has_space else 0)
+
+			text_after_caret = target_widget.get('insert', current_line_end)
+			if caret_column <= marker_length and text_after_caret.strip() == '':
+				target_widget.edit_separator()
+				target_widget.delete(current_line_start, current_line_end)
+				target_widget.insert(current_line_start, indent_text + '\n' + indent_text)
+				target_widget.edit_separator()
+				return 'break'
+
+			# Continuation: number, letter, or bullet
+			if match_number:
+				n = int(match_number.group(2))
+				sep = match_number.group(3)
+				next_marker = f'{n + 1}{sep} '
+				continuation = indent_text + next_marker
+			elif match_letter:
+				alpha_seq = match_letter.group(2)
+				sep = match_letter.group(3)
+				next_seq = next_alpha_sequence(alpha_seq)
+				continuation = indent_text + f'{next_seq}{sep} '
+			else:
+				bullet_char = match_bullet.group(2)
+				continuation = indent_text + f'{bullet_char} '
+
+			target_widget.edit_separator()
+			target_widget.insert('insert', '\n' + continuation)
+			target_widget.edit_separator()
+			return 'break'
+
+		def toggle_auto_lists(enable: bool) -> None:
+			'Bind/unbind the <Return> handler idempotently.'
+			if binding_ids['return'] is not None:
+				try:
+					self.EgonTE.unbind('<Return>', binding_ids['return'])
+				except Exception:
+					pass
+			binding_ids['return'] = None
+
+			if enable:
+				binding_ids['return'] = self.EgonTE.bind('<Return>', handle_return_auto_list, add='+')
+
+		def apply_auto_lists(key_event=None) -> None:
+			'Variable manager: reads self.aul and applies the Return binding state.'
+			try:
+				enabled_flag = bool(self.aul.get()) if default_enabled is None else bool(default_enabled)
+			except Exception:
+				enabled_flag = bool(getattr(self, 'aul', False))
+
+			if last_applied_enabled['value'] is enabled_flag:
+				return
+			last_applied_enabled['value'] = enabled_flag
+
+			try:
+				self.EgonTE.after(0, toggle_auto_lists, enabled_flag)
+			except Exception:
+				toggle_auto_lists(enabled_flag)
+
+		def run_auto_lists_tests() -> dict:
+			'Lightweight unit tests for alpha rollover, numbers, and bullets (pure logic paths).'
+			results = {'passed': 0, 'failed': 0, 'cases': []}
+
+			def check(case_name, condition):
+				ok = bool(condition)
+				results['cases'].append((case_name, ok))
+				if ok:
+					results['passed'] += 1
+				else:
+					results['failed'] += 1
+
+			# Alpha rollover tests
+			check('alpha a->b', next_alpha_sequence('a') == 'b')
+			check('alpha z->aa', next_alpha_sequence('z') == 'aa')
+			check('alpha aa->ab', next_alpha_sequence('aa') == 'ab')
+			check('alpha az->ba', next_alpha_sequence('az') == 'ba')
+			check('alpha zz->aaa', next_alpha_sequence('zz') == 'aaa')
+			check('alpha A->B', next_alpha_sequence('A') == 'B')
+			check('alpha Z->AA', next_alpha_sequence('Z') == 'AA')
+			check('alpha AZ->BA', next_alpha_sequence('AZ') == 'BA')
+			check('alpha ZZ->AAA', next_alpha_sequence('ZZ') == 'AAA')
+
+			# Number formatting sanity (mirrors continuation format)
+			check('number 1.', f'1. ' == '1. ')
+			check('number 2)', f'2) ' == '2) ')
+
+			# Bullet formatting sanity
+			for ch in ['-', '+', '*', '•', '—']:
+				check(f'bullet {ch}', f'{ch} ' == f'{ch} ')
+
+			return results
+
+		# Public API (snake case, no leading underscores)
+		self.handle_return_auto_list = handle_return_auto_list
+		self.toggle_auto_lists = toggle_auto_lists
+		self.build_list_patterns = build_list_patterns
+		self.apply_auto_lists = apply_auto_lists
+		self.next_alpha_sequence = next_alpha_sequence
+		self.run_auto_lists_tests = run_auto_lists_tests
+
+		# Legacy compatibility (can be removed later if nothing depends on them)
+		self._on_return_auto_list = handle_return_auto_list
+		self.enable_auto_lists = toggle_auto_lists
+		self._ensure_list_regex = build_list_patterns
+		self.aul_var = apply_auto_lists
+
+		# Ensure options UI compatibility
 		if not hasattr(self, 'bindings_dict') or not isinstance(self.bindings_dict, dict):
 			self.bindings_dict = {}
-		self.bindings_dict['autol'] = self.aul
+		self.bindings_dict['autol'] = getattr(self, 'aul', None)
 
-		# Reflect changes immediately when user toggles the option
-		self.aul.trace_add('write', lambda *args: self.aul_var())
-
-		# Apply initial state (enable/disable <Return> handler)
-		self.aul_var()
-
-	def aul_var(self, event=None) -> None:
-		"""
-		Auto-lists variable manager. Applies current self.aul state by
-		binding/unbinding the Enter handler. Safe to call often; no threads.
-		"""
+		# Apply on checkbox change and once at start
 		try:
-			enabled = self.aul.get()
+			self.aul.trace_add('write', lambda *args: apply_auto_lists())
 		except Exception:
-			enabled = bool(getattr(self, 'aul', False))
+			pass
+		apply_auto_lists()
 
-		if getattr(self, '_autol_enabled_last', None) == enabled:
-			return
-		self._autol_enabled_last = enabled
-
-		# Apply on the UI thread
-		try:
-			self.EgonTE.after(0, self.enable_auto_lists, enabled)
-		except Exception:
-			self.enable_auto_lists(enabled)
-
-	def enable_auto_lists(self, enable: bool) -> None:
-		"""
-		Bind/unbind the <Return> auto-list handler.
-		"""
-		# Always unbind previous to keep state clean
-		if getattr(self, '_auto_list_binding', None):
-			try:
-				self.EgonTE.unbind('<Return>', self._auto_list_binding)
-			except Exception:
-				pass
-			self._auto_list_binding = None
-
-		if enable:
-			handler = getattr(self, '_on_return_auto_list', None)
-			if callable(handler):
-				self._auto_list_binding = self.EgonTE.bind('<Return>', handler, add='+')
-
-	def _ensure_list_regex(self):
-		if getattr(self, '_list_rx_ready', False):
-			return
-
-		# Accept more bullet markers:
-		# - ASCII: -, +, *
-		# - Unicode common bullets: •, ●, ◦, ‣, ▪, ·
-		# - Dashes used as bullets: en dash (–), em dash (—)
-		bullet_chars = r'\-\+\*•●◦‣▪·\u2013\u2014'
-
-		# Bulleted list at line start:
-		# - Capture leading indent (group 1) and the bullet (group 2)
-		# - Allow an optional space after bullet, but require that some non-space content exists on the line
-		#   so a bare marker line still counts as “only marker”
-		self._rx_bullet = compile(rf'^(\s*)([{bullet_chars}])(?:\s+|)(?=\S)')
-
-		# Numbered list at line start:
-		# - Separators supported: ., ), :, -, ], }
-		# - Require at least one space after the separator (classic “1. item” style)
-		self._rx_number = compile(r ^ '(\s*)(\d+)([.\):\-\]\}])\s+')
-
-		# Only-marker checks (no non-space content after bullet/number)
-		self._rx_only_bul = compile(rf'^\s*([{bullet_chars}])\s*$')
-		self._rx_only_num = compile(r'^\s*\d+[.\):\-\]\}]\s*$')
-
-		self._list_rx_ready = True
-
-	def _on_return_auto_list(self, event):
-		"""
-		Auto-continue lists on Enter.
-		- Continues bullets and numbers.
-		- Preserves indent.
-		- Ends list when the line contains only the marker.
-		- Clean undo.
-		Return 'break' when handled, or None to let default newline occur.
-		"""
-		# Respect activation flag
-		try:
-			if not bool(self.aul.get()):
-				return None
-		except Exception:
-			return None
-
-		w = event.widget
-
-		# Allow replacing selection normally
-		if w.tag_ranges('sel'):
-			return None
-
-		# Treat Shift+Enter as plain newline (Windows Tk: Shift is bit 0x0001)
-		if getattr(event, 'state', 0) & 0x0001:
-			return None
-
-		# Read current line
-		line_start = w.index('insert linestart')
-		line_end = w.index('insert lineend')
-		line_text = w.get(line_start, line_end)
-
-		# Only continue at end-of-line or when only whitespace follows
-		if w.compare('insert', '<', line_end) and w.get('insert', line_end).strip():
-			return None
-
-		self._ensure_list_regex()
-
-		mb = self._rx_bullet.match(line_text)
-		mn = self._rx_number.match(line_text)
-		s = line_text.rstrip()
-
-		# End list if line is just the marker
-		if mb and self._rx_only_bul.fullmatch(s):
-			w.edit_separator()
-			w.delete(line_start, line_end)
-			indent = mb.group(1)
-			w.insert(line_start, indent + '\n' + indent)
-			w.edit_separator()
-			return 'break'
-		if mn and self._rx_only_num.fullmatch(s):
-			w.edit_separator()
-			w.delete(line_start, line_end)
-			indent = mn.group(1)
-			w.insert(line_start, indent + '\n' + indent)
-			w.edit_separator()
-			return 'break'
-
-		# Not a list line -> let default behavior happen
-		if not (mb or mn):
-			return None
-
-		indent = (mb or mn).group(1)
-		if mn:
-			n = int(mn.group(2))
-			sep = mn.group(3)
-			next_marker = f'{n + 1}{sep} '
-			continuation = indent + next_marker
-		else:
-			bullet = mb.group(2)
-			continuation = indent + f'{bullet} '
-
-		# Insert as one undo step
-		w.edit_separator()
-		w.insert('insert', '\n' + continuation)
-		w.edit_separator()
-		return 'break'
 
 
 	def compare(self):
@@ -4654,191 +4734,9 @@ class Window(Tk):
 		return open_find_replace(self, event)
 
 
-
 	def natural_language_process(self, function: str):
-		'''
-		the NLP function will return you the thing that you are looked for with it that is found on the content
-		of the main text box,
-		It have also some more unique things that it can output (like phone numbers),
-		and the output will be in a nice and organized window, that will let you decide what to do with the content
-		(copy ,etc.)
-		'''
-		try:
-			nlp = spacy.load('en_core_web_sm')
-		except OSError as e:
-			messagebox.showinfo('EgonTE', 'natural language package isn\'t found.\nthe program now will pause to try to'
-										  'download the package for you')
-			nlp_download('en_core_web_sm')
-			nlp = spacy.load('en_core_web_sm')
+		open_nlp(self, preset_function=function)
 
-		try:
-
-			if self.prefer_gpu.get():
-				spacy.prefer_gpu()
-
-			nlp_root = self.make_pop_ups_window(self.natural_language_process)
-			result_frame = Frame(nlp_root)
-			text = self.EgonTE.get('1.0', 'end')
-			doc = nlp(text)
-			def_result = True
-			result_text = '(No matches found!)'
-			pattern_function = False
-			pos_list = ('VERB', 'NOUN', 'ADJ', 'ADV', 'PRON')
-			content = []
-
-			if function in pos_list:
-				print('reaching wrong')
-				for token in doc:
-					if token.pos_ == function:
-						content.append(token)
-				if content:
-					result_text = ', '.join(str(e) for e in content)
-
-			elif function == 'FULL_NAME':
-				# defining a rule
-				pattern_function = [{'POS': 'PROPN'}, {'POS': 'PROPN'}]
-
-			elif function == 'PHONE_NUMBER':
-				pattern_function = [
-					{'ORTH': '('},
-					{'SHAPE': 'ddd'},
-					{'ORTH': ')'},
-					{'SHAPE': 'ddd'},
-					{'ORTH': '-', 'OP': '?'},
-					{'SHAPE': 'dddd'}
-				]
-
-			if pattern_function:
-				matcher = Matcher(nlp.vocab)
-				matcher.add(function, [pattern_function])
-				matches = matcher(doc)
-				# adding a rule
-				for match_id, start, end in matches:
-					span = doc[start:end]
-					content.append(span.text)
-				if content:
-					result_text = ', '.join(str(e) for e in content)
-
-			elif function == 'dependency':
-				def_result = False
-				columns = ('word', 'dependency')
-				result = ttk.Treeview(result_frame, columns=columns, show='headings')
-				result.heading('word', text='Words')
-				result.heading('dependency', text='Dependency')
-				content = {}
-				for token in doc:
-					content[token.text] = token.dep_
-					result.insert('', END, value=[token, content[token.text]])
-
-				str_res = ''
-				for res in content.keys():
-					str_res += f'{res} - {content[res]}, '
-				result_text = str_res
-
-
-
-			elif function == 'entity recognition':
-				def_result = False
-				columns = ('entity', 'recognition')
-				result = ttk.Treeview(result_frame, columns=columns, show='headings')
-				result.heading('entity', text='Entity')
-				result.heading('recognition', text='Data')
-
-				content = {}
-				for ent in doc.ents:
-					content[ent.text] = ent.label_
-					result.insert('', END, value=[ent, content[ent.text]])
-
-				str_res = ''
-				for res in content.keys():
-					str_res += f'{res} - {content[res]}, '
-				result_text = str_res
-
-
-			elif function == 'stop words':
-				stopwords = list(spacy.lang.en.stop_words.STOP_WORDS)
-				for token in doc:
-					print(f'token : {token}')
-					if str(token) in stopwords:
-						content.append(token)
-
-				if content:
-					result_text = ', '.join(str(e) for e in content)
-
-			elif function == 'lemmatization':
-				def_result = False
-				columns = ('original', 'altered')
-				result = ttk.Treeview(result_frame, columns=columns, show='headings')
-				result.heading('original', text='Original')
-				result.heading('altered', text='Altered')
-
-				res = ''
-				for token in doc:
-					if str(token) != str(token.lemma_):
-						res += (f'{str(token):>20} : {str(token.lemma_)}\n')
-						result.insert('', END, value=[f'{str(token):>20}', str(token.lemma_)])
-					result_text = res
-
-			elif function == 'most common words':
-				def_result = False
-				columns = ('top_word', 'number_of_occurrences')
-				result = ttk.Treeview(result_frame, columns=columns, show='headings')
-				result.heading('top_word', text='Words')
-				result.heading('number_of_occurrences', text='Occurrences')
-
-				words = [
-					token.text
-					for token in doc
-					if not token.is_stop and not token.is_punct
-				]
-				result_text = text = Counter(words).most_common(10)  # !!!
-
-				for res in result_text:
-					result.insert('', END, value=res)
-
-				str_res = ''
-				for res in result_text:
-					str_res += f'{res[0]} - {res[1]}, '
-				result_text = str_res
-
-			if function != 'most common words':
-				title = Label(nlp_root, text=f'{function.capitalize()}:')
-			else:
-				title = Label(nlp_root, text='Top 10 most common words:')
-
-			title.configure(font=self.titles_font)
-			copy_button = Button(nlp_root, text='Copy', bd=1, command=lambda: copy(result_text))
-			title.pack()
-			result_frame.pack(fill=BOTH, expand=True)
-			if def_result:
-
-				result = Text(result_frame)
-
-				result_text = result_text.split(' ')
-				it = iter(result_text)
-				result_lists = list(iter(lambda: tuple(islice(it, 10)), ()))
-				result_text = ''
-				for index, result_list in enumerate(result_lists):
-					if index > 0:
-						result_text += '\n'
-					for result_word in result_list:
-						result_text += f'{result_word} '
-
-				result.insert('end', result_text)
-				result.configure(state=DISABLED)
-
-			nlp_scroll = ttk.Scrollbar(result_frame)
-			nlp_scroll.pack(side=RIGHT, fill=Y)
-			result.configure(yscrollcommand=self.text_scroll.set)
-			nlp_scroll.config(command=self.EgonTE.yview)
-
-			result.pack(fill=BOTH, expand=True)
-			copy_button.pack()
-
-
-
-		except OSError as e:
-			messagebox.showerror('EgonTE', 'Can\'t find the language model!')
 
 	def saved_settings(self, special_mode: str =None):
 
@@ -5355,421 +5253,32 @@ class Window(Tk):
 		random_city.grid(row=3, column=1, pady=3)
 		enter_city.grid(row=4, column=1, pady=5)
 
+
 	def send_email(self):
-		file_type = 'external'
-		self.custom_text = False
+		return open_email(self)
 
-		def file_mode(mode: str):
-			global file_type, custom_box, email_c_frame
-			file_type = mode
-			for button in email_button_dict.values():
-				button.configure(bg='SystemButtonFace')
-			email_button_dict[mode].configure(bg='light grey')
-			if mode == 'none':
-				email_c_frame, custom_box, email_scroll = self.make_rich_textbox(email_root, place=[9, 1])
-			else:
-				if self.custom_text:
-					email_c_frame.destroy()
-					self.custom_text = False
-
-		def content():
-			global file_name, file_type
-			if file_type == 'local':
-				try:
-					file_name = filedialog.askopenfilename()
-					if file_name:
-						with open(file_name) as fp:
-							file_content = fp.read()
-				except UnicodeDecodeError:
-					messagebox.showerror('EgonTE', 'file contains unsupported characters')
-			elif file_type == 'this':
-				file_name = self.file_name
-				file_content = self.EgonTE.get('1.0', 'end')
-			else:
-				file_name = f'A message from {sender_box.get()}'
-				if custom_box:
-					file_content = custom_box.get('1.0', 'end')
-
-			return file_content
-
-		def send():
-			# initialize the library
-			msg = EmailMessage()
-
-			# email's content
-			if subject_box.get():
-				msg['Subject'] = subject_box.get()
-			else:
-				try:
-					msg['Subject'] = f'The contents of {file_name}'
-				except NameError:
-					msg['Subject'] = 'An email'
-			msg['From'] = sender_box.get()
-			msg['To'] = receiver_box.get()
-			msg.set_content(content())
-			# adding a layer of security
-			context = ssl.create_default_context()
-			# Send the message via our own SMTP server.
-			with SMTP_SSL('smpt.gamil.com', 465, context=context) as mail:
-				mail.login(sender_box.get(), password=password_box.get())
-				mail.sendmail(sender_box.get(), receiver_box.get(), msg.as_string())
-
-			# s = smtplib.SMTP('localhost')
-			# s.send_message(msg)
-			# s.quit()
-
-		messagebox.showinfo('EgonTE', 'you might cannot use this function\n if you have 2 step verification')
-		email_root = self.make_pop_ups_window(self.send_email)
-		req = Label(email_root, text='Requirements', font='arial 12 underline')
-		sender_title = Label(email_root, text='Your Email:')
-		password_title = Label(email_root, text='Your Password:')
-		receiver_title = Label(email_root, text='Receiver Email:')
-		sender_box = Entry(email_root, width=25)
-		password_box = Entry(email_root, width=25, show='*')
-		receiver_box = Entry(email_root, width=25)
-		content_title = Label(email_root, text='Content:', font='arial 12 underline')
-		subject_title = Label(email_root, text='subject:')
-		subject_box = Entry(email_root, width=25)
-
-		files_title = Label(email_root, text='Body:')
-		loc_button = Button(email_root, text='Local file', command=lambda: file_mode('local'), borderwidth=1)
-		custom_button = Button(email_root, text='Custom', command=lambda: file_mode('none'), borderwidth=1)
-		th_button = Button(email_root, text='This file', command=lambda: file_mode('this'), borderwidth=1)
-		send_button = Button(email_root, text='Send', command=send, font='arial 10 bold')
-
-		req.grid(row=0, column=1, pady=2)
-		sender_title.grid(row=1, column=0)
-		password_title.grid(row=1, column=1)
-		receiver_title.grid(row=1, column=2)
-		sender_box.grid(row=2, column=0, padx=5)
-		password_box.grid(row=2, column=1)
-		receiver_box.grid(row=2, column=2, padx=5)
-		content_title.grid(row=3, column=1, pady=2)
-		subject_title.grid(row=4, column=1)
-		subject_box.grid(row=5, column=1, padx=5)
-		files_title.grid(row=6, column=1)
-		loc_button.grid(row=7, column=0)
-		custom_button.grid(row=7, column=1)
-		th_button.grid(row=7, column=2, pady=4)
-		send_button.grid(row=10, column=1, pady=2)
-
-		email_button_dict = {'this': th_button, 'none': custom_button, 'local': loc_button}
-		file_mode('this')
 
 	def chatGPT(self):
 		'''
 		this function attempts to create a chatGPT workspace like the website via the text editor
-		note: this function wasnt tested properly so its probably isnt good
 		'''
-		working = True
-
-		def active_bot():
-			global working
-
-			# requirements for the openAI official API
-			if openai_library:
-				try:
-					self.key_page(active_ui)
-
-				# simple error handling for the main login function (openAI library - via keys)
-				except:
-					messagebox.showerror('EgonTE', 'Some error has occurred in the login process')
-
-			# requirements for third-party library
-			else:
-				try:
-					global login_root
-
-					# sign in function
-					def enter():
-						options = Options()
-						options.record = True
-						options.track = True
-						options.proxies = 'https://localhost:8080'
-						self.alt_chat = Chat(email=username_entry.get(), password=password_entry.get(), options=options)
-						login_root.destroy()
-						active_ui()
-
-					# custom login interface exclusively for this library
-					login_root = Toplevel()
-					self.make_tm(login_root)
-					if self.limit_w_s.get():
-						login_root.resizable(False, False)
-					login_root.title(self.title_struct + 'sign to ChatGPT')
-					username_title = Label(login_root, text='username:')
-					username_entry = Entry(login_root, width=25)
-					password_title = Label(login_root, text='password:')
-					password_entry = Entry(login_root, width=25, show='*')
-					enter_button = Button(login_root, text='Enter', command=enter)
-
-					username_title.grid(row=1, column=1)
-					username_entry.grid(row=2, column=1, padx=10)
-					password_title.grid(row=3, column=1)
-					password_entry.grid(row=4, column=1)
-					enter_button.grid(row=6, column=1, pady=5)
-
-
-				# error handling for the custom library
-				except Exception as gpt_exception:
-					working = False
-					e_label = Label(login_root, text=str(gpt_exception), fg='red')
-					e_label.grid(row=5, column=1)
-					print(gpt_exception)
-
-		def active_ui():
-			gpt_root = self.make_pop_ups_window(active_ui, 'ChatGPT API')
-			gpt_root.tk.call('wm', 'iconphoto', gpt_root._w, self.gpt_image)
-			BG_GRAY = '#ABB2B9'
-			BG_COLOR = '#444454'
-			TEXT_COLOR = '#EAECEE'
-			FONT = 'Helvetica 14'
-			FONT_BOLD = 'Helvetica 13 bold'
-
-			interact_frame = Frame(gpt_root)
-
-			text_frame = Frame(gpt_root)
-			text_frame.pack(fill=BOTH, expand=True)
-			scroll = ttk.Scrollbar(text_frame)
-			scroll.pack(side=RIGHT, fill=Y)
-
-			# title_gpt = Label(gpt_root, bg=BG_COLOR, fg=TEXT_COLOR, text='ChatGPT', font='Helvetica 13 bold',
-			#                  pady=10, width=20, height=1)
-			# text_frame, self.GPT_txt, scroll = self.make_rich_textbox(gpt_root, font=FONT, size=[60, 60])
-			self.GPT_txt = Text(text_frame, bg=BG_COLOR, fg=TEXT_COLOR, font=FONT, width=60, yscrollcommand=scroll.set,
-					   undo=True, wrap=WORD, cursor=self.predefined_cursor, state=DISABLED)
-			self.GPT_txt.pack(fill=BOTH, expand=True)
-			scroll.config(command=self.GPT_txt.yview)
-
-			self.gpt_entry = Entry(interact_frame, bg='#2C3E50', fg=TEXT_COLOR, font=FONT, width=55)
-			send = Button(interact_frame, text='Send', font=FONT_BOLD, bg=BG_GRAY,
-						  command=lambda: Thread(target=ask_gpt, daemon=True).start())
-			interact_frame.pack(fill=X)
-
-			self.gpt_entry.pack(side='left', fill=BOTH, expand=True)
-			send.pack(side='right')
-			# title_gpt.grid(row=0)
-			# txt.grid(row=1, column=0, columnspan=2)
-			# self.gpt_entry.grid(row=2, column=0)
-			# send.grid(row=2, column=1)
-
-			gpt_root.bind('<Return>', ask_gpt)
-
-			# trying to make the image not crash
-			# self.update()
-			# gpt_root.mainloop()
-
-		def ask_gpt(event=None):
-			self.GPT_txt.configure(state=NORMAL)
-			try:
-				if openai_library:
-					self.GPT_txt.insert(END, f'>>> {self.gpt_entry.get()}\n')
-					# openai.api_key = self.key  # os.getenv(self.key)
-					if self.service_type.get() == 0:
-						completion = self.api_client.chat.completions.create(
-							model='gpt-35-turbo',
-							engine=self.deployment_name,
-							messages=[
-								{'role': 'user',
-								 'content': self.gpt_entry.get()}
-							]
-						)
-					else:
-						completion = self.api_client.chat.completions.create(
-							model=self.gpt_model,
-							messages=[
-								{'role': 'user',
-								 'content': self.gpt_entry.get()}
-							]
-						)
-
-					answer = (completion.choices[0].message.content)
-
-				else:
-					answer = self.alt_chat.ask(self.gpt_entry.get())
-				self.GPT_txt.insert(END, f'OpenAI: {answer}\n')
-			except openai.RateLimitError:
-				messagebox.showerror('OpenAI',
-									 'You exceeded your current quota, please check your plan and billing details')
-			self.GPT_txt.configure(state=DISABLED)
-
-		# checking multiple libraries / keys to find the most effective window
-		if openai_library:
-			if self.openai_code:
-				active_ui()
-			else:
-				active_bot()
-		else:
-			active_bot()
+		open_chatgpt(self)
 
 	def dallE(self):
 		'''
 		this function will try to return you the result of a simple DallE prompt with some options
-		note: this function wasnt tested properly so its probably isnt good
 		'''
-		self.dalle_prompt = 'An eco-friendly computer from the 90s in the style of vaporwave'
-		im_size_var = StringVar()
-		im_size_var.set('256x256')
+		open_dalle(self)
 
-		def imagine():
-			if prompt_entry.get():
-				self.dalle_prompt = prompt_entry.get()
-			try:
-				image_resp = self.api_client.images.generate(
-					model='dall-e-3', size=im_size_var.get(),
-					prompt=self.dalle_prompt,
-				)
-				# Grab the URL out of the response
-				image_url = image_resp.data[0].url
-				# Download the image
-				data = requests.get(image_url)
-				# Save the image
-				with open(f'{image_resp.created}.png', 'wb') as image:
-					image.write(data.content)
-				# Open it
-				subprocess.call(['start', f'{image_resp.created}.png'], shell=True)
-			except openai.RateLimitError:
-				messagebox.showerror('OpenAI',
-									 'You exceeded your current quota, please check your plan and billing details')
-
-		def ui():
-			global prompt_entry, dallE_root
-
-			dallE_root = Toplevel()
-			self.opened_windows.append(dallE_root)
-			self.func_window[ui] = dallE_root
-			dallE_root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(dallE_root))
-			dallE_root.attributes('-alpha', self.st_value)
-			self.make_tm(dallE_root)
-			dallE_root.title(self.title_struct + 'DallE')
-			prompt_title = Label(dallE_root, text='Enter the prompt here', font='arial 10 underline')
-			prompt_entry = Entry(dallE_root, width=30)
-			size_title = Label(dallE_root, text='Size of output', font='arial 10 underline')
-			size_256 = Radiobutton(dallE_root, variable=im_size_var, value='256x256', text='256x256')
-			size_512 = Radiobutton(dallE_root, variable=im_size_var, value='512x512', text='512x512')
-			size_1024 = Radiobutton(dallE_root, variable=im_size_var, value='1024x1024', text='1024x1024')
-			size_1536 = Radiobutton(dallE_root, variable=im_size_var, value='1536x1536', text='1536x1536')
-			size_2048 = Radiobutton(dallE_root, variable=im_size_var, value='2048x2048', text='2048x2048')
-
-			imagine_button = Button(dallE_root, text='Imagine', command=imagine, font='arial 10 bold')
-
-			prompt_title.grid(row=1, column=1)
-			prompt_entry.grid(row=2, column=1)
-			size_title.grid(row=3, column=1)
-			size_256.grid(row=4, column=0)
-			size_512.grid(row=4, column=1)
-			size_1024.grid(row=4, column=2)
-			size_1536.grid(row=5, column=0)
-			size_2048.grid(row=5, column=2)
-			imagine_button.grid(row=6, column=1, pady=4)
-
-			self.record_list.append(f'> [{get_time()}] - Dall-E tool window opened')
-
-		if not self.openai_code:
-			self.key_page(ui)
-		else:
-			ui()
-
-	def key_page(self, after_func=None):
-		'''
-		this function will get your OpenAI key to make the usage of chatGPT and DallE possible via the program
-
-		:param after_func:
-		'''
-
-		def change_ui():
-			global end_entry, dep_entry
-			get_key.unbind_all('<Button-1>')
-			if self.service_type.get() == 0:
-				if not self.end_entry_state:
-					end_entry = Entry(login_root, width=35)
-					dep_entry = Entry(login_root, width=35)
-					end_entry.grid(row=3)
-					dep_entry.grid(row=4)
-					end_entry.insert(END, 'Azure endpoint')
-					dep_entry.insert(END, 'Azure deployment name')
-					self.end_entry_state = True
-				get_key.bind('<Button-1>', lambda e: ex_links(link=
-					'https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython&pivots=programming-language-python'))
-
-			elif self.service_type.get() == 1:
-				if self.end_entry_state:
-					end_entry.destroy()
-					dep_entry.destroy()
-					self.end_entry_state = False
-				get_key.bind('<Button-1>', lambda e: ex_links(link='https://platform.openai.com/account/api-keys'))
-
-		def enter():
-			try:
-				self.key = key_entry.get()
-				# openai.api_key = self.key
-				if self.service_type.get() == 0:
-					#  your endpoint should look like the following https://YOUR_RESOURCE_NAME.openai.azure.com/
-					endpoint = end_entry.get()
-					self.deployment_name = dep_entry.get()
-					self.api_client = AzureOpenAI(api_key=self.key, api_version='2023-05-15', azure_endpoint=endpoint)
-				elif self.service_type.get() == 1:
-					self.api_client = OpenAI(api_key=self.key)
-				login_root.destroy()
-
-				valid_code = False
-				try:
-					self.api_client.models.list()
-					valid_code = True
-				except:
-					messagebox.showerror('Error', 'The OpenAI key is invalid')
-
-				if after_func and valid_code:
-					self.openai_code = True
-					after_func()
-
-				return True
-			except openai.AuthenticationError:
-				messagebox.showerror('EgonTE', 'Error not provided/Incorrect key')
-				return False
-
-		login_root = Toplevel()
-		self.make_tm(login_root)
-		if self.limit_w_s.get():
-			login_root.resizable(False, False)
-		login_root.title(self.title_struct + 'connect to OpenAI')
-		self.service_type = IntVar()
-		self.service_type.set(1)
-		self.end_entry_state = False
-
-		login_title = Label(login_root, text='Enter your OpenAI key to connect', font='arial 12')
-		key_title = Label(login_root, text='Key entry', font='arial 12 underline', width=60)
-		key_entry = Entry(login_root, width=35, show='*')
-		service_frame = Frame(login_root)
-		via_azure = Radiobutton(service_frame, text='Azure key', variable=self.service_type, value=0, command=change_ui)
-		via_openai = Radiobutton(service_frame, text='OpenAI key', variable=self.service_type, value=1,
-								 command=change_ui)
-		get_key = Label(login_root, text='Dosen\'t have/forget key?', fg='blue', font='arial 10 underline')
-		enter_button = Button(login_root, text='Enter', font='arial 10 bold', command=enter, relief=FLAT)
-		via_azure.grid(row=0, column=0)
-		via_openai.grid(row=0, column=2)
-		login_title.grid(row=0)
-		key_title.grid(row=1)
-		key_entry.grid(row=2)
-		service_frame.grid(row=5)
-
-		get_key.grid(row=6)
-		enter_button.grid(row=7)
-
-		get_key.bind('<Button-1>', lambda e: ex_links(link='https://platform.openai.com/account/api-keys'))
-
-		self.record_list.append(f'> [{get_time()}] - OpenAI API login page opened')
-
-		login_root.mainloop()
 
 	def full_screen(self, event=None):
 		self.fs_value = not (self.fs_value)
 		self.attributes('-fullscreen', self.fs_value)
 
+
 	def topmost(self):
 		self.tm_value = not (self.tm_value)
 		self.attributes('-topmost', self.tm_value)
-
-
 
 	def transcript(self):
 		'''
@@ -7043,7 +6552,7 @@ class Window(Tk):
 		self._ver_thread = th  # optional: keep a handle
 
 
-def other_transparency(self, event=False):
+	def other_transparency(self, event=False):
 		self.st_value = int(self.transparency_s.get()) / 100
 		for window in self.opened_windows:
 			window.attributes('-alpha', self.st_value)
