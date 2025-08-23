@@ -352,3 +352,22 @@ special_files = (('excel', '*.xlsx'), ('csv', '*.csv'), ('pdf', '*.pdf')
 night_mode_colors = {'black' : ['#110022', '#373737', '#27374D', 'green'], 'blue' : ['#041C32', '#04293A', '#064663', '#ECB365']
     , 'default' : ['SystemButtonFace', 'SystemButtonFace', 'SystemButtonFace', 'black']}
 
+
+function_items = [
+    'Get nouns', 'Get verbs', 'Get adjectives', 'Get adverbs', 'Get pronouns',
+    'Get stop words',
+    'Entity recognition', 'Dependency tree', 'Lemmatization', 'Most common words',
+    'Get names (persons)', 'Get phone numbers', 'Extract emails', 'Extract URLs', 'Extract IP addresses',
+    'Key phrases (noun chunks)', 'N-grams (2–3)', 'Sentence split', 'POS distribution', 'Sentiment (VADER)',
+]
+
+function_map = {
+    'Get nouns': 'NOUN', 'Get verbs': 'VERB', 'Get adjectives': 'ADJ', 'Get adverbs': 'ADV', 'Get pronouns': 'PRON',
+    'Get stop words': 'stop words',
+    'Entity recognition': 'entity recognition', 'Dependency tree': 'dependency', 'Lemmatization': 'lemmatization',
+    'Most common words': 'most common words',
+    'Get names (persons)': 'FULL_NAME', 'Get phone numbers': 'PHONE_NUMBER',
+    'Extract emails': 'EMAILS', 'Extract URLs': 'URLS', 'Extract IP addresses': 'IP_ADDRESSES',
+    'Key phrases (noun chunks)': 'KEY_PHRASES', 'N-grams (2–3)': 'NGRAMS',
+    'Sentence split': 'SENTENCE_SPLIT', 'POS distribution': 'POS_DISTRIBUTION', 'Sentiment (VADER)': 'SENTIMENT',
+}
