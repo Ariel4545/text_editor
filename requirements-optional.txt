@@ -10,3 +10,5 @@ email
 tkhtmlview
 python-docx
 tktooltip
+cryptography
+rsa
