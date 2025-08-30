@@ -292,7 +292,7 @@ library_list = [
     'pyaudio', 'pydub', 'ffmpeg-downloader', 'PyPDF2', 'nltk', 'PyDictionary',
     'tkinter-tooltip', 'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
     'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
-    'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr'
+    'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr', 'smtplib'
 ]
 
 # Optional extras (kept here so "most" lives in this file—
@@ -307,7 +307,8 @@ library_optional = [
     'emoticon',
     'tkhtmlview',
     'python-docx',
-    'tktooltip'
+    'tktooltip',
+    'googletrans'
 ]
 
 # Aliases and canonical names for pip (no runtime, pure data)
