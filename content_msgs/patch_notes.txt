@@ -1,5 +1,108 @@
 Version - name - release date
 
+[ 13.3.3 - Tools & fixes - 30/8/25 ]
+
+EgonTE:
+* organized the unconditional imports.
+* Fixed libraries’ installer forwarder bugs in the EgonTE.
+* Moved Tesseract installation and conditions from the init method to a dedicated method. This prevents errors and speeds up program startup.
+* Moved Text-box widget creation out of the init method. Used the specialized “create_rich_textbox” for this purpose.
+* Moved the “opening message” functionality out of the init method. This avoids slowing down overall program initialization, especially due to possible API requests.
+* Moved some initial calls of methods in the “init” method into a new method to make them faster and safer.
+* Removed some “randomness” tools’ menus and tools because they all merged into one pop-up (window) tool (which is a standalone file) in the new version.
+* Made the “stopwatch” method more durable, and improved the restart functionality to prevent errors
+* Added a calculator and a Python version guard forwarders.
+* Fixed some issues regarding the drop-down menus creation.
+
+Randomness tools file (new):
+* Numbers tab: clarity, control, and previews
+  * Added spinners for lower/upper bounds and float decimals.
+  * Split actions into Re-roll vs Insert, with visible preview values.
+  * Input validation for ranges and decimals.
+  * Enter inserts the current int; no silent re-rolls.
+* Names tab: safe optional dependency
+  * Graceful handling when the names library isn’t available.
+  * Re-roll, Insert, Copy actions with gender/type options.
+* Colors tab: display and palette tools
+  * Live preview for HEX/RGB/HSL; uppercase and hash toggles.
+  * Palette generation (complementary, triadic, analogous, monochrome).
+  * Copy single color or palette as CSS variables.
+  * Inline swatch canvas with resize handling.
+* Lists tab: essential list operations
+  * Choice, sample (k, no replacement), and shuffle.
+  * Input parsing from lines/commas/semicolons.
+  * Clear errors and result insertion.
+* Sequence tab: redesigned for inline preview
+  * Removed the ‘open with preview’ toggle; added an embedded preview text box.
+  * Length spinner; options for lowercase/uppercase/digits/symbols or custom charset.
+  * Generate, Insert, Copy, Clear actions.
+  * Insert at caret or end; lag confirmation for very large lengths.
+  * Clean, simple UX without extra windows; consistent with the rest of the tool.
+* Dates and times tab: feature-complete generator
+  * Start/end date inputs, include-time toggle, and format presets.
+  * Today + N quick range support.
+  * Re-roll, Insert, Copy, and format validation.
+* Key bindings and interaction polish
+  * Enter triggers the most relevant action based on the active tab.
+  * Escape closes the tool.
+  * Safe binding via app.binds when available; robust fallbacks otherwise.
+* Tooltips and scaling
+  * Tooltips attached to the correct, current widgets (no stale references).
+  * Best-effort DPI scaling hooks for better readability.
+* Reliability and safety improvements
+  * Consistent RNG abstraction with fallbacks (project RNG → stdlib).
+  * Defensive try/except around UI operations to avoid user disruption.
+  * Clear, actionable error messages.
+  * Insert helpers that respect caret placement when available.
+
+Calculator tool file (new):
+* Evaluation and safety
+  * Comprehensive error handling (ZeroDivisionError, NumExprError, generic exceptions) with clear messages.
+  * Input validation: length cap, allowed-character/name checks, and balanced parentheses detection.
+  * Constants and math features: pi and e support; optional degrees mode for sin/cos/tan.
+  * Debounced auto-calc with a toggle to enable/disable.
+* UI behavior
+  * Kept familiar full layout: entry, “Calculate,” last expression, operator panel toggle, keypad toggle, and tutorial link.
+  * Safer deletion in the input (selection-aware; caret-safe).
+  * Operator buttons reworked with explicit tokens and correct labels.
+* History
+  * Persistent history of (expression, result).
+  * Preview expression on select; compute via Enter or double-click.
+  * Context menu for Reuse, Compute, Copy (expr/result/both), Insert “expr = result,” and cleanup actions.
+  * Up/Down navigation in the entry recalls prior expressions.
+* Editor connectivity (self.EgonTE)
+  * Smart insertion:
+    * Insert result at caret.
+    * Replace selection with result (automatic when selection exists).
+    * Insert “expr = result.”
+  * Insert options:
+    * Trailing space and newline toggles.
+    * Insert button right-click menu to choose insert mode and whitespace/newline.
+  * History actions and middle-click can insert results directly into the editor.
+* Keyboard shortcuts
+  * Enter to calculate; Escape to close; Backspace with safe delete.
+  * Ctrl+I insert result; Ctrl+Shift+I replace selection with result; Ctrl+E insert “expr = result.”
+  * Up/Down to cycle history in the entry.
+
+Library installer UI:
+* The new installer is more reliable, more consistent with the rest of the program, safer to close/cancel, easier to theme and position, and clearer about what it restarts—while preserving the simple, determinate progress UX
+
+Version guard (new):
+* Defines a supported Python range: default is 3.10.x (RECOMMENDED=(3,10), MAX_EXCLUSIVE=(3,11)).
+* Checks the current interpreter (sys.version_info) with version_in_range.
+* If version is supported, returns True and does nothing else.
+* If not supported, it:
+  * Tries to show a small Tk dialog:
+    * Yes = Continue anyway → returns True
+    * No = Opens the provided download_url in a browser → returns False
+    * Cancel = Exit → returns False
+  * If Tk isn’t available (headless), it prints a helpful message to stderr and returns allow_continue (True by default).
+
+Libraries checkup:
+* Added all the possible libraries to the “required.txt” and “required_optional.txt”.
+* Added all the possible libraries to the lists that the library installer uses in “large_variables.py”
+* Altered the imports section order in the main program (”EgonTE.py”).
+
 [ 1.13.2 - Tools revolution 2 - 23/8/25 (Summery) ]
 OpenAI interfaces (ChatGPT and Dall-E):
 * Everything is moved into a single standalone module: ai_popups.py.
