@@ -1,68 +1,82 @@
-# default libraries
-from dependencies.large_variables import *
-from dependencies.universal_functions import *
-from UI import ui_builders
-from pop_ups.handwriting_popup import open_handwriting
-from pop_ups.encryption_popup import open_encryption
-from pop_ups.find_replace_popup import open_find_replace
-from pop_ups.file_template_generator_popup import open_document_template_generator
-from pop_ups.git_tool_popup import open_git_tool
-from pop_ups.web_scrapping_popup import open_web_scrapping_popup
-from pop_ups.nlp_popup import open_nlp
-from pop_ups.email_popup import open_email
-from pop_ups.ai_popups import open_chatgpt, open_dalle
-from UI.library_installer_ui import show_library_installer
-from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
-from tkinter import *
-import tkinter.ttk as ttk
-import subprocess
-from sys import exit as exit_
-import sys
-from sys import executable, argv
-import ssl
-from socket import gethostname
-from collections import Counter
-from itertools import islice
+# Standard library
 import os
-from random import choice, randint, random, shuffle
+import queue
+import subprocess
+import sys
 import time
+import urllib.error
+import urllib.request
+from collections import Counter
+from ctypes import byref, c_int, sizeof, windll  # Windows-only usage is guarded below
+from datetime import datetime, timedelta
+from heapq import nlargest
+from io import BytesIO
+from itertools import islice
+from json import dump, load, loads
+from pathlib import Path
+from platform import system as platform_system
+from random import choice, randint, shuffle
 from re import findall, sub, compile, IGNORECASE, escape
 from re import search as reSearch
 from re import split as reSplit
-from json import dump, load, loads
-from platform import system
-from ctypes import windll, c_int, byref, sizeof
-from heapq import nlargest
+from shutil import which as shutil_which
+from socket import gethostname
+from string import (
+	ascii_letters,
+	digits,
+	ascii_lowercase,
+	ascii_uppercase,
+	printable,
+	punctuation,
+)
+from sys import exit as exit_
 from threading import Thread
-from string import ascii_letters, digits, ascii_lowercase, ascii_uppercase, printable, punctuation
-from smtplib import SMTP_SSL
-from datetime import datetime, timedelta
-from io import BytesIO
-from importlib import util
-from pathlib import Path
-import queue
 
-def library_installer(parent: Misc | None = None) -> dict:
-	"""
-	Top-level installer entry point.
-	- parent: optional Tk widget to parent the dialog; pass a window or frame if you have one.
-			  If None, the installer will create its own root (standalone mode).
-	Returns the result dict from show_library_installer.
-	"""
-	# Use a copy so we never mutate module-level lists
+# GUI (tkinter)
+from tkinter import *
+from tkinter import filedialog, colorchooser, font, messagebox, simpledialog
+from tkinter import ttk  # same as `import tkinter.ttk as ttk`
+
+# local modules
+from UI import ui_builders
+from UI.library_installer_ui import show_library_installer
+from dependencies.large_variables import *
+from dependencies.universal_functions import *
+from dependencies.version_guard import ensure_supported_python
+
+def library_installer(parent=None):
+	'''
+	Top-level installer entry point (safe with `from tkinter import *`).
+
+	- parent: optional Tk widget to parent the dialog (e.g., a Tk or Toplevel instance).
+			  If None, the installer tries to use the default Tk root; if not found,
+			  it will create its own root window.
+	Returns:
+		result dict from show_library_installer.
+	'''
+
+	# Copy so we never mutate module-level lists
 	required = list(library_list)
 	optional = list(library_optional)
 
-	# If no parent was provided, try to use the default Tk root if one exists.
-	# Otherwise the installer will create its own root window.
+	# Helper: is this object a Tk widget?
+	def _is_tk_widget(obj):
+		try:
+			from tkinter import Misc as _Misc
+			return isinstance(obj, _Misc)
+		except Exception:
+			return False
+
+	# If no parent provided, try to use the default Tk root (works even with star-import)
 	if parent is None:
 		try:
-			parent = _get_default_root()
+			import tkinter as _tk  # local, won’t pollute your global namespace
+			parent = getattr(_tk, "_default_root", None)
 		except Exception:
 			parent = None
 
 	return show_library_installer(
-		parent=parent if isinstance(parent, Misc) else None,
+		parent=parent if _is_tk_widget(parent) else None,
 		base_libraries=required,
 		optional_libraries=optional,
 		allow_upgrade_pip=True,
@@ -73,8 +87,10 @@ def library_installer(parent: Misc | None = None) -> dict:
 		blocklist=library_blocklist,
 		pins=library_pins,
 		skip_installed=True,
+		# Ensure restart launches the main app script explicitly
+		restart_script='EgonTE.py',
+		restart_args=[],
 	)
-
 
 
 # required libraries that aren't by default
@@ -88,13 +104,12 @@ try:
 	import pyaudio  # imported to make speech_recognition work
 	from speech_recognition import Recognizer, Microphone, AudioFile, WaitTimeoutError # install SpeechRecognition
 	import webbrowser
-	import names
 	import urllib.request, urllib.error
 	from urllib.parse import urlparse
-	import requests
 	# matplotlib (graphs library) in a way that suits tkinter
 	import matplotlib
-
+	import requests
+	from smtplib import SMTP_SSL
 	matplotlib.use('TkAgg')
 	from matplotlib.figure import Figure
 	from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -126,6 +141,19 @@ try:
 except (ModuleNotFoundError) as e:
 	print(e)
 	library_installer()
+
+# Local applications
+from pop_ups.ai_popups import open_chatgpt, open_dalle
+from pop_ups.calc_popup import open_calculator
+from pop_ups.email_popup import open_email
+from pop_ups.encryption_popup import open_encryption
+from pop_ups.file_template_generator_popup import open_document_template_generator
+from pop_ups.find_replace_popup import open_find_replace
+from pop_ups.git_tool_popup import open_git_tool
+from pop_ups.handwriting_popup import open_handwriting
+from pop_ups.nlp_popup import open_nlp
+from pop_ups.randomness_app import open_random
+from pop_ups.web_scrapping_popup import open_web_scrapping_popup
 
 '''the optional libraries that can add a lot of extra content to the editor'''
 tes = ACTIVE
@@ -160,21 +188,6 @@ try:
 	deep_trans = ''
 except (ImportError, AttributeError, ModuleNotFoundError) as e:
 	google_trans = ''
-
-
-symmetric_dec = True
-try:
-	from cryptography.fernet import Fernet
-except (ImportError, AttributeError, ModuleNotFoundError) as e:
-	symmetric_dec = False
-
-asymmetric_dec = True
-try:
-	import rsa
-except (ImportError, AttributeError, ModuleNotFoundError) as e:
-	asymmetric_dec = False
-
-enc_tool = symmetric_dec or asymmetric_dec
 
 try:
 	from pyshorteners import Shortener
@@ -352,7 +365,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.2'
+		self.ver = '1.13.3'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -367,15 +380,7 @@ class Window(Tk):
 		self.title_struct = 'EgonTE - '
 		self.style_combobox = ttk.Style(self)
 
-		# set of condition that check if you have the tesseract executable
-		global tes
-		if tes == ACTIVE:
-			try:
-				if not (os.path.exists(r'Tesseract-OCR\tesseract.exe')):
-					pytesseract.pytesseract.tesseract_cmd = (r'C:\Program Files\Tesseract-OCR\tesseract.exe')
-				print('pytesseract - initial steps completed')
-			except:
-				tes = DISABLED
+		self.init_ocr_async()
 
 		# create toll tip, for the toolbar buttons (with shortcuts)
 		# TOOL_TIP = Balloon(self)
@@ -405,30 +410,15 @@ class Window(Tk):
 									  style='TCombobox', values=tuple(reversed(range(8, 80, 2))))
 		self.font_Size_c = 31
 		self.font_size.current(self.font_Size_c)  # 16 is at index 31
-		# create vertical scrollbar
-		self.eFrame = Frame(frame)
-		self.eFrame.pack(fill=BOTH, expand=True)
-		self.text_scroll = ttk.Scrollbar(self.eFrame)
-		self.text_scroll.pack(side=RIGHT, fill=Y)
-		# horizontal scrollbar
-		self.horizontal_scroll = ttk.Scrollbar(frame, orient='horizontal')
-		# create text box
-		self.EgonTE = Text(self.eFrame, width=100, height=1, font=('arial', 16), selectbackground='blue',
-						   selectforeground='white',
-						   undo=True,
-						   yscrollcommand=self.text_scroll.set, wrap=WORD, relief=self.predefined_relief,
-						   cursor=self.predefined_cursor, xscrollcommand=self.horizontal_scroll.set)
-		self.EgonTE.focus_set()
-		self.EgonTE.pack(fill=BOTH, expand=True)
-		# config scrollbars
-		self.text_scroll.config(command=self.EgonTE.yview)
-		self.horizontal_scroll.config(command=self.EgonTE.xview)
-		# create main menu's component
-		self.app_menu = Menu(frame)
-		self.config(menu=self.app_menu)
 
 		self._popup = ui_builders.UIBuilders(self)
 		self.make_pop_ups_window = self._popup.make_pop_ups_window
+
+		# build main text box and its vertical scrollbar (legacy or rich path)
+		self.build_main_textbox(parent_container=frame)
+		# create main menu's component
+		self.app_menu = Menu(frame)
+		self.config(menu=self.app_menu)
 
 		self.load_function_links()
 		self.menu_assests()
@@ -490,27 +480,6 @@ class Window(Tk):
 				padx, sticky = 5, ''
 			button.grid(row=0, column=index, sticky=sticky, padx=padx)
 
-		# opening sentence that will be inserted if there is no last opened file option
-		if not (insert_lf):
-			op_msgs = ('Hello world!', '^-^', 'What a beautiful day!', 'Welcome!', '', 'Believe in yourself!',
-					   'If I did it you can do way more than that', 'Don\'t give up!',
-					   'I\'m glad that you are using my Text editor (:', 'Feel free to send feedback',
-					   f'hi {gethostname()}')
-
-			msg_from_web = choice([True, False])
-			if msg_from_web:
-				try:
-					op_insp_msg = self.insp_quote(op_msg=True)
-					if op_insp_msg:
-						print(op_insp_msg)
-						final_op_msg = op_insp_msg
-					else:
-						raise
-				except:
-					final_op_msg = choice(op_msgs)
-			else:
-				final_op_msg = choice(op_msgs)
-			self.EgonTE.insert('1.0', final_op_msg)
 
 		# ui tuples (and list) to make management of some UI events (like night mode) easier
 		self.menus_components = [self.file_menu, self.edit_menu, self.tool_menu, self.color_menu, self.options_menu, \
@@ -526,8 +495,6 @@ class Window(Tk):
 			self.dynamic_bg = 'SystemButtonFace'
 			self.dynamic_button = 'SystemButtonFace'
 
-		self.place_toolt()
-		self.binds(mode='initial')
 		self.stt_time = get_time()
 		# Thread(target=self.record_logs, daemon=False).start()
 		# self.record_logs()
@@ -535,11 +502,208 @@ class Window(Tk):
 								  'menus': [self.menus_components, 'bg-fg'],
 								  'buttons': [self.toolbar_components, 'bg'], 'highlight': [self.EgonTE, 'selectbackground']}
 
+		self.opening_msg(insert_lf)
+		self.call_init_steps()
+
+
+	def build_main_textbox(self, parent_container):
+		'''
+		Build the main editor text box using the rich textbox path only.
+		The horizontal scrollbar is created in the same container as the text widget
+		and the vertical scrollbar to ensure correct stacking above the status bar.
+		Saves widgets into variables and wires scrollbars.
+		'''
+		# Build via rich textbox (container, text widget, vertical scrollbar)
+		rich_container_frame, rich_text_widget, vertical_scrollbar = self.make_rich_textbox(
+			root=parent_container,
+			place='pack_top',
+			wrap=WORD,
+			font='arial 16',
+			size=(100, 1),
+			selectbg='blue',
+			bd=0,
+			relief=self.predefined_relief,
+			format='txt',
+		)
+
+		# Save references
+		self.editor_container_frame = rich_container_frame
+		self.EgonTE = rich_text_widget
+		self.text_scroll = vertical_scrollbar
+
+		# Configure vertical scrollbar to control the text widget
+		try:
+			self.text_scroll.config(command=self.EgonTE.yview)
+		except Exception:
+			pass
+
+			# Create horizontal scrollbar in the same container, but DON'T pack initially
+		self.horizontal_scroll = ttk.Scrollbar(self.editor_container_frame, orient='horizontal')
+
+		# Configure text <-> horizontal scrollbar linkage
+		try:
+			self.horizontal_scroll.config(command=self.EgonTE.xview)
+			self.EgonTE.configure(xscrollcommand=self.horizontal_scroll.set)
+		except Exception:
+			pass
+
+
+		# Focus and cursor (mirror original behavior)
+		try:
+			self.EgonTE.configure(cursor=self.predefined_cursor)
+		except Exception:
+			pass
+		self.EgonTE.focus_set()
+
+	def init_ocr_async(self):
+		'''
+		Non-blocking OCR (Tesseract) setup.
+		Resolves tesseract path cross-platform and configures pytesseract if found.
+		Keeps original ACTIVE/DISABLED semantics via the global 'tes'.
+		'''
+		self.tes = tes
+
+		def ocr_worker():
+			try:
+				if self.tes != ACTIVE:
+					return
+
+				tesseract_path = None
+
+				try:
+					tesseract_path = shutil_which('tesseract')
+				except Exception:
+					tesseract_path = None
+
+				if not tesseract_path:
+					try:
+						if os.path.exists(r'Tesseract-OCR\tesseract.exe'):
+							tesseract_path = r'Tesseract-OCR\tesseract.exe'
+					except Exception:
+						pass
+
+				if not tesseract_path and platform_system.startswith('win'):
+					for candidate_path in (
+							r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+							r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+					):
+						if os.path.exists(candidate_path):
+							tesseract_path = candidate_path
+							break
+
+				if not tesseract_path and platform_system == 'darwin':
+					for candidate_path in ('/opt/homebrew/bin/tesseract', '/usr/local/bin/tesseract'):
+						if os.path.exists(candidate_path):
+							tesseract_path = candidate_path
+							break
+
+				if tesseract_path:
+					try:
+						pytesseract.pytesseract.tesseract_cmd = tesseract_path
+						print('pytesseract - initial steps completed')
+					except Exception:
+						self.tes = DISABLED
+				else:
+					self.tes = DISABLED
+			except Exception:
+				try:
+					self.tes = DISABLED
+				except Exception:
+					pass
+
+		try:
+			Thread(target=ocr_worker, daemon=True).start()
+		except Exception:
+			try:
+				if self.tes == ACTIVE:
+					try:
+						if not (os.path.exists(r'Tesseract-OCR\tesseract.exe')):
+							pytesseract.pytesseract.tesseract_cmd = (r'C:\Program Files\Tesseract-OCR\tesseract.exe')
+						print('pytesseract - initial steps completed')
+					except Exception:
+						self.tes = DISABLED
+			except Exception:
+				pass
+
+
+	def opening_msg(self, insert_lf: bool):
+		'''
+		Insert a friendly opening message without blocking startup.
+		Matches original behavior: sometimes fetch from API, otherwise pick local.
+		'''
+		# If a last file was opened, don't insert any opening message
+		if insert_lf:
+			return
+
+		# If text already has content, do nothing (idempotent guard)
+		try:
+			if self.EgonTE.get('1.0', 'end-1c').strip():
+				return
+		except Exception:
+			# If widget not ready for any reason, try a bit later
+			self.after(50, lambda: self._maybe_insert_opening_message(insert_lf))
+			return
+
+
+		def insert_message(msg: str):
+			try:
+				# Check again to avoid double insert if user typed quickly
+				if not self.EgonTE.get('1.0', 'end-1c').strip():
+					self.EgonTE.insert('1.0', msg)
+			except Exception:
+				pass
+
+		# Decide whether to attempt a web message (same coin-flip behavior)
+		try:
+			use_web = choice([True, False])
+		except Exception:
+			use_web = False
+
+		if not use_web:
+			# Purely local, schedule ASAP but idle-safe
+			self.after_idle(lambda: insert_message(choice(op_msgs)))
+			return
+
+		# Web path: run API in background and update UI via after
+		def _fetch_and_insert():
+			final_msg = None
+			try:
+				op_insp_msg = self.insp_quote(op_msg=True)
+				if op_insp_msg:
+					final_msg = op_insp_msg
+			except Exception:
+				final_msg = None
+			if not final_msg:
+				try:
+					final_msg = choice(op_msgs)
+				except Exception:
+					final_msg = 'Welcome!'
+			self.after(0, lambda: insert_message(final_msg))
+
+		try:
+			Thread(target=_fetch_and_insert, daemon=True).start()
+		except Exception:
+			# If threading fails for any reason, fall back to local immediately
+			self.after_idle(lambda: insert_message(choice(op_msgs)))
+
+
+	def call_init_steps(self):
+		'''
+		Minimal dispatcher: call existing methods in order.
+		Keep only methods that are safe to run at this point.
+		'''
+		self.place_toolt()
+		self.binds(mode='initial')
 		self.setup_auto_lists()
-		if RA:
+
+
+		if 'RA' in globals() and RA and hasattr(self, 'right_align_language_support'):
 			self.right_align_language_support()
-		if self.check_ver_v.get():
+
+		if hasattr(self, 'check_ver_v') and self.check_ver_v.get():
+			# preserve idle scheduling
 			self.after_idle(self.check_version)
+
 
 	def load_images(self):
 		'''
@@ -615,10 +779,8 @@ class Window(Tk):
 							   'clipboard history.': self.clipboard_history, 'insert images': self.insert_image
 							   }
 		self.tool_functions = {'translate': self.translate, 'current datetime|(F5)': get_time(),
-							   'random numbers': self.ins_random, 'random names': self.ins_random_name,
-							   'url shorter': self.url,
-							   'generate sequence': self.generate, 'search online': self.search_www,
-							   'sort input': self.sort,
+							   'randomness tools!': self.ins_random, 'url shorter': self.url,
+							   'search online': self.search_www, 'sort input': self.sort,
 							   'dictionary': lambda: Thread(target=self.knowledge_window('dict'), daemon=True).start(),
 							   'wikipedia!': lambda: Thread(target=self.knowledge_window('wiki'), daemon=True).start(),
 							   'web scrapping!': self.web_scrapping, 'text decorators': self.text_decorators,
@@ -666,18 +828,23 @@ class Window(Tk):
 										'advance options colors': lambda: self.custom_ui_colors(components='advance_options')
 										}
 
-		self.settings_fuctions = {'Night mode': (self.night, self.night_mode),
-								  'status bars': (self.hide_statusbars, self.show_statusbar),
-								  'tool bar': (self.hide_toolbar, self.show_toolbar), 'custom cursor': (
-				self.custom_cursor, 'tcross', 'xterm'), 'custom style': (self.custom_style, 'vista', 'clam'
-																		 ), 'word wrap': (self.word_wrap, self.word_wrap_v),
-								  'reader mode': (self.reader_mode,), 'auto save': (self.save_outvariables, self.auto_save_v),
-								  'top most': (self.topmost,), 'automatic emoji detection': (self.automatic_emojis_v,),
-								  # variable only
-								  'dev mode': (lambda: self.manage_menus(mode='dev'),),
-								  'special tools': (lambda: self.manage_menus(mode='tools'), self.sta),
-								  'fun numbers.': (self.save_outvariables, self.fun_numbers),
-								  'advance options': self.call_settings}
+		self.settings_functions = {
+			'Night mode': (self.night, self.night_mode),  # (command, BooleanVar)
+			'status bars': (self.hide_statusbars, self.show_statusbar),
+			'tool bar': (self.hide_toolbar, self.show_toolbar),
+			# For these, use plain commands; remove onvalue/offvalue pattern without var
+			'custom cursor': self.custom_cursor,
+			'custom style': self.custom_style,
+			'word wrap': (self.word_wrap, self.word_wrap_v),
+			'reader mode': (self.reader_mode,),  # treated as checkbutton with command
+			'auto save': (self.save_outvariables, self.auto_save_v),
+			'top most': (self.topmost,),
+			'automatic emoji detection': (self.automatic_emojis_v,),  # BooleanVar only
+			'dev mode': (lambda: self.manage_menus(mode='dev'),),
+			'special tools': (lambda: self.manage_menus(mode='tools'), self.sta),
+			'fun numbers.': (self.save_outvariables, self.fun_numbers),
+			'advance options': self.call_settings,
+		}
 
 		self.other_functions = {'advance options': self.call_settings, 'help': lambda: self.info_page('help'),
 								'patch notes': lambda: self.info_page('patch_notes')}
@@ -691,8 +858,9 @@ class Window(Tk):
 										 'Patch notes': lambda: self.open_windows_control(
 											 lambda: self.info_page('patch_notes'))
 			, 'Search': self.search_functions, 'links': self.links_functions}
-		self.conjoined_functions_dict = self.conjoined_functions_only
-		self.conjoined_functions_dict['options'] = self.settings_fuctions
+		self.conjoined_functions_dict = dict(self.conjoined_functions_only)
+		self.conjoined_functions_dict['options'] = self.settings_functions
+
 
 	def menu_assests(self):
 		''' a one time menu initializer, to prevent attributes and variables duplication'''
@@ -700,11 +868,12 @@ class Window(Tk):
 			[Menu(self.app_menu, tearoff=False) for x in range(7)]
 		self.menus_list = [self.tool_menu, self.nlp_menu, self.color_menu, self.links_menu, self.options_menu]
 
+
 	def create_menus(self, initial: bool):
 		'''
-		a function that creates the UI's menus and helps to manage them because it's option to create specific
-		menus after some are deleted because of its initial parameter
-		'''
+				a function that creates the UI's menus and helps to manage them because it's option to create specific
+				menus after some are deleted because of its initial parameter
+				'''
 
 		if not (initial):
 			chosen_functions_dict = {key: val for key, val in self.conjoined_functions_dict.items() if
@@ -714,18 +883,22 @@ class Window(Tk):
 			self.menus_list = [self.file_menu, self.edit_menu] + self.menus_list
 
 			'''+ loop of the commands - probably reverse this 
-			3. fix namings
-
-			5. fix list index - menu list
-
-			BONUS:
-			made also modes for non initials: use the specific "menu_content" with a conditional chosen name
-			'''
+					3. fix namings
+	
+					5. fix list index - menu list
+	
+					BONUS:
+					made also modes for non initials: use the specific "menu_content" with a conditional chosen name
+					'''
 		# newer
 		index = 0
 		for menu_name, menu_content in (chosen_functions_dict.items()):
-			menu = self.menus_list[index]
+			# Fetch the Menu object ONLY for dict-like submenus
 			if isinstance(menu_content, dict) or isinstance(menu_content, list):
+				# Guard against running out of Menu objects
+				if index >= len(self.menus_list):
+					break
+				menu = self.menus_list[index]
 				index += 1
 				self.app_menu.add_cascade(label=menu_name.capitalize(), menu=menu)
 				for name, function in menu_content.items():
@@ -769,7 +942,8 @@ class Window(Tk):
 
 			else:
 				self.app_menu.add_cascade(label=menu_name, command=menu_content)
-				index -= 1
+			# IMPORTANT: do NOT modify index here; non-dict entries don't consume a Menu
+
 
 	def place_toolt(self, *args, **kwargs):
 		'''
@@ -1014,7 +1188,7 @@ class Window(Tk):
 		return new_menu
 
 	def add_to_clipboard_history(self, item_text: str):
-		"""Add text to the clipboard history, keeping most recent at index 0 and skipping consecutive duplicates."""
+		'''Add text to the clipboard history, keeping most recent at index 0 and skipping consecutive duplicates.'''
 		if not item_text:
 			return
 		if not hasattr(self, 'copy_list') or self.copy_list is None:
@@ -1296,7 +1470,7 @@ class Window(Tk):
 		ent_filter.focus_set()
 
 	def typefaces(self, tf: str):
-		"""
+		'''
 		Toggle simple typeface styles over the selection (or whole document if no selection).
 
 		Supported:
@@ -1310,7 +1484,7 @@ class Window(Tk):
 		- No size or family handling here.
 		- Uses the widget's base font as the starting point to keep rendering consistent.
 		- Avoids trailing-newline issues by operating up to 'end-1c'.
-		"""
+		'''
 
 		def base_font_copy(widget):
 			spec = widget.cget('font')
@@ -1506,7 +1680,7 @@ class Window(Tk):
 		old function that aims to print your file
 		'''
 		file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file', filetypes=text_extensions)
-		if system().lower() == 'windows':
+		if platform_system().lower() == 'windows':
 			printer_name = GetDefaultPrinter()
 			if file2p:
 				if messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
@@ -1514,7 +1688,7 @@ class Window(Tk):
 		else:
 			printer_name = simpledialog.askstring(self.title_struct + 'Print', 'What is your printer name?')
 			if printer_name and file2p:
-				os.system(f'lpr -P f{printer_name} f{file2p}')
+				os.platform_system(f'lpr -P f{printer_name} f{file2p}')
 
 	# select all text function
 	def select_all(self, event=None):
@@ -1589,7 +1763,7 @@ class Window(Tk):
 		self.data['night_mode'] = self.night_mode.get()
 		self.update()
 
-		if system().lower() == 'windows':
+		if platform_system().lower() == 'windows':
 			# support windows 11 only
 			set_window_attribute = windll.dwmapi.DwmSetWindowAttribute
 			get_parent = windll.user32.GetParent
@@ -1870,9 +2044,9 @@ class Window(Tk):
 			self._stt_max_attempts = 3
 
 	def start_speech_to_text(self):
-		"""
+		'''
 		Main-thread entry point. Bind this to the button.
-		"""
+		'''
 		self._ensure_stt_attrs()
 		if self._stt_running:
 			return
@@ -1889,10 +2063,10 @@ class Window(Tk):
 
 
 	def _stt_worker_once(self):
-		"""
+		'''
 		Background thread: does one listen+recognize cycle.
 		No Tkinter calls here.
-		"""
+		'''
 		r = Recognizer()
 		try:
 			with Microphone() as source:
@@ -1907,9 +2081,9 @@ class Window(Tk):
 			self._stt_queue.put({'status': 'error', 'kind': 'recognition', 'error': str(e)})
 
 	def _poll_stt_queue(self):
-		"""
+		'''
 		Main-thread polling for worker results. Safe UI updates happen here.
-		"""
+		'''
 		try:
 			msg = self._stt_queue.get_nowait()
 		except queue.Empty:
@@ -1953,6 +2127,13 @@ class Window(Tk):
 		'''
 		self.saved_settings(special_mode='save')
 		self._stopwatch_running = False
+		# Cancel any scheduled stopwatch update to avoid "invalid command name" after destroy
+		try:
+			if getattr(self, "_sw_after", None):
+				self.after_cancel(self._sw_after)
+				self._sw_after = None
+		except Exception:
+			pass
 		if self.usage_report_v.get():
 			self.usage_report()
 
@@ -1961,9 +2142,8 @@ class Window(Tk):
 				self.save()
 
 		if event == 'r':
-			self.destroy()
-			app = Window()
-			app.mainloop()
+			# Slightly delay restart to let Tk settle and avoid pending callbacks firing on a destroyed widget
+			self.after(200, lambda: (self.destroy(), Window().mainloop()))
 		else:
 			self.quit()
 			exit_()
@@ -1999,124 +2179,7 @@ class Window(Tk):
 		the text editor
 		NEW : claculator buttons
 		'''
-
-		self.ins_equation = ''
-		self.extra_calc_ui = False
-		padx_b, pady_b = 1, 1
-		button_height, button_width = 3, 5
-		ex_color = '#B0A695'
-
-		def button_ui():
-			if not self.extra_calc_ui:
-				extra_frame.pack(side='right', fill=Y)
-			else:
-				extra_frame.pack_forget()
-			self.extra_calc_ui = not (self.extra_calc_ui)
-
-		def calculate_button():
-			self.ins_equation = calc_entry.get()
-
-			last_calc.configure(state='normal')
-			last_calc.delete(0, END)
-			last_calc.insert(0, self.ins_equation)
-			last_calc.configure(state='readonly')
-
-			try:
-				self.ins_equation = numexpr.evaluate(self.ins_equation)
-
-				calc_entry.delete(0, END)
-				calc_entry.insert(0, self.ins_equation)
-
-			except SyntaxError:
-				messagebox.showerror(self.title_struct + 'error', 'typed some  invalid characters')
-			except NameError:
-				messagebox.showerror(self.title_struct + 'error', 'calculation tool support only arithmetics & modulus')
-			self.ins_equation = str(self.ins_equation)
-
-		def insert_eq():
-			if self.ins_equation:
-				eq = f'{self.ins_equation} '
-				self.EgonTE.insert(self.get_pos(), eq)
-
-		def show_oper():
-			show_op.config(text='hide operations', command=hide_oper)
-			op_frame.pack()
-			numexpr_tutorial.pack()
-
-		def hide_oper():
-			op_frame.pack_forget()
-			numexpr_tutorial.pack_forget()
-			show_op.config(text='show operations', command=show_oper)
-
-		def insert_extra(exp):
-			calc_entry.insert(END, str(exp))
-
-		calc_root = self.make_pop_ups_window(self.ins_calc)
-		left_frame = Frame(calc_root)
-		title = Label(left_frame, text='Calculator', font=self.titles_font, padx=2, pady=3)
-		introduction_text = Label(left_frame, text='Enter a equation below:', font='arial 10 underline', padx=2, pady=3)
-		enter = Button(left_frame, text='Calculate', command=calculate_button, borderwidth=1, font='arial 10 bold')
-		b_frame = Frame(left_frame)
-		copy_button = Button(b_frame, text='Copy', command=lambda: copy(str(self.ins_equation)), borderwidth=1,
-							 font='arial 10')
-		insert_button = Button(b_frame, text='Insert', command=insert_eq, borderwidth=1, font='arial 10')
-		last_calc = Entry(left_frame, relief=RIDGE, justify='center', width=25, state='readonly')
-		calc_entry = Entry(left_frame, relief=RIDGE, justify='center', width=25)
-		show_op = Button(left_frame, text='Show operators', bd=1, command=show_oper)
-		calc_ui = Button(left_frame, text='Calculator UI', command=button_ui, bd=1)
-		left_frame.pack(side='left')
-		title.pack(padx=10)
-		introduction_text.pack(padx=10)
-		last_calc.pack()
-		calc_entry.pack()
-		enter.pack(pady=3)
-		b_frame.pack(pady=3)
-		copy_button.grid(row=0, column=0, padx=2)
-		insert_button.grid(row=0, column=2, padx=2)
-		show_op.pack()
-		calc_ui.pack()
-
-		op_frame = Frame(left_frame)
-		op_list, oper_buttons = ('+ addition', '- subtraction', '* multiply', '/ deviation', '** power', '% modulus'), []
-		for index, op in enumerate(op_list):
-			button = Button(op_frame, text=op, command=lambda i=op: insert_extra(f' {i[0]} '), relief=FLAT)
-			oper_buttons.append(button)
-		add, sub_b, mul, div, pow, modu = oper_buttons
-
-		add.grid(row=0, column=0)
-		sub_b.grid(row=0, column=2)
-		mul.grid(row=1, column=0)
-		div.grid(row=1, column=2)
-		pow.grid(row=2, column=0)
-		modu.grid(row=2, column=2)
-
-		numexpr_link = 'https://numexpr.readthedocs.io/en/latest/user_guide.html'
-		numexpr_tutorial = Button(left_frame, text='NumExpr tutorial', command=lambda: ex_links(link=numexpr_link)
-								  , relief=FLAT, fg='blue', font='arial 10 underline')
-
-		if self.is_marked():
-			if str(self.EgonTE.get('sel.first', 'sel.last')).isnumeric():
-				calc_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
-
-		extra_frame = Frame(calc_root, bg=ex_color)
-		b0, b1, b2, b3, b4, b5, b6, b7, b8, b9 = [
-			Button(extra_frame, text=f'{num}', command=lambda num=num: insert_extra(num), padx=padx_b, pady=pady_b,
-				   relief=FLAT, bg=ex_color, height=button_height, width=button_width) for num in range(10)]
-		clear_b = Button(extra_frame, text='C', command=lambda: calc_entry.delete(0, END), pady=pady_b, relief=FLAT,
-						 bg='#F3B664',
-						 height=button_height
-						 , width=button_width)
-		del_b = Button(extra_frame, text='DEL', command=lambda: calc_entry.delete(calc_entry.index(INSERT) - 1),
-					   pady=pady_b, relief=FLAT, bg='#F3B664',
-					   height=button_height
-					   , width=button_width)
-
-		n_list = [b0, b1, b2, b3, b4, b5, b6, b7, b8, b9]
-		pack_list, row_, column_ = [b1, b2, b3, b4, b5, b6, b7, b8, b9, clear_b, b0, del_b], 0, 0
-		for widget in pack_list:
-			widget.grid(row=row_, column=column_)
-			column_ += 1
-			if column_ == 3: row_, column_ = 1 + row_, 0
+		open_calculator(self)
 
 	def dt(self, event=None):
 		'''
@@ -2137,73 +2200,7 @@ class Window(Tk):
 		self.EgonTE.insert(self.get_pos(), message)
 
 	def ins_random(self):
-		'''
-		insert random numbers - random int / random decimal (between 0-1) to the text editor.
-		the random int is based on your input but also has random range when you open it.
-		there is also quick random int that is self-explanatory
-		'''
-
-		def enter_button_custom():
-			global num_1, num_2
-			try:
-				try:
-					num_1 = int(number_entry1.get())
-					num_2 = int(number_entry2.get())
-				except ValueError:
-					messagebox.showerror(self.title_struct + 'error', 'didn\'t typed valid characters')
-				rand = randint(num_1, num_2)
-				rand = str(rand) + ' '
-				self.EgonTE.insert(self.get_pos(), rand)
-			except NameError:
-				pass
-
-		def enter_button_quick_float():
-			random_float = str(random()) + ' '
-			self.EgonTE.insert(self.get_pos(), random_float)
-
-		def enter_button_quick_int():
-			random_float = random()
-			random_exp = len(str(random_float))
-			random_round = randint(50, 1000)
-			random_int = int(random_float * 10 ** random_exp)
-			random_int //= random_round
-			random_int = str(random_int) + ' '
-			self.EgonTE.insert(self.get_pos(), random_int)
-
-		ran_num_root = self.make_pop_ups_window(self.ins_random)
-		title = Label(ran_num_root, text='Random numbers:', justify='center',
-					  font=self.titles_font)
-		introduction_text = Label(ran_num_root, text='Enter numbers below:', justify='center',
-								  font='arial 10 underline')
-		sub_c = Button(ran_num_root, text='submit custom', command=enter_button_custom, relief=FLAT)
-		sub_qf = Button(ran_num_root, text='submit quick float', command=enter_button_quick_float, relief=FLAT)
-		sub_qi = Button(ran_num_root, text='submit quick int', command=enter_button_quick_int, relief=FLAT)
-		number_entry1 = Entry(ran_num_root, relief=RIDGE, justify='center', width=20)
-		number_entry2 = Entry(ran_num_root, relief=RIDGE, justify='center', width=20)
-		bt_text = Label(ran_num_root, text='Between', font='arial 10 bold')
-		options = None
-		title.grid(row=0, column=1)
-		introduction_text.grid(row=1, column=1, padx=5)
-		number_entry1.grid(row=2, column=1)
-		bt_text.grid(row=3, column=1)
-		number_entry2.grid(row=4, column=1)
-		sub_c.grid(row=5, column=1, padx=5)
-		sub_qf.grid(row=5, column=0)
-		sub_qi.grid(row=5, column=2, padx=5)
-
-		if self.is_marked():
-			ran_numbers = self.EgonTE.get('sel.first', 'sel.last')
-			numbers_separation = ran_numbers.split(' ')
-			if str(ran_numbers[0]).isnumeric():
-				number_entry1.insert('end', numbers_separation[0])
-			try:
-				number_entry2.insert('end', numbers_separation[1])
-			except IndexError:
-				pass
-		else:
-			if self.fun_numbers.get():
-				number_entry1.insert('end', str(randint(1, 10)))
-				number_entry2.insert('end', str(randint(10, 1000)))
+		open_random(self)
 
 	def copy_file_path(self, event=None):
 		'''
@@ -2286,67 +2283,6 @@ class Window(Tk):
 		self.data['reader_mode'] = self.reader_mode_v
 		self.reader_mode_v = not (self.reader_mode_v)
 
-	def ins_random_name(self):
-		'''
-		the function is generating random names (with some gender and parts od name options),
-		and there is an option to paste the random generated to the main text box
-		'''
-		global random_name
-
-		# insert the random name into the text box
-		def button():
-			global random_name
-			self.EgonTE.insert(self.get_pos(), random_name + ' ')
-
-		# basic name roll
-		def roll():
-			global random_name
-			random_name = names.get_full_name()
-			rand_name.config(text=random_name)
-
-		# UI & values
-		def adv_option():
-			global gender, types
-			type_string = StringVar()
-			gender_string = StringVar()
-			gender = ttk.Combobox(name_root, width=13, textvariable=gender_string, state='readonly',
-								  font=('arial', 10, 'bold'), )
-			types = ttk.Combobox(name_root, width=13, textvariable=type_string, state='readonly',
-								 font=('arial', 10, 'bold'), )
-			gender['values'] = ('Male', 'Female')
-			types['values'] = ('Full Name', 'First Name', 'Last Name')
-			gender.grid(row=6, column=0)
-			types.grid(row=7, column=0)
-			adv_options.grid_forget()
-
-			# advance name roll
-			def adv_random_name():
-				global random_name
-				gender_value = gender.get()
-				type_value = types.get()
-				if type_value == 'Last Name':
-					random_name = names.get_last_name()
-				elif type_value == 'Full Name' or type_value == 'First Name':
-					random_name = names.get_full_name(gender=gender_value.lower())
-					if type_value == 'First Name':
-						random_name = random_name.split(' ')[0]
-				rand_name.config(text=random_name)
-				re_roll.config(command=adv_random_name)
-
-		name_root = self.make_pop_ups_window(self.ins_random_name)
-		random_name = names.get_full_name()
-		text = Label(name_root, text='Random name that generated:', font='arial 10 underline')
-		rand_name = Label(name_root, text=random_name)
-		enter = Button(name_root, text='Submit', command=button, relief=RIDGE)
-		re_roll = Button(name_root, text='Re-roll', command=roll, relief=RIDGE)
-		adv_options = Button(name_root, text='Advance options', command=adv_option, state=ACTIVE, relief=RIDGE)
-		copy_b = Button(name_root, text='Copy', command=lambda: copy(str(random_name)), width=10, relief=RIDGE)
-		text.grid(row=0, padx=10)
-		rand_name.grid(row=1)
-		enter.grid(row=2)
-		re_roll.grid(row=3)
-		adv_options.grid(row=4)
-		copy_b.grid(row=5)
 
 	def translate(self):
 		'''
@@ -2556,101 +2492,6 @@ class Window(Tk):
 		self.EgonTE.delete(*self.text_index)
 		self.EgonTE.insert(self.first_index, sorted_words)
 
-	def generate(self):
-		'''
-		insert a random generated string in the length that you decide, contains regular english characters and numbers,
-		and also can contain many common symbols if you active its option
-		'''
-
-		def generate_sequence():
-			global sym_char
-			try:
-				length = int(length_entry.get())
-				approved = True
-			except ValueError:
-				messagebox.showerror(self.title_struct + 'error', 'didn\'t write the length')
-				approved = False
-			if approved:
-				if length < 20000:
-					approved = True
-				else:
-					if messagebox.askyesno('EgonTE', '20000 characters or more can cause lag,'
-													 ' are you sure you want to proceed?'):
-						approved = True
-					else:
-						approved = False
-			if approved:
-				sym_char = '!', '@', '#', '$', '%', '^', '&', '*', '(', ')'
-				if self.generate_sym.get():
-					for character in sym_char:
-						characters.append(character)
-					else:
-						try:
-							remove_list = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
-							for i in characters:
-								if i in remove_list:
-									characters.remove(i)
-						except ValueError as e:
-							print(e)
-				shuffle(characters)
-				sequence = []
-				for i in range(length):
-					sequence.append(choice(characters))
-
-				desired_pos = END
-				if self.insert_mc.get():
-					desired_pos = self.get_pos()
-				if self.preview_sequence.get():
-					def insert_gs():
-						self.EgonTE.insert(desired_pos, ''.join(sequence))
-						preview_root.destroy()
-
-					preview_root = Toplevel()
-					self.make_tm(preview_root)
-					preview_root.title(self.title_struct + 'preview of G.S')
-					text_frame, text, text_scroll = self.make_rich_textbox(preview_root)
-					text.insert(END, ''.join(sequence))
-					text.configure(state=DISABLED)
-					insert_button = Button(preview_root, text='Insert', command=insert_gs)
-					insert_button.pack()
-				else:
-					self.EgonTE.insert(desired_pos, ''.join(sequence))
-
-		self.generate_sym = BooleanVar()
-		self.insert_mc = BooleanVar()
-		self.preview_sequence = BooleanVar()
-		self.insert_mc.set(True)
-		generate_root = self.make_pop_ups_window(self.generate)
-		characters = list(ascii_letters + digits)
-		intro_text = Label(generate_root, text='Generate a random sequence', font=self.titles_font)
-		length_entry = Entry(generate_root, width=15)
-		option_text = Label(generate_root, text='Options', font='arial 12 underline')
-		options_frame = Frame(generate_root)
-		sym_checkbutton = Checkbutton(options_frame, text='Include symbols', variable=self.generate_sym)
-		length_text = Label(generate_root, text='length', padx=10, font='arial 10 underline')
-		# option_text = Label(generate_root, text='Options',  font='arial 10 underline')
-		msc_checkbutton = Checkbutton(options_frame, text='Insert at pointer', variable=self.insert_mc)
-		enter_button = Button(generate_root, text='Enter', width=8, height=1, bd=1, command=generate_sequence)
-		preview_checkbutton = Checkbutton(options_frame, text='Open with preview', variable=self.preview_sequence)
-
-		if self.fun_numbers.get():
-			length_entry.insert(0, randint(10, 100))
-
-		intro_text.pack()
-		length_text.pack()
-		length_entry.pack(pady=3)
-		option_text.pack()
-		# sym_checkbutton.pack(pady=3)
-		option_text.pack()
-		options_frame.pack()
-		msc_checkbutton.grid(row=0, column=0)
-		sym_checkbutton.grid(row=1, column=0)
-		preview_checkbutton.grid(row=2, column=0)
-		enter_button.pack()
-
-		generate_root.update_idletasks()
-		generate_w, generate_h = generate_root.winfo_width() + 100, generate_root.winfo_height()
-		generate_root.geometry(f'{generate_w}x{generate_h}')
 
 	# font size up / down by 1 iteration
 	def sizes_shortcuts(self, value=-1):
@@ -3058,10 +2899,10 @@ class Window(Tk):
 
 
 		def custom_binding(mode: str):
-			"""
+			'''
 			mode is the group key (e.g., 'filea', 'typea', 'editf', 'textt', 'windf', 'autof', 'autol').
 			Each checkbox drives a BooleanVar in self.binding_work[mode].
-			"""
+			'''
 			var = self.binding_work.get(mode)
 			if var and var.get():
 				# enable (bind) this group only
@@ -3071,9 +2912,9 @@ class Window(Tk):
 				self.unbind_group(mode)
 
 		def reset_binds():
-			"""
+			'''
 			Restore original values: set all flags to True and re-apply all bindings.
-			"""
+			'''
 			for var in self.binding_work.values():
 				try:
 					var.set(True)
@@ -4205,7 +4046,7 @@ class Window(Tk):
 				# getting the actual file info
 				file_size = os.path.getsize(file_info_name)
 
-				if system().lower() == 'windows':
+				if platform_system().lower() == 'windows':
 					creation_time = datetime.fromtimestamp((os.path.getctime(file_info_name)))
 					modified_time = datetime.fromtimestamp((os.path.getmtime(file_info_name)))
 				else:
@@ -4264,9 +4105,9 @@ class Window(Tk):
 
 
 	def file_template_generator(self, event=None):
-		"""
+		'''
 		Delegate to the standalone Document Template Generator popup implementation.
-		"""
+		'''
 		return open_document_template_generator(self, event)
 
 
@@ -5009,7 +4850,8 @@ class Window(Tk):
 		ss = int(td.total_seconds()) % 60
 		if self.op_active:
 			self.usage_time.configure(text=f"Usage time: {hh:02}:{mm:02}:{ss:02}")
-		self.after(500, self._update_stopwatch)
+		# Store the after() id so we can cancel it on exit/restart
+		self._sw_after = self.after(500, self._update_stopwatch)
 
 
 	def merge_files(self):
@@ -5759,73 +5601,151 @@ class Window(Tk):
 			self.log_root.attributes('-topmost', True)
 			self.log_root.attributes('-topmost', False)
 
+
 	def manage_menus(self, mode: str):
 		'''
-		this window manage the diffrent menu modes that the program have, is can delete menus, call the create menus
-		function, change / add things to capture the mode that the user selected for the program
-		'''
+			this window manage the diffrent menu modes that the program have, is can delete menus, call the create menus
+			function, change / add things to capture the mode that the user selected for the program
+			'''
+
+		# Helpers: reliable label-based add/remove in any Menu
+		def _find_entry_index_by_label(menu_obj, label_text: str):
+			try:
+				end = menu_obj.index('end')
+			except Exception:
+				end = None
+			if end is None:
+				return None
+			target = (label_text or '').casefold()
+			for i in range(end + 1):
+				try:
+					t = menu_obj.type(i)
+					if t in ('cascade', 'command', 'checkbutton', 'radiobutton'):
+						if (menu_obj.entrycget(i, 'label') or '').casefold() == target:
+							return i
+				except Exception:
+					pass
+			return None
+
+		def _delete_if_exists(menu_obj, label_text: str):
+			idx = _find_entry_index_by_label(menu_obj, label_text)
+			if idx is not None:
+				try:
+					menu_obj.delete(idx)
+				except Exception:
+					pass
+
+		def _add_check_once(menu_obj, label_text: str, **kwargs):
+			if _find_entry_index_by_label(menu_obj, label_text) is None:
+				try:
+					menu_obj.add_checkbutton(label=label_text, **kwargs)
+				except Exception:
+					pass
+
+		def _add_cascade_once(root_menu, label_text: str, *, menu=None, command=None):
+			if _find_entry_index_by_label(root_menu, label_text) is not None:
+				return
+			try:
+				if menu is not None:
+					root_menu.add_cascade(label=label_text, menu=menu)
+				elif command is not None:
+					root_menu.add_cascade(label=label_text, command=command)
+			except Exception:
+				pass
+
+		# Ensure the "Options" cascade exists before we touch self.options_menu
+		def _ensure_options_cascade():
+			try:
+				if _find_entry_index_by_label(self.app_menu, 'Options') is None:
+					# Attach the existing submenu instance
+					self.app_menu.add_cascade(label='Options', menu=self.options_menu)
+			except Exception:
+				pass
+
 		if mode == 'dev':
-			if self.dev_mode.get():
-				self.app_menu.delete('Record')
-				self.app_menu.delete('Git')
-				self.options_menu.delete('prefer gpu')
+			# Toggle internally (restores previous automatic behavior)
+			new_state = not self.dev_mode.get()
+			self.dev_mode.set(new_state)
+
+			# Always ensure Options cascade is visible before editing its items
+			_ensure_options_cascade()
+
+			if new_state:
+				_add_cascade_once(self.app_menu, 'Record', command=self.call_record)
+				_add_check_once(self.options_menu, 'prefer gpu', variable=self.prefer_gpu)
+
+				if _find_entry_index_by_label(self.app_menu, 'Git') is None:
+					self.git_menu = Menu(self.app_menu, tearoff=False)
+					self.app_menu.add_cascade(label='Git', menu=self.git_menu)
+					self.git_menu.add_command(label='Pull', command=lambda: self.gitp('pull'))
+					self.git_menu.add_command(label='Push', command=lambda: self.gitp('push'), state=DISABLED)
+					self.git_menu.add_command(label='Commit', command=lambda: self.gitp('commit'))
+					self.git_menu.add_command(label='Add', command=lambda: self.gitp('add'))
+					self.git_menu.add_separator()
+					self.git_menu.add_command(label='Clone', command=lambda: self.gitp('clone'))
+					self.git_menu.add_command(label='Commit data', command=lambda: self.gitp('commit data'))
+					self.git_menu.add_command(label='Repository Information',
+											  command=lambda: self.gitp('repo info'))
+					self.git_menu.add_separator()
+					self.git_menu.add_command(label='Custom command', command=lambda: self.gitp('execute'))
+
+					self.menus_components.append(self.git_menu)
+			else:
+				_delete_if_exists(self.app_menu, 'Record')
+				_delete_if_exists(self.app_menu, 'Git')
+				_delete_if_exists(self.options_menu, 'prefer gpu')
 				try:
 					self.menus_components.remove(self.git_menu)
-				except:
-					self.menus_components.pop(-1)
-			else:
-				self.app_menu.add_cascade(label='Record', command=self.call_record)
-				self.options_menu.add_checkbutton(label='prefer gpu', variable=self.prefer_gpu)
+				except Exception:
+					try:
+						self.menus_components.pop(-1)
+					except Exception:
+						pass
 
-				self.git_menu = Menu(self.app_menu, tearoff=False)
-				self.app_menu.add_cascade(label='Git', menu=self.git_menu)
-				self.git_menu.add_command(label='Pull', command=lambda: self.gitp('pull'))
-				self.git_menu.add_command(label='Push', command=lambda: self.gitp('push'))
-				self.git_menu.add_command(label='Commit', command=lambda: self.gitp('commit'))
-				self.git_menu.add_command(label='Add', command=lambda: self.gitp('add'))
-				self.git_menu.add_separator()
-				self.git_menu.add_command(label='Clone', command=lambda: self.gitp('clone'))
-				self.git_menu.add_command(label='Commit data', command=lambda: self.gitp('commit data'))
-				self.git_menu.add_command(label='Repository Information',
-										  command=lambda: self.gitp('repo info'))
-				self.git_menu.add_separator()
-				self.git_menu.add_command(label='Custom command', command=lambda: self.gitp('execute'))
-
-				self.menus_components.append(self.git_menu)
-
-			self.dev_mode.set(not (self.dev_mode.get()))
 		elif mode == 'tools':
 			if not (self.sta.get()):
-				self.app_menu.delete('Colors+')
-				self.app_menu.delete('Tools')
+				_delete_if_exists(self.app_menu, 'Colors+')
+				_delete_if_exists(self.app_menu, 'Tools')
 			else:
 
-				self.app_menu.delete('NLP')
-				self.app_menu.delete('Options')
-				self.app_menu.delete('Help')
-				self.app_menu.delete('Patch notes')
-				self.app_menu.delete('External links')
+				for lbl in ('NLP', 'Options', 'Help', 'Patch notes', 'External links'):
+					_delete_if_exists(self.app_menu, lbl)
 
 				if self.dev_mode.get():
-					self.app_menu.delete('Record')
-					self.app_menu.delete('Git')
-					self.options_menu.delete('prefer gpu')
+					_delete_if_exists(self.app_menu, 'Record')
+					_delete_if_exists(self.app_menu, 'Git')
+					_delete_if_exists(self.options_menu, 'prefer gpu')
 
 				self.create_menus(initial=False)
 
 				if self.dev_mode.get():
-					self.app_menu.add_cascade(label='Record', command=self.call_record)
+					_add_cascade_once(self.app_menu, 'Record', command=self.call_record)
+
 		elif mode == 'python':
 			# python menu
 			if self.python_file:
-				self.app_menu.add_cascade(label='Run', command=self.run_code)
-				self.app_menu.add_cascade(label='Clear console', command=self.clear_console)
+				_add_cascade_once(self.app_menu, 'Run', command=self.run_code)
+				_add_cascade_once(self.app_menu, 'Clear console', command=self.clear_console)
 
-				self.options_menu.add_separator()
-				self.options_menu.add_checkbutton(label='Auto clear console', variable=self.auto_clear_c)
-				self.options_menu.add_checkbutton(label='Save by running', variable=self.sar)
+				# Ensure Options cascade is present before adding items to it
+				_ensure_options_cascade()
 
-			# self.sta.set(not(self.sta.get()))
+				# Avoid stacking separators and duplicates
+				try:
+					last = self.options_menu.index('end')
+					last_type = self.options_menu.type(last) if last is not None else None
+					if last_type != 'separator':
+						self.options_menu.add_separator()
+				except Exception:
+					pass
+				_add_check_once(self.options_menu, 'Auto clear console', variable=self.auto_clear_c)
+				_add_check_once(self.options_menu, 'Save by running', variable=self.sar)
+
+		# Hint Tk to refresh menu UI (best-effort, harmless if not needed)
+		try:
+			self.update_idletasks()
+		except Exception:
+			pass
 
 	def emoticons(self, reverse : bool):
 		content = self.EgonTE.get('1.0', 'end').split(' ')
@@ -6566,10 +6486,15 @@ def new_window(app):
 
 
 if __name__ == '__main__':
-	if req_lib:
-		app = Window()
-		app.mainloop()
+	# python version guard
+	if not ensure_supported_python():
+		sys.exit(1)
 	else:
-		if messagebox.askyesno('EgonTE', 'some of the required libraries aren\'t installed\ndo you want to open the '
-										 'libraries installer again?'):
-			library_installer()
+		# libraries installation guard
+		if req_lib:
+			app = Window()
+			app.mainloop()
+		else:
+			if messagebox.askyesno('EgonTE', 'some of the required libraries aren\'t installed\ndo you want to open the '
+											 'libraries installer again?'):
+				library_installer()
