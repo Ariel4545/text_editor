@@ -27,3 +27,5 @@ webbrowser
 wikipedia
 win32api
 numexpr
+requests
+smtplib
