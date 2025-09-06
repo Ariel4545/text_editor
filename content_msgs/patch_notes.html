@@ -1,5 +1,233 @@
 <h3>Version - name - release date</h3>
 
+<h3>[ 1.13.4 - Nifty tools - 6/9/25 ]</h3>
+
+<h4>EgonTE</h4>
+
+<h5>Usage report</h5>
+<ul>
+  <li>Duration source unified
+    <ul>
+      <li>Exclusively uses the existing stopwatch state for elapsed time; avoids duplicate timing logic</li>
+      <li>Reads start_time and start_date; computes duration with perf_counter for accuracy and consistency</li>
+    </ul>
+  </li>
+  <li>Report structure and formatting
+    <ul>
+      <li>Clear header with session start, end, and human-friendly duration</li>
+      <li>Stable ordering for session statistics; safe stringification of values</li>
+    </ul>
+  </li>
+  <li>Action analytics
+    <ul>
+      <li>Totals and unique action counts from recorded actions</li>
+      <li>Lightweight categorization by first token after the log dash</li>
+      <li>Displays top categories for a quick overview</li>
+    </ul>
+  </li>
+  <li>Large-log handling
+    <ul>
+      <li>Truncates detailed action logs after a safe threshold with a clear remainder count</li>
+      <li>Normalizes line breaks within records for single-line readability</li>
+    </ul>
+  </li>
+  <li>Output and portability
+    <ul>
+      <li>Creates a dedicated report directory if missing</li>
+      <li>Generates safe, timestamped file names with sanitized characters</li>
+      <li>Writes using UTF-8 and normalized newlines for portability</li>
+    </ul>
+  </li>
+  <li>Resilience and fallbacks
+    <ul>
+      <li>Graceful error handling during writes with a partial fallback report path</li>
+      <li>Avoids raising to callers while still surfacing partial data</li>
+    </ul>
+  </li>
+  <li>Privacy and transparency
+    <ul>
+      <li>Local-generation privacy note clarifying no transmission of data</li>
+    </ul>
+  </li>
+  <li>Return value
+    <ul>
+      <li>Returns the absolute path to the generated report for downstream use</li>
+    </ul>
+  </li>
+  <li>Project conventions
+    <ul>
+      <li>Adheres to snake_case and single quotes; no leading-underscore helpers; no in-function imports</li>
+    </ul>
+  </li>
+</ul>
+
+<h5>Others</h5>
+<ul>
+  <li>Added forwarders for all standalone files of improved tools and removed legacy code (translate, text decorators, transcript)</li>
+    <li>Added a new "Translation" graphic button instead of the ("Translation") drop-down menu's item.</li>
+</ul>
+
+<h4>Translation tool (new standalone file)</h4>
+
+<h5>Additions</h5>
+<ul>
+  <li>Language search fields under "From" and "To" with live filtering by display name and ISO code</li>
+  <li>Runtime detection of supported language codes for both backends; validates and auto-repairs user inputs</li>
+  <li>Auto backend preference ("auto") chooses optimal backend at runtime</li>
+  <li>History export to JSON and CSV with clear success/error messages</li>
+  <li>Modules tab "Reinstall Selected" (uninstall + install); live enable/disable of Translate based on availability</li>
+  <li>Clear progress and result statuses; hints for likely source language when auto-detect is enabled</li>
+</ul>
+
+<h5>Changes / Improvements</h5>
+<ul>
+  <li>Backend-aware language aliasing and normalization
+    <ul>
+      <li>Robust handling for he/iw, jv/jw, tl/fil, zh/zh-cn/zh-tw, ua/uk, nb/nn->no, and more</li>
+      <li>Canonicalization of backend-returned codes ensures consistent UI and history</li>
+    </ul>
+  </li>
+  <li>Translation pipeline
+    <ul>
+      <li>Reuses a single translator per request; unified chunking; fewer allocations</li>
+      <li>"Auto" prefers deep-translator; falls back to googletrans when needed</li>
+      <li>googletrans attempts multiple service URLs before falling back to deep-translator</li>
+    </ul>
+  </li>
+  <li>UI/UX
+    <ul>
+      <li>Debounced triggers applied to typing, selections, and programmatic changes</li>
+      <li>Combobox typing narrows current filtered list; search fields persist filters</li>
+      <li>RTL alignment reapplies only on direction changes to reduce flicker</li>
+    </ul>
+  </li>
+  <li>History
+    <ul>
+      <li>Efficient trimming by configurable limit and smoother refresh</li>
+    </ul>
+  </li>
+  <li>Modules
+    <ul>
+      <li>Clearer status/version display; action text reflects install vs reinstall</li>
+    </ul>
+  </li>
+</ul>
+
+<h5>Fixes</h5>
+<ul>
+  <li>Backend failures from mismatched language codes (he vs iw, tl vs fil, Chinese variants)</li>
+  <li>Inconsistent normalization of backend-detected language codes (now canonicalized)</li>
+  <li>Cases where "auto" was inadvertently used as a target language</li>
+  <li>Redundant state updates causing minor UI stalls or jitter</li>
+</ul>
+
+<h4>Text decorators (new standalone file)</h4>
+
+<h5>Additions</h5>
+<ul>
+  <li>Standalone popup with top controls (Style, Layout, Preview, Options, Tools, Transforms, Outport, Window)</li>
+  <li>Main content: Input and Output with dedicated scrollbars</li>
+  <li>Style validation: one-time check for malformed triples, alphabet/dict mismatches, glyph height inconsistencies</li>
+  <li>Per-style glyph cache with normalized, center-padded rects; reused for speed and consistency</li>
+  <li>Vertical placement spacing with configurable blank-row separation</li>
+  <li>Combined preview window with "Alphabet" and "Chars" tabs; font/size/placement/spacing controls, live status, copy/save</li>
+  <li>Tools and Transforms: quick actions (use editor text, clear, trim) and transforms (reverse, join, sort, toggle case, insert tab)</li>
+  <li>Outport: insert to editor, copy to clipboard, save as .txt</li>
+  <li>Window/layout controls: lock min size, resizable toggle, compact padding, center, swap tabs, side-by-side editor layout</li>
+</ul>
+
+<h5>Changes / Improvements</h5>
+<ul>
+  <li>Rendering pipeline: unified normalization, robust key resolution, consistent auto-spacing for both orientations</li>
+  <li>Performance: render memoization keyed by (style, placement, text, spacing); fast per-style rects</li>
+  <li>UI consistency: output wrap mirrored across layouts; "Focus Output after render" respected when Live is off</li>
+  <li>Large-input guard prompts before expensive renders; tab size edits trigger scheduled re-render</li>
+  <li>Preview ergonomics: live status (chars/lines/spacing/placement), polished copy/save flows</li>
+  <li>Alphabet building favors single-character keys; clear per-placement character list</li>
+</ul>
+
+<h5>Fixes</h5>
+<ul>
+  <li>Vertical mode reliability: always renders, caches, and returns output</li>
+  <li>Spacing safety: defensive clamps for join/stack paths</li>
+  <li>Blank-row generation aligned to glyph rect width; handles edge widths gracefully</li>
+  <li>Glyph edge cases: guards for empty line lists and zero-width conditions</li>
+  <li>Event duplication: removed redundant bindings and duplicate Return handlers</li>
+  <li>Unsupported characters: clear ask/auto-replace-with-space path</li>
+  <li>Layout sync: accurate content and wrap mirroring between layouts</li>
+  <li>Debounce correctness: cancels pending callbacks to avoid overlap and flicker</li>
+</ul>
+
+<h4>OpenAI API tools (ChatGPT and DALL-E)</h4>
+
+<h5>Additions</h5>
+<ul>
+  <li>Unified pop-up factory integration with app popup builder; graceful fallback when unavailable</li>
+  <li>Key dialog UX: Show/Hide key, Paste, Clear, inline status bar with progress, Test Connection, secret bypass (env code or SHA-256 hash), legacy Ctrl+Shift+B</li>
+  <li>Chat: sidebar system prompt with presets (Default/Concise/Detailed/Code), streaming with Stop, token count indicator, shortcuts (Enter, Ctrl+1/2/3)</li>
+  <li>DALL-E: multi-view modes (Split, Gallery, Viewer-only, List-only) with Alt+1/2/3/4, persisted view, inline viewer (Pillow) with zoom, thumbnail grid with lazy loading, right-click actions</li>
+  <li>Utilities: copy/open URLs, download/copy images, decode base64 to temp files, fetch image bytes, open folders/files cross-platform</li>
+</ul>
+
+<h5>Changes / Improvements</h5>
+<ul>
+  <li>Key dialog: single provider-aware dialog (OpenAI/Azure) with dynamic fields; remembered provider; guarded lifecycle</li>
+  <li>Chat UI: more modern; bypass mode simulation; trimmed conversation; safer threading and UI posts</li>
+  <li>DALL-E UI: clearer header; separated action bar; read-only outputs with double-click/context menu; centered scrollable viewer; smooth scrolling</li>
+  <li>Consistency/resilience: snake_case, single quotes, cohesive theming, centralized fallbacks, standardized key/mouse interactions</li>
+</ul>
+
+<h5>Fixes</h5>
+<ul>
+  <li>Key dialog crash after bypass/close (guarded callbacks/status)</li>
+  <li>Legacy name mismatch via compatibility shim for on_service_change()</li>
+  <li>UI race conditions: workers check window before posting</li>
+  <li>Robust error surfacing to status line (wrapping) instead of raising</li>
+  <li>Output interactions: fixed context menu/selection; enforced read-only</li>
+</ul>
+
+<h4>Transcription tool (new standalone file)</h4>
+
+<h5>Additions</h5>
+<ul>
+  <li>Dedicated entry open_transcript(app) with complete workflow</li>
+  <li>Busy modal and background runner (run_async) with optional cancel</li>
+  <li>YouTube transcript language selection; graceful fallback to translated tracks</li>
+  <li>Local audio segmentation with configurable segment length; large-file prompt</li>
+  <li>Privacy controls: redact emails/long numbers/token-like secrets; confirm before copying/saving unredacted</li>
+  <li>Exports: TXT (optional inline timestamps), SRT, VTT, Markdown, HTML, JSON, CSV, DOCX; YouTube timestamp links</li>
+  <li>Result windows for text/captions; format selection for insertion; timestamp toggle</li>
+  <li>Shortcuts: copy/save/escape; Return to fetch YouTube when valid</li>
+  <li>Tooltips for all actions; guardrails for DOCX and empty buffers</li>
+  <li>Consistent widget variable bindings for safe reconfiguration</li>
+</ul>
+
+<h5>Changes / Improvements</h5>
+<ul>
+  <li>Unified project style: snake_case, descriptive identifiers, single quotes, imports at module top-level</li>
+  <li>Refactored to app-level builders (make_pop_ups_window, make_rich_textbox, place_toolt)</li>
+  <li>Robust retries with exponential backoff for YouTube and speech recognition</li>
+  <li>Safer YouTube URL/ID normalization; cleans extraneous parameters</li>
+  <li>Caption normalization: default duration inference, whitespace collapsing, optional removal of bracketed tags</li>
+  <li>SRT/VTT correctness: reliable time formatting, wrapping, sensible line limits</li>
+  <li>CSV export keeps numeric precision; selective redaction for text fields</li>
+  <li>Editor insertion modes consolidated with stable focus/scroll</li>
+  <li>Clearer UX: status feedback, button enablement based on validation, consistent notifications</li>
+  <li>Resource lifecycle: temp files cleaned; UI elements re-enabled; busy popups closed reliably</li>
+  <li>Segment-based pipeline tuned for responsiveness on long audio</li>
+</ul>
+
+<h5>Fixes</h5>
+<ul>
+  <li>Prevent crashes when optional libraries are missing with user-facing guidance</li>
+  <li>Validated DOCX buffers to avoid empty saves</li>
+  <li>Avoided Tk state errors via defensive widget checks/toggles</li>
+  <li>Eliminated silent failures in clipboard/editor operations</li>
+  <li>Addressed GC-related widget issues by retaining references</li>
+  <li>Ensured temporary WAV files are always removed</li>
+  <li>Hardened error surfaces with contextual messages and safe fallbacks</li>
+</ul>
+
 <h3>[ 13.3.3 - Tools & fixes - 30/8/25 ]</h3>
 
 <h4>EgonTE</h4>
@@ -1021,147 +1249,7 @@
 <ul>
   <li>Six shortcuts added</li>
 </ul>
-<h3 id="ef67f9adbaafdf579195bea2e02e65e56">[ 1.1 - better tools U.I. - 17/9/22 ]</h3>
-<p><br>bug fixes<br>UI/UX improvement for tools</p>
-<p>&nbsp;</p>
-<h3 id="e6da3fb3ef9698e0db1bff6eb8f16bca1">[ 1.0 - &nbsp;text twisting function &amp; more functionalities - 16/9/22 ]</h3>
-<p><br>added functionality that warns for unsaved changes (file)<br>added fonts<br>added fun functions that reverse words, reverse characters, join words, lower/upper<br>added function that generates random characters<br>!</p>
-<p>&nbsp;</p>
-<h3 id="e7e9a3e45be7c6b1ab56ff385a7303ccc">[ 0.9.9 - 15/9/22]</h3>
-<p><br>added replace (text) function</p>
-<p>&nbsp;</p>
-<h3 id="e6ebde5b9baf3d4e198ba5a1431ba3ded">[ 0.9.8 - 14/9/22 ]</h3>
-<p><br>added URL shorter tool</p>
-<p>&nbsp;</p>
-<h3 id="eac7480b436afbd90a2517cf5eb3c5110">[ 0.9.7 - 13/9/22]</h3>
-<p><br>improved code writing<br>added advanced name generator tool<br>bug fixes</p>
-<p>&nbsp;</p>
-<h3 id="e965de344490dee644afd5685981cf8ad">[ 0.9.4 - better code + better open &amp; quit - 12/9/22 ]</h3>
-<p><br>optimized imports<br>improved code writing<br>improved window placement<br>improved exit function<br>added more opening msgs</p>
-<p>&nbsp;</p>
-<h3 id="e19ae0a5c4e1e5bb3866414ac84e57ddd">[ 0.9.3 - 11/9/22]</h3>
-<p><br>bug fixes<br>added space when inserting certain things from tools</p>
-<p>&nbsp;</p>
-<h3 id="ea57e2a784296d591d628e582b23e124a">[ 0.9.2 - adv random tool &amp; more - 10/9/22 ]</h3>
-<p><br>Advanced random numbers tool<br>added space when inserting certain things from tools<br>added reference to modulus in calc explanation<br>made random name root not resizable</p>
-<p>&nbsp;</p>
-<h3 id="eff5b7bca335c522ba82677b54331a53f">[ 0.9.1 - 9/9/22]</h3>
-<p><br>U.I. for the random names tool</p>
-<p>&nbsp;</p>
-<h3 id="e17a436fd50a068878a267b3f6b8e8c8d">[ 0.9 - 8/9/22 ]</h3>
-<p><br>added translate tool<br>bug fixes<br>changed Insert menu name to tool menu</p>
-<p>&nbsp;</p>
-<h3 id="e05822c7e43f414789a74434bb4f86469">[ 0.8.8 - 7/9/22 ]</h3>
-<p><br>added random name tool</p>
-<p>&nbsp;</p>
-<h3 id="e0f4e65a75e0af4afa0719ad817c2cc7c">[ 0.8.7 - 6/9/22 ]</h3>
-<p><br>added an option to change the cursor to the default one</p>
-<p>&nbsp;</p>
-<h3 id="e7b1f31e8d3bfb7fab0dba8ca2938fd24">[ 0.8.6 - 6/9/22]</h3>
-<p><br>added 3 new tooltip(s)<br>added four new shortcuts</p>
-<p>&nbsp;</p>
-<h3 id="ecabe85fd3913abfa12f4230e31d87eec">[ 0.8.4 - 4/9/22 ]</h3>
-<p><br>bug fixes<br>added error handling for - saving a file, changing text colors, calc, random numbers<br>copy file path function</p>
-<p>&nbsp;</p>
-<h3 id="e8402ec60401b844b06913ca869773a57">[ 0.8.3 - 3/9/22 ]</h3>
-<p><br>added an operation list for the calculation tool</p>
-<p>&nbsp;</p>
-<h3 id="e858704ad776e5c95cd818ade1edcbd58">[ 0.8.2 - 3/9/22 ]</h3>
-<p><br>experimented more with the fonts/size</p>
-<p>&nbsp;</p>
-<h3 id="ec29475332b557af27a97777c4e2b5229">[ 0.8.1 - 2/9/22 ]</h3>
-<p><br>added an option to insert a random number<br>improved calc U.I.</p>
-<p>&nbsp;</p>
-<h3 id="ed444a6397d6a32f730a1a756af8805f6">[ 0.8 - 1/9/22 ]</h3>
-<p><br>added option to insert datetime</p>
-<p>&nbsp;</p>
-<h3 id="e0934629b6fd509b0eeaa4e5c4a9e1fc9">[ 0.7.9 - 1/9/22 ]</h3>
-<p><br>optimized imports</p>
-<p>&nbsp;</p>
-<h3 id="e84209ef0ab16421bf949341756744527">[ 0.7.6 - 1/9/22 ]</h3>
-<p><br>option to insert a calculation</p>
-<p>&nbsp;</p>
-<h3 id="e9b9318a0f5e05efa2e1170cd42e83d16">[ 0.7.4 - 28/8/22 ]</h3>
-<p><br>bug fixes<br>speech-to-text variation of error &amp; goodbye sentences</p>
-<p>&nbsp;</p>
-<h3 id="e9e5f332389099188151f5a21132d1820">[ 0.7.3 - 28/8/22 ]</h3>
-<p><br>added option to open the respiratory page through the program<br>added option the tear of the edit menu</p>
-<p>&nbsp;</p>
-<h3 id="e31d37e562885191a2e1f44db19c3ac4d">[ 0.7.1 - 22/8/22 ]</h3>
-<p><br>added file bar - info about the file<br>bug fixes</p>
-<p>&nbsp;</p>
-<h3 id="edb63c8e5989230c134bbcbbe33103a66">[ 0.7 - 21/8/22 ]</h3>
-<p><br>bug fixes<br>optimized imports<br>improved exit function<br>improved shortcuts</p>
-<p>&nbsp;</p>
-<h3 id="ed396ee0827953914a881aec84bd90179">[ 0.6.8 - 20/8/22 ]</h3>
-<p><br>added search function</p>
-<p>&nbsp;</p>
-<h3 id="e8574503d54b23932bb5399d22f477c77">[ 0.6 - 7/8/22 ]</h3>
-<p><br>added advanced speech-to-text<br>added opening sentences<br>better exit<br>added option to hide the status bar &amp; toolbar<br>improved night mode U.I. &amp; Functionality<br>changed the status bar position in the bottom middle<br>!</p>
-<p>&nbsp;</p>
-<h3 id="e10f8a83f6995753c1e339f8c71b47c88">[ 0.5.9 - 5/8/22 ]</h3>
-<p><br>fixed message box for printing files<br>added a message box for quitting the app</p>
-<p>&nbsp;</p>
-<h3 id="e74d97ff1b0e23c03928656bbc3708ad9">[ 0.5.8 - 5/8/22 ]</h3>
-<p><br>fixed imports<br>fixed text-to-speech icon problems</p>
-<p>&nbsp;</p>
-<h3 id="e2ed194728c32c0926f30d4d7da0b71a8">[ 0.5.7 - 30/7/22 ]</h3>
-<p><br>added tooltip(s)</p>
-<p>&nbsp;</p>
-<h3 id="ea50e75b25019c2ebc50329bb6044f860">[ 0.5.5 - 30/7/22 ]</h3>
-<p><br>added six new shortcuts<br>bug fixes</p>
-<p>&nbsp;</p>
-<h3 id="ec1676ba01dfb4f555feca0da5d3e2aa1">[ 0.5.3 - 30/7/22 ]</h3>
-<p><br>added custom coordinates for the program when opening it</p>
-<p>&nbsp;</p>
-<h3 id="eabbcea0a3923f59f9d02ccdb10e40e4c">[ 0.5.2 - 30/7/22 ]</h3>
-<p><br>added text to speech<br>added thread</p>
-<p>&nbsp;</p>
-<h3 id="e41e1a438e4c9eaf4afd9e11b610cacdf">[ 0.5 - 30/7/22 ]</h3>
-<p><br>added custom cursor</p>
-<p>&nbsp;</p>
-<h3 id="ecc1c07dcec6cfccfea91b1e648ab038d">[ 0.4.8 - 30/7/22 ]</h3>
-<p><br>added use to the status bar</p>
-<p>&nbsp;</p>
-<h3 id="ed43666fce4002ab8cfbafa239b857356">[ 0.4.6 - 29/7/22 ]</h3>
-<p><br>night mode improvement</p>
-<p>&nbsp;</p>
-<h3 id="e2a4ee01882cf8339b9bf8dfd84805686">[ 0.4.4 - 29/7/22 &nbsp;]</h3>
-<p><br>added images to the buttons</p>
-<p>&nbsp;</p>
-<h3 id="e92a1f23c9dd148d36f5238d8beee7454">[ 0.4.1 - 29/7/22 &nbsp;]</h3>
-<p><br>added separator to the color menu</p>
-<p>&nbsp;</p>
-<h3 id="ebcb14636812b25ad08ea0e9f7e3d0c8d">[ 0.4 - 29/7/22 &nbsp;]</h3>
-<p><br>made buttons flat (more modern style)</p>
-<p>&nbsp;</p>
-<h3 id="e64bbd8de234656e2c01d8bdc73bf3187">[ 0.3.8 - 29/7/22 &nbsp;]</h3>
-<p><br>changed font default size<br>bug fix</p>
-<p>&nbsp;</p>
-<h3 id="eef871d75dd02ef6ac56c6e7d3817d38b">[ 0.3.6 - 28/7/22 ]</h3>
-<p><br>added one new shortcut</p>
-<p>&nbsp;</p>
-<h3 id="ee91b539648d1be8214e0cd1e8227325d">[ 0.3.4 - 28/7/22 ]</h3>
-<p><br>Added message box when you attempt to print</p>
-<p>&nbsp;</p>
-<h3 id="edf63e3ffefb3715c02d78b222e05bce9">[ 0.3.2 - 28/7/22 ]</h3>
-<p><br>bug fixes</p>
-<p>&nbsp;</p>
-<h3 id="e5e083bb93c682e1ad40c4dc90a095d56">[ 0.3 (initial commit) - 18/7/22 ]</h3>
-<h3 id="ee6826cec8a79047fd4ab5179ef48c571">&nbsp;</h3>
-<h2 id="e1c1ef207edcba0b040bc4297ad7b44f1"><u>BEFORE GITHUB</u></h2>
-<p>&nbsp;</p>
-<h3 id="e6b8771f197427a5ee9cc85db551f3d2f">[ 0.3 (p0.8) - 18/7/22 ]</h3>
-<p><br>added underline<br>added text alignments<br>improved night mode with button colors<br>improved U.I.</p>
-<p>&nbsp;</p>
-<h3 id="e37bb531fe499389d2b7bc5174a4ef3af">[ 0.2.5 (p0.7) - 18/7/22 ]</h3>
-<p><br>added underline<br>added font U.I.</p>
-<p>&nbsp;</p>
-<h3 id="ef039f93f0eebdd7d4b64c7679e1115d5">[ 0.2 (median) - text design &amp; more functions - 17/7/22 ]</h3>
-<p><br>added bold text<br>added italics slant<br>added custom text color<br>added custom background colors<br>added custom highlight color<br>added the option to print a file<br>added select all function<br>added clear function<br>added night mode<br>added three new shortcuts</p>
-<p>&nbsp;</p>
-<h3 id="e07208fce9f9781e9a4c367f514b1bb96">[ 0.1 (basic/first version) 15-16/7/22]</h3>
-<p><br>have the ability to open &amp; save files<br>also have two different save functions: save &amp; save as<br>have the three most basic edit tools: cut, copy &amp; paste<br>&nbsp;</p>```
+
 <h3>[ 1.1 - better tools UI - 17/9/22 ]</h3>
 <ul>
   <li>Bug fixes</li>
