@@ -1,4 +1,3 @@
-# python
 import tkinter as tk
 import tkinter.ttk as ttk
 from typing import Any, Optional, Tuple, Callable, Union, Iterable, Hashable
@@ -13,18 +12,18 @@ class UIBuilders:
         self._registry = {}
 
     def _resolve_owner(self, parent_widget: Optional[tk.Misc]) -> tk.Misc:
-        """
+        '''
         Return a Tkinter widget suitable to be the owner of a Toplevel.
         Avoids touching low-level .tk attributes and handles common app layouts.
-        """
+        '''
         if isinstance(parent_widget, tk.Misc):
             return parent_widget
 
         # Common candidates on the app
         candidates = [
-            getattr(self.app, "root", None),
-            getattr(self.app, "master", None),
-            getattr(self.app, "_root", None),
+            getattr(self.app, 'root', None),
+            getattr(self.app, 'master', None),
+            getattr(self.app, '_root', None),
             self.app,  # if the app itself is a widget (e.g., subclass of Tk/Frame)
         ]
         for candidate in candidates:
@@ -36,7 +35,7 @@ class UIBuilders:
         if isinstance(default_root, tk.Misc):
             return default_root
 
-        raise RuntimeError("No valid Tkinter owner widget found for popup creation")
+        raise RuntimeError('No valid Tkinter owner widget found for popup creation')
 
     def make_pop_ups_window(
             self,
@@ -59,17 +58,17 @@ class UIBuilders:
         derived_name = None
         if function is not None:
             try:
-                derived_name = (function.__name__.replace("_", " ")).capitalize()
+                derived_name = (function.__name__.replace('_', ' ')).capitalize()
             except Exception:
                 pass
         if custom_title and isinstance(custom_title, str) and custom_title.strip():
             derived_name = custom_title
         if title is None:
-            title_prefix = getattr(self.app, "title_struct", "")
-            title = f"{title_prefix}{derived_name}" if derived_name else title_prefix
+            title_prefix = getattr(self.app, 'title_struct', '')
+            title = f'{title_prefix}{derived_name}' if derived_name else title_prefix
 
         # 3) Optional singleton behavior key
-        allow_duplicate = bool(getattr(self.app, "allow_duplicate", True))
+        allow_duplicate = bool(getattr(self.app, 'allow_duplicate', True))
         singleton_key = name or (function if function is not None else None)
         if singleton_key is not None and not allow_duplicate:
             existing = self._registry.get(singleton_key)
@@ -98,7 +97,7 @@ class UIBuilders:
 
         if topmost:
             try:
-                popup_window.attributes("-topmost", True)
+                popup_window.attributes('-topmost', True)
             except Exception:
                 pass
 
@@ -108,7 +107,7 @@ class UIBuilders:
             pass
 
         # Optional icon from the app
-        icon = getattr(self.app, "iconphoto", None)
+        icon = getattr(self.app, 'iconphoto', None)
         if icon:
             try:
                 popup_window.iconphoto(False, icon)
@@ -116,39 +115,39 @@ class UIBuilders:
                 pass
 
         # Track open windows and map function -> window (if app uses these)
-        if hasattr(self.app, "opened_windows"):
+        if hasattr(self.app, 'opened_windows'):
             self.app.opened_windows.append(popup_window)
         if function is not None:
-            func_map = getattr(self.app, "func_window", None)
+            func_map = getattr(self.app, 'func_window', None)
             if not isinstance(func_map, dict):
                 self.app.func_window = {}
             self.app.func_window[function] = popup_window
 
         # Close protocol: delegate to app if external_variable is False
-        if not external_variable and hasattr(self.app, "close_pop_ups"):
-            popup_window.protocol("WM_DELETE_WINDOW", lambda: self.app.close_pop_ups(popup_window))
+        if not external_variable and hasattr(self.app, 'close_pop_ups'):
+            popup_window.protocol('WM_DELETE_WINDOW', lambda: self.app.close_pop_ups(popup_window))
         else:
             def on_close():
                 try:
-                    if hasattr(self.app, "opened_windows"):
+                    if hasattr(self.app, 'opened_windows'):
                         self.app.opened_windows = [w for w in self.app.opened_windows if w is not popup_window]
                     if singleton_key is not None and self._registry.get(singleton_key) is popup_window:
                         self._registry.pop(singleton_key, None)
                 finally:
                     popup_window.destroy()
 
-            popup_window.protocol("WM_DELETE_WINDOW", on_close)
+            popup_window.protocol('WM_DELETE_WINDOW', on_close)
 
         # Transparency (alpha) from app state
-        alpha_value = getattr(self.app, "st_value", None)
+        alpha_value = getattr(self.app, 'st_value', None)
         if alpha_value is not None:
             try:
-                popup_window.attributes("-alpha", alpha_value)
+                popup_window.attributes('-alpha', alpha_value)
             except Exception:
                 pass
 
         # Theming/time setup if app provides it
-        apply_tm = getattr(self.app, "make_tm", None)
+        apply_tm = getattr(self.app, 'make_tm', None)
         if callable(apply_tm):
             try:
                 apply_tm(popup_window)
@@ -157,8 +156,8 @@ class UIBuilders:
 
         # App-driven non-resizable rule
         try:
-            limit_flag = getattr(self.app, "limit_w_s", None)
-            if limit_flag and callable(getattr(limit_flag, "get", None)) and limit_flag.get():
+            limit_flag = getattr(self.app, 'limit_w_s', None)
+            if limit_flag and callable(getattr(limit_flag, 'get', None)) and limit_flag.get():
                 popup_window.resizable(False, False)
         except Exception:
             pass
@@ -176,10 +175,10 @@ class UIBuilders:
 
         # Log entry
         try:
-            now_fn = getattr(self.app, "get_time", None)
-            ts = now_fn() if callable(now_fn) else ""
-            if hasattr(self.app, "record_list") and derived_name:
-                self.app.record_list.append(f"> [{ts}] - {derived_name} tool window opened")
+            now_fn = getattr(self.app, 'get_time', None)
+            ts = now_fn() if callable(now_fn) else ''
+            if hasattr(self.app, 'record_list') and derived_name:
+                self.app.record_list.append(f'> [{ts}] - {derived_name} tool window opened')
         except Exception:
             pass
 
@@ -193,8 +192,8 @@ class UIBuilders:
 
     def _popup_binds(self, popup_window: tk.Toplevel) -> None:
         try:
-            popup_window.bind("<Escape>", lambda e: popup_window.destroy(), add="+")
-            popup_window.bind("<Control-w>", lambda e: popup_window.destroy(), add="+")
+            popup_window.bind('<Escape>', lambda e: popup_window.destroy(), add='+')
+            popup_window.bind('<Control-w>', lambda e: popup_window.destroy(), add='+')
         except Exception:
             pass
 
@@ -206,26 +205,26 @@ class UIBuilders:
                 return
             x = owner.winfo_rootx() + (owner.winfo_width() - popup_window.winfo_width()) // 2
             y = owner.winfo_rooty() + (owner.winfo_height() - popup_window.winfo_height()) // 3
-            popup_window.geometry(f"+{x}+{y}")
+            popup_window.geometry(f'+{x}+{y}')
         except Exception:
             pass
 
     def make_rich_textbox(
         self,
         parent_container: Optional[tk.Misc] = None,
-        place: Union[str, Tuple[int, int], list] = "pack_top",
+        place: Union[str, Tuple[int, int], list] = 'pack_top',
         wrap: Any = tk.WORD,
-        font: str = "arial 10",
+        font: str = 'arial 10',
         size: Optional[Tuple[int, int]] = None,
-        selectbg: str = "dark cyan",
+        selectbg: str = 'dark cyan',
         bd: int = 0,
-        relief: str = "",
-        format: str = "txt",
+        relief: str = '',
+        format: str = 'txt',
         *,
         # legacy alias to remain compatible with old calls/forwarders
         root: Optional[tk.Misc] = None,
     ) -> Tuple[tk.Frame, Any, ttk.Scrollbar]:
-        """
+        '''
         Build a scrollable rich text box inside a container frame.
 
         Accepts either parent_container (preferred) or root (legacy alias).
@@ -233,21 +232,21 @@ class UIBuilders:
 
         Returns:
             (container_frame, text_widget, y_scrollbar)
-        """
+        '''
         # Use legacy alias if provided
         container = parent_container or root
         if container is None:
-            raise ValueError("make_rich_textbox requires a parent_container (or legacy root) widget")
+            raise ValueError('make_rich_textbox requires a parent_container (or legacy root) widget')
 
-        final_relief = relief or getattr(self.app, "predefined_relief", tk.FLAT)
-        cursor_style = getattr(self.app, "predefined_cursor", "xterm")
+        final_relief = relief or getattr(self.app, 'predefined_relief', tk.FLAT)
+        cursor_style = getattr(self.app, 'predefined_cursor', 'xterm')
 
         container_frame = tk.Frame(container)
-        y_scrollbar = ttk.Scrollbar(container_frame, orient="vertical")
+        y_scrollbar = ttk.Scrollbar(container_frame, orient='vertical')
 
         # Choose the text-like class
         text_cls: Any = tk.Text
-        if isinstance(format, str) and format.lower() == "html":
+        if isinstance(format, str) and format.lower() == 'html':
             # Try to import HTMLText only when needed
             try:
                 from tkhtmlview import HTMLText as _HTMLText
@@ -285,11 +284,11 @@ class UIBuilders:
         return (container_frame, text_widget, y_scrollbar)
 
     def _place_container(self, frame: tk.Frame, place: Union[str, Tuple[int, int], list]) -> None:
-        """
+        '''
         Helper for placing the container frame.
         - If place is a string with 'pack' (e.g., 'pack_top', 'pack_left'), it uses pack with that side.
         - If place is a (row, col) tuple/list, it uses grid at that position.
-        """
+        '''
         if not place:
             return
 
@@ -298,17 +297,17 @@ class UIBuilders:
             frame.grid(row=row, column=col)
             return
 
-        if isinstance(place, str) and "pack" in place:
+        if isinstance(place, str) and 'pack' in place:
             # Expected patterns: 'pack_top', 'pack_left', 'pack_right', 'pack_bottom'
-            side = "top"
-            parts = place.split("_", 1)
-            if len(parts) == 2 and parts[1] in ("top", "left", "right", "bottom"):
+            side = 'top'
+            parts = place.split('_', 1)
+            if len(parts) == 2 and parts[1] in ('top', 'left', 'right', 'bottom'):
                 side = parts[1]
             frame.pack(fill=tk.BOTH, expand=True, side=side)
             return
 
         # Fallback: sensible default
-        frame.pack(fill=tk.BOTH, expand=True, side="top")
+        frame.pack(fill=tk.BOTH, expand=True, side='top')
 
     def place_toolt(
         self,
@@ -321,13 +320,13 @@ class UIBuilders:
         fg: Optional[str] = None,
         bg: Optional[str] = None,
     ) -> None:
-        """
+        '''
         Initialize tooltips for toolbar buttons without backend collisions.
 
         Backends (mutually exclusive for the whole session):
           - 'external': tktooltip.ToolTip (preferred)
           - 'tix': tkinter.tix.Balloon
-        """
+        '''
         # Resolve targets
         if targets is None:
             targets = self._collect_default_tooltip_targets()
@@ -336,21 +335,21 @@ class UIBuilders:
             return
 
         # Decide and lock the backend only once to avoid collisions
-        backend = getattr(self, "_tooltip_backend", None)
+        backend = getattr(self, '_tooltip_backend', None)
         if backend is None:
             backend = self._select_tooltip_backend(prefer_external=prefer_external, allow_tix=allow_tix)
             self._tooltip_backend = backend
             # Backend-level initialization
-            if backend == "tix":
+            if backend == 'tix':
                 self._ensure_tix_balloon(delay_ms)
             # Initialize tracking
             self._tooltip_handles = {}         # widget -> handle (external)
             self._tooltip_bound_widgets = set()  # for tix bindings
 
         # Attach for chosen backend only
-        if backend == "external":
+        if backend == 'external':
             self._attach_tooltips_external(items, delay_ms, follow_mouse, fg, bg)
-        elif backend == "tix":
+        elif backend == 'tix':
             self._attach_tooltips_tix(items)
         else:
             # Neither external nor Tix is available; do nothing by design
@@ -360,10 +359,10 @@ class UIBuilders:
 
     def _select_tooltip_backend(self, *, prefer_external: bool, allow_tix: bool) -> str:
         if prefer_external and self._external_available():
-            return "external"
+            return 'external'
         if allow_tix and self._tix_available():
-            return "tix"
-        return "none"
+            return 'tix'
+        return 'none'
 
     def _external_available(self) -> bool:
         try:
@@ -418,7 +417,7 @@ class UIBuilders:
         import tkinter.tix as tix
         # Ensure Tix package loaded; ignore errors if already present
         try:
-            self.app.tk.eval("package require Tix")
+            self.app.tk.eval('package require Tix')
         except Exception:
             pass
         self._tix_balloon = tix.Balloon(self.app)  # type: ignore[attr-defined]
@@ -429,7 +428,7 @@ class UIBuilders:
             pass
 
     def _attach_tooltips_tix(self, items: Iterable[Tuple[tk.Widget, str]]) -> None:
-        balloon = getattr(self, "_tix_balloon", None)
+        balloon = getattr(self, '_tix_balloon', None)
         if balloon is None:
             return
         bound = self._tooltip_bound_widgets  # type: ignore[attr-defined]
@@ -455,33 +454,35 @@ class UIBuilders:
                 targets.append((widget, text))
 
 
-        '''+ optimaize with a loop which its content will come from the "large variables file" '''
-        add("bold_button", "Bold (Ctrl+B)")
-        add("italics_button", "Italics (Ctrl+I)")
-        add("underline_button", "Underline (Ctrl+U)")
-        add("align_left_button", "Align left (Ctrl+L)")
-        add("align_center_button", "Align center (Ctrl+E)")
-        add("align_right_button", "Align right (Ctrl+R)")
-        add("color_button", "Change colors")
-        add("tts_button", "Text to speech")
-        add("talk_button", "Speech to text")
-        add("font_size", "Font size: Ctrl+Plus / Ctrl+Minus")
-        add("v_keyboard_button", "Virtual keyboard")
-        add("dtt_button", "Draw to text")
+        '''+ optimaize with a loop which its content will come from the 'large variables file' '''
+        add('bold_button', 'Bold (Ctrl+B)')
+        add('italics_button', 'Italics (Ctrl+I)')
+        add('underline_button', 'Underline (Ctrl+U)')
+        add('align_left_button', 'Align left (Ctrl+L)')
+        add('align_center_button', 'Align center (Ctrl+E)')
+        add('align_right_button', 'Align right (Ctrl+R)')
+        add('color_button', 'Change colors')
+        add('tts_button', 'Text to speech')
+        add('talk_button', 'Speech to text')
+        add('font_size', 'Font size: Ctrl+Plus / Ctrl+Minus')
+        add('v_keyboard_button', 'Virtual keyboard')
+        add('dtt_button', 'Draw to text')
+        add('calc_button', 'Calculator')
+        add('translate_button', 'Translator')
         return targets
 
     def _is_widget(self, obj: Any) -> bool:
         return isinstance(obj, tk.Misc)
 
-    def binds(self, mode: str = "initial") -> None:
-        """
+    def binds(self, mode: str = 'initial') -> None:
+        '''
         Bind keyboard/mouse shortcuts.
 
         Modes:
-          - "initial" / "reset": bind all groups (respecting binding_work flags)
-          - group key: one of ["filea", "typea", "editf", "textt", "windf", "autof", "autol"]
+          - 'initial' / 'reset': bind all groups (respecting binding_work flags)
+          - group key: one of ['filea', 'typea', 'editf', 'textt', 'windf', 'autof', 'autol']
         This mirrors the original behavior and maintains app.bindings_dict compatibility.
-        """
+        '''
         app = self.app
 
         # 1) Build handler maps (event name -> callable)
@@ -491,21 +492,21 @@ class UIBuilders:
         pattern_groups = self._build_pattern_groups()
 
         # 3) Management flags (BooleanVars) to enable/disable groups
-        bind_flags = getattr(app, "binding_work", {}) if isinstance(getattr(app, "binding_work", {}), dict) else {}
+        bind_flags = getattr(app, 'binding_work', {}) if isinstance(getattr(app, 'binding_work', {}), dict) else {}
 
         # 4) Choose which groups to process
-        all_groups = ["filea", "typea", "editf", "textt", "windf", "autof", "autol"]
-        if mode in ("initial", "reset"):
+        all_groups = ['filea', 'typea', 'editf', 'textt', 'windf', 'autof', 'autol']
+        if mode in ('initial', 'reset'):
             target_groups = all_groups
         else:
             target_groups = [mode] if mode in all_groups else []
 
         # Initialize records
-        if not hasattr(self, "_bound_by_mode"):
+        if not hasattr(self, '_bound_by_mode'):
             self._bound_by_mode: dict[str, list[Tuple[tk.Misc, str]]] = {}
 
         # Before rebinding, clear previous bindings for the selected mode(s)
-        if mode in ("initial", "reset"):
+        if mode in ('initial', 'reset'):
             # Re-create all
             for g in target_groups:
                 self.unbind_group(g)
@@ -533,13 +534,13 @@ class UIBuilders:
             handlers_map = handler_groups.get(group_key, {}) or {}
 
             # Special-case autol: single event, handler stored in handlers_map['KeyRelease']
-            if group_key == "autol":
-                handler = handlers_map.get("KeyRelease")
+            if group_key == 'autol':
+                handler = handlers_map.get('KeyRelease')
                 if callable(handler):
-                    if self._safe_bind(target_widget, "<KeyRelease>", handler):
-                        self._bound_by_mode.setdefault("autol", []).append((target_widget, "<KeyRelease>"))
+                    if self._safe_bind(target_widget, '<KeyRelease>', handler):
+                        self._bound_by_mode.setdefault('autol', []).append((target_widget, '<KeyRelease>'))
                 # bindings_dict compatibility: autol must store the BooleanVar, not pattern
-                self._ensure_bindings_dict_shape(pattern_groups, autol_var=getattr(app, "aul", None))
+                self._ensure_bindings_dict_shape(pattern_groups, autol_var=getattr(app, 'aul', None))
                 continue
 
             # All other groups use explicit pattern lists from pattern_groups
@@ -561,11 +562,11 @@ class UIBuilders:
         self._attach_right_click()
 
     def unbind_group(self, mode: str) -> None:
-        """
+        '''
         Unbind all patterns previously recorded for a group/mode.
         Updates app.bindings_dict[mode] to original shape.
-        """
-        if not hasattr(self, "_bound_by_mode"):
+        '''
+        if not hasattr(self, '_bound_by_mode'):
             return
         records = self._bound_by_mode.get(mode, [])
         for widget, pattern in records:
@@ -573,24 +574,24 @@ class UIBuilders:
         self._bound_by_mode[mode] = []
 
         # Reset bindings_dict entry to original shape
-        if hasattr(self.app, "bindings_dict") and isinstance(self.app.bindings_dict, dict):
-            if mode == "autol":
-                self.app.bindings_dict["autol"] = getattr(self.app, "aul", None)
+        if hasattr(self.app, 'bindings_dict') and isinstance(self.app.bindings_dict, dict):
+            if mode == 'autol':
+                self.app.bindings_dict['autol'] = getattr(self.app, 'aul', None)
             else:
                 # Revert to the canonical pattern list for that group (from pattern groups)
                 groups = self._build_pattern_groups()
                 self.app.bindings_dict[mode] = groups.get(mode, [])
 
     def reset_binds(self) -> None:
-        """
+        '''
         Unbind all recorded patterns for all modes and rebind everything.
         If app.binding_work exists (dict of BooleanVar flags), set all to True first.
-        """
-        if hasattr(self, "_bound_by_mode"):
+        '''
+        if hasattr(self, '_bound_by_mode'):
             for mode in list(self._bound_by_mode.keys()):
                 self.unbind_group(mode)
 
-        bw = getattr(self.app, "binding_work", None)
+        bw = getattr(self.app, 'binding_work', None)
         if isinstance(bw, dict):
             for var in bw.values():
                 try:
@@ -598,141 +599,141 @@ class UIBuilders:
                 except Exception:
                     pass
 
-        self.binds(mode="reset")
+        self.binds(mode='reset')
 
     # ---------- internals ----------
 
     def _build_handler_groups(self) -> dict[str, dict[str, Any]]:
         app = self.app
         return {
-            "initial": {
-                "Modified": getattr(app, "status", None),
-                "Cut": (lambda e=None: app.cut(True)) if hasattr(app, "cut") else None,
-                "Copy": getattr(app, "copy", None),
-                "Control-Key-a": getattr(app, "select_all", None),
-                "Control-Key-l": (lambda e=None: app.align_text()) if hasattr(app, "align_text") else None,
-                "Control-Key-e": (lambda e=None: app.align_text("center")) if hasattr(app, "align_text") else None,
-                "Control-Key-r": (lambda e=None: app.align_text("right")) if hasattr(app, "align_text") else None,
-                "Alt-Key-c": getattr(app, "clear", None),
-                "Alt-F4": getattr(app, "exit_app", None),
-                "Control-Key-plus": getattr(app, "sizes_shortcuts", None),
-                "Control-Key-minus": (lambda e=None: app.sizes_shortcuts(-1)) if hasattr(app,
-                                                                                         "sizes_shortcuts") else None,
-                "F5": getattr(app, "dt", None),
-                "Alt-Key-r": (lambda e=None: app.exit_app(event="r")) if hasattr(app, "exit_app") else None,
+            'initial': {
+                'Modified': getattr(app, 'status', None),
+                'Cut': (lambda e=None: app.cut(True)) if hasattr(app, 'cut') else None,
+                'Copy': getattr(app, 'copy', None),
+                'Control-Key-a': getattr(app, 'select_all', None),
+                'Control-Key-l': (lambda e=None: app.align_text()) if hasattr(app, 'align_text') else None,
+                'Control-Key-e': (lambda e=None: app.align_text('center')) if hasattr(app, 'align_text') else None,
+                'Control-Key-r': (lambda e=None: app.align_text('right')) if hasattr(app, 'align_text') else None,
+                'Alt-Key-c': getattr(app, 'clear', None),
+                'Alt-F4': getattr(app, 'exit_app', None),
+                'Control-Key-plus': getattr(app, 'sizes_shortcuts', None),
+                'Control-Key-minus': (lambda e=None: app.sizes_shortcuts(-1)) if hasattr(app,
+                                                                                         'sizes_shortcuts') else None,
+                'F5': getattr(app, 'dt', None),
+                'Alt-Key-r': (lambda e=None: app.exit_app(event='r')) if hasattr(app, 'exit_app') else None,
             },
-            "autof": {
-                "KeyPress": getattr(app, "emoji_detection", None),
-                "KeyRelease": getattr(app, "update_insert_image_list", None),
+            'autof': {
+                'KeyPress': getattr(app, 'emoji_detection', None),
+                'KeyRelease': getattr(app, 'update_insert_image_list', None),
             },
-            "autol": {
-                "KeyRelease": getattr(app, "aul_var", None) or getattr(app, "aul_var", None) or getattr(app, "aul",
+            'autol': {
+                'KeyRelease': getattr(app, 'aul_var', None) or getattr(app, 'aul_var', None) or getattr(app, 'aul',
                                                                                                         None),
             },
-            "typea": {
-                "Control-Key-b": (lambda e=None: app.typefaces(tf="weight-bold")) if hasattr(app,
-                                                                                             "typefaces") else None,
-                "Control-Key-i": (lambda e=None: app.typefaces(tf="slant-italic")) if hasattr(app,
-                                                                                              "typefaces") else None,
-                "Control-Key-u": (lambda e=None: app.typefaces(tf="underline")) if hasattr(app, "typefaces") else None,
+            'typea': {
+                'Control-Key-b': (lambda e=None: app.typefaces(tf='weight-bold')) if hasattr(app,
+                                                                                             'typefaces') else None,
+                'Control-Key-i': (lambda e=None: app.typefaces(tf='slant-italic')) if hasattr(app,
+                                                                                              'typefaces') else None,
+                'Control-Key-u': (lambda e=None: app.typefaces(tf='underline')) if hasattr(app, 'typefaces') else None,
             },
-            "editf": {
-                "Control-Key-f": getattr(app, "find_text", None),
-                "Control-Key-h": getattr(app, "replace", None),
-                "Control-Key-g": getattr(app, "goto", None),
+            'editf': {
+                'Control-Key-f': getattr(app, 'find_text', None),
+                'Control-Key-h': getattr(app, 'replace', None),
+                'Control-Key-g': getattr(app, 'goto', None),
             },
-            "filea": {
-                "Control-o": getattr(app, "open_file", None),
-                "Control-Key-s": getattr(app, "save", None),
-                "Control-Key-n": getattr(app, "new_file", None),
-                "Control-Key-p": getattr(app, "print_file", None),
-                "Alt-Key-d": getattr(app, "copy_file_path", None),
+            'filea': {
+                'Control-o': getattr(app, 'open_file', None),
+                'Control-Key-s': getattr(app, 'save', None),
+                'Control-Key-n': getattr(app, 'new_file', None),
+                'Control-Key-p': getattr(app, 'print_file', None),
+                'Alt-Key-d': getattr(app, 'copy_file_path', None),
             },
-            "textt": {
-                "Control-Shift-Key-j": getattr(app, "join_words", None),
-                "Control-Shift-Key-u": getattr(app, "lower_upper", None),
-                "Control-Shift-Key-r": getattr(app, "reverse_characters", None),
-                "Control-Shift-Key-c": getattr(app, "reverse_words", None),
+            'textt': {
+                'Control-Shift-Key-j': getattr(app, 'join_words', None),
+                'Control-Shift-Key-u': getattr(app, 'lower_upper', None),
+                'Control-Shift-Key-r': getattr(app, 'reverse_characters', None),
+                'Control-Shift-Key-c': getattr(app, 'reverse_words', None),
             },
-            "windf": {
-                "F11": getattr(app, "full_screen", None),
-                "Control-Key-t": getattr(app, "topmost", None),
+            'windf': {
+                'F11': getattr(app, 'full_screen', None),
+                'Control-Key-t': getattr(app, 'topmost', None),
             },
         }
 
     def _build_pattern_groups(self) -> dict[str, list[str]]:
         app = self.app
-        filea = list(getattr(app, "filea_list", [])) or []
-        typea = list(getattr(app, "typef_list", [])) or []
-        editf = list(getattr(app, "editf_list", [])) or []
-        textt = list(getattr(app, "textt_list", [])) or []
-        windf = list(getattr(app, "win_list", [])) or []
-        autof = list(getattr(app, "autof_list", [])) or []
+        filea = list(getattr(app, 'filea_list', [])) or []
+        typea = list(getattr(app, 'typef_list', [])) or []
+        editf = list(getattr(app, 'editf_list', [])) or []
+        textt = list(getattr(app, 'textt_list', [])) or []
+        windf = list(getattr(app, 'win_list', [])) or []
+        autof = list(getattr(app, 'autof_list', [])) or []
 
         # Ensure app.bindings_dict precisely matches your original shape
-        if not hasattr(app, "bindings_dict") or not isinstance(app.bindings_dict, dict):
+        if not hasattr(app, 'bindings_dict') or not isinstance(app.bindings_dict, dict):
             app.bindings_dict = {}
 
         app.bindings_dict.update({
-            "filea": filea,
-            "typea": typea,
-            "editf": editf,
-            "textt": textt,
-            "windf": windf,
-            "autof": autof,
-            "autol": getattr(app, "aul", None),  # original: variable stored here (not pattern)
+            'filea': filea,
+            'typea': typea,
+            'editf': editf,
+            'textt': textt,
+            'windf': windf,
+            'autof': autof,
+            'autol': getattr(app, 'aul', None),  # original: variable stored here (not pattern)
         })
 
         return {
-            "filea": filea,
-            "typea": typea,
-            "editf": editf,
-            "textt": textt,
-            "windf": windf,
-            "autof": autof,
+            'filea': filea,
+            'typea': typea,
+            'editf': editf,
+            'textt': textt,
+            'windf': windf,
+            'autof': autof,
             # autol handled specially in binds()
         }
 
     def _ensure_bindings_dict_shape(self, patterns: dict[str, list[str]], autol_var: Any = None) -> None:
-        """
+        '''
         Re-assert the expected shape of app.bindings_dict after (re)binding.
-        """
+        '''
         app = self.app
-        app.bindings_dict["filea"] = patterns.get("filea", [])
-        app.bindings_dict["typea"] = patterns.get("typea", [])
-        app.bindings_dict["editf"] = patterns.get("editf", [])
-        app.bindings_dict["textt"] = patterns.get("textt", [])
-        app.bindings_dict["windf"] = patterns.get("windf", [])
-        app.bindings_dict["autof"] = patterns.get("autof", [])
+        app.bindings_dict['filea'] = patterns.get('filea', [])
+        app.bindings_dict['typea'] = patterns.get('typea', [])
+        app.bindings_dict['editf'] = patterns.get('editf', [])
+        app.bindings_dict['textt'] = patterns.get('textt', [])
+        app.bindings_dict['windf'] = patterns.get('windf', [])
+        app.bindings_dict['autof'] = patterns.get('autof', [])
         if autol_var is not None:
-            app.bindings_dict["autol"] = autol_var
+            app.bindings_dict['autol'] = autol_var
 
     def _resolve_group_target(self, group_key: str) -> Optional[tk.Misc]:
         app = self.app
-        if group_key in ("autof", "autol"):
-            tw = getattr(app, "EgonTE", None)
+        if group_key in ('autof', 'autol'):
+            tw = getattr(app, 'EgonTE', None)
             if isinstance(tw, tk.Misc):
                 return tw
         if isinstance(app, tk.Misc):
             return app
-        root = getattr(app, "root", None)
+        root = getattr(app, 'root', None)
         if isinstance(root, tk.Misc):
             return root
         dr = tk._get_default_root()
         return dr if isinstance(dr, tk.Misc) else None
 
     def _normalize_event_key(self, pattern: str) -> str:
-        return pattern[1:-1] if pattern.startswith("<") and pattern.endswith(">") else pattern
+        return pattern[1:-1] if pattern.startswith('<') and pattern.endswith('>') else pattern
 
     def _pick_fallback_handler(self, ev_key: str, handler_groups: dict[str, dict[str, Any]]) -> Optional[Any]:
         for g in handler_groups.values():
             if ev_key in g and callable(g[ev_key]):
                 return g[ev_key]
-        parts = ev_key.split("-")
-        if len(parts) >= 2 and parts[-2] == "Key" and len(parts[-1]) == 1 and parts[-1].isalpha():
+        parts = ev_key.split('-')
+        if len(parts) >= 2 and parts[-2] == 'Key' and len(parts[-1]) == 1 and parts[-1].isalpha():
             flip = parts.copy()
             flip[-1] = parts[-1].lower() if parts[-1].isupper() else parts[-1].upper()
-            alt_key = "-".join(flip)
+            alt_key = '-'.join(flip)
             for g in handler_groups.values():
                 if alt_key in g and callable(g[alt_key]):
                     return g[alt_key]
@@ -753,12 +754,12 @@ class UIBuilders:
 
     def _attach_right_click(self) -> None:
         app = self.app
-        text_widget = getattr(app, "EgonTE", None)
-        rc_handler = getattr(app, "right_click_menu", None)
+        text_widget = getattr(app, 'EgonTE', None)
+        rc_handler = getattr(app, 'right_click_menu', None)
         if isinstance(text_widget, tk.Misc) and callable(rc_handler):
             try:
-                text_widget.bind("<ButtonRelease-3>", rc_handler)
-                text_widget.bind("<ButtonRelease>", rc_handler)
+                text_widget.bind('<ButtonRelease-3>', rc_handler)
+                text_widget.bind('<ButtonRelease>', rc_handler)
             except Exception:
                 pass
 
@@ -771,9 +772,9 @@ class UIBuilders:
         skip_warn: bool = False,
         allow_duplicates: Optional[bool] = None,
         bring_to_front: bool = True,
-        dialog_title: str = "EgonTE",
+        dialog_title: str = 'EgonTE',
     ) -> None:
-        """
+        '''
         Control opening of secondary tool windows:
 
         - If a window for the tool is already open and duplicates are disabled,
@@ -788,7 +789,7 @@ class UIBuilders:
             max_windows: override for the threshold after which a warning is shown;
                          defaults to 5 if not set.
             skip_warn: if True, skip the confirmation dialog even if count exceeds threshold.
-            allow_duplicates: override the project's "avoid duplicates" setting just for this call.
+            allow_duplicates: override the project's 'avoid duplicates' setting just for this call.
             bring_to_front: if True, deiconify/lift/focus existing window when found.
             dialog_title: title for the confirmation dialog.
 
@@ -796,15 +797,15 @@ class UIBuilders:
             - app.func_window: dict[Hashable, tk.Toplevel]
             - app.opened_windows: list[tk.Toplevel]
             - app.adw (BooleanVar/bool): allow duplicates (False => avoid duplicates)
-            - app.all_tm_v (BooleanVar/bool): global "top-most" preference for tool windows
+            - app.all_tm_v (BooleanVar/bool): global 'top-most' preference for tool windows
             - app.win_count_warn (BooleanVar/bool): whether to show the warning on count
-        """
+        '''
         app = self.app
 
         # Ensure storage exists
-        if not isinstance(getattr(app, "func_window", None), dict):
+        if not isinstance(getattr(app, 'func_window', None), dict):
             app.func_window = {}
-        if not isinstance(getattr(app, "opened_windows", None), list):
+        if not isinstance(getattr(app, 'opened_windows', None), list):
             app.opened_windows = []
 
         func_window: dict = app.func_window
@@ -814,14 +815,14 @@ class UIBuilders:
         def _get_bool(name: str, default: bool = False) -> bool:
             var = getattr(app, name, None)
             try:
-                get = getattr(var, "get", None)
+                get = getattr(var, 'get', None)
                 return bool(get()) if callable(get) else bool(var) if var is not None else default
             except Exception:
                 return default
 
-        project_allow_dupes = _get_bool("adw", False)  # legacy default: avoid duplicates
-        project_topmost_all = _get_bool("all_tm_v", False)
-        project_warn_on_count = _get_bool("win_count_warn", True)
+        project_allow_dupes = _get_bool('adw', False)  # legacy default: avoid duplicates
+        project_topmost_all = _get_bool('all_tm_v', False)
+        project_warn_on_count = _get_bool('win_count_warn', True)
 
         eff_allow_dupes = project_allow_dupes if allow_duplicates is None else bool(allow_duplicates)
         threshold = 5 if max_windows is None else int(max_windows)
@@ -854,7 +855,7 @@ class UIBuilders:
                     from tkinter import messagebox
                     ok = messagebox.askyesno(
                         dialog_title,
-                        f"You have {open_count} open windows.\nOpen another one?",
+                        f'You have {open_count} open windows.\nOpen another one?',
                         parent=self._owner_for_dialog(),
                     )
                     if not ok:
@@ -874,7 +875,7 @@ class UIBuilders:
 
     def _owner_for_dialog(self) -> Optional[tk.Misc]:
         # Try to use the app/root as dialog parent if available
-        for attr in ("root", "master"):
+        for attr in ('root', 'master'):
             w = getattr(self.app, attr, None)
             if isinstance(w, tk.Misc):
                 return w
@@ -917,8 +918,8 @@ class UIBuilders:
                 pass
             # Brief topmost pulse to guarantee z-order, then restore global preference
             try:
-                window.attributes("-topmost", True)
-                window.attributes("-topmost", topmost_all)
+                window.attributes('-topmost', True)
+                window.attributes('-topmost', topmost_all)
             except Exception:
                 pass
         except Exception:
