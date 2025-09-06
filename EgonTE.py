@@ -154,6 +154,9 @@ from pop_ups.handwriting_popup import open_handwriting
 from pop_ups.nlp_popup import open_nlp
 from pop_ups.randomness_app import open_random
 from pop_ups.web_scrapping_popup import open_web_scrapping_popup
+from pop_ups.text_decorators_app import open_text_decorators
+from pop_ups.translate_app import open_translate
+from pop_ups.transcript_app import open_transcript
 
 '''the optional libraries that can add a lot of extra content to the editor'''
 tes = ACTIVE
@@ -161,12 +164,6 @@ try:
 	from pytesseract import image_to_string  # download https://github.com/UB-Mannheim/tesseract/wiki
 except:
 	tes = DISABLED
-try:
-	from youtube_transcript_api import YouTubeTranscriptApi
-
-	yt_api = True
-except (ImportError, AttributeError, ModuleNotFoundError) as e:
-	yt_api = False
 try:
 	from emoticon import emoticon, demoticon
 
@@ -365,7 +362,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.3'
+		self.ver = '1.13.4'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -460,10 +457,11 @@ class Window(Tk):
 						(self.STT_IMAGE, lambda: self.after(0, self.start_speech_to_text)),
 						(self.KEY_IMAGE, lambda: Thread(target=self.virtual_keyboard()).start()),
 						(self.DTT_IMAGE, lambda: self.open_windows_control(self.handwriting)),
-						(self.CALC_IMAGE, lambda: self.open_windows_control(self.ins_calc)))
+						(self.CALC_IMAGE, self.ins_calc),
+                        (self.TRANSLATE_IMAGE, self.translate))
 		self.bold_button, self.italics_button, self.underline_button, self.color_button, self.align_left_button, \
 			self.align_center_button, self.align_right_button, self.tts_button, self.talk_button, self.v_keyboard_button, \
-			self.dtt_button, self.calc_button = [
+			self.dtt_button, self.calc_button, self.translate_button = [
 			Button(self.toolbar_frame, image=b_image, command=b_command, relief=FLAT)
 			for b_image, b_command in buttons_list]
 		# ui tuples (and list) to make management of some UI events (like night mode) easier
@@ -472,7 +470,7 @@ class Window(Tk):
 			self.font_size,
 			self.align_left_button, self.align_center_button, self.align_right_button, self.tts_button,
 			self.talk_button,
-			self.v_keyboard_button, self.dtt_button, self.calc_button]
+			self.v_keyboard_button, self.dtt_button, self.calc_button, self.translate_button]
 		pdx, r = 5, 0
 		for index, button in enumerate(self.toolbar_components):
 			padx, sticky = 2, W
@@ -713,9 +711,9 @@ class Window(Tk):
 		# buttons' icons - size=32x32 pixels
 		image_names = (
 			'bold', 'underline', 'italics', 'colors', 'left_align', 'center_align', 'right_align', 'tts', 'stt',
-			'keyboard', 'drawToText_icon', 'calc_icon')
+			'keyboard', 'drawToText_icon', 'calc_icon', 'translate_icon')
 		self.BOLD_IMAGE, self.UNDERLINE_IMAGE, self.ITALICS_IMAGE, self.COLORS_IMAGE, self.ALIGN_LEFT_IMAGE, self.ALIGN_CENTER_IMAGE \
-			, self.ALIGN_RIGHT_IMAGE, self.TTS_IMAGE, self.STT_IMAGE, self.KEY_IMAGE, self.DTT_IMAGE, self.CALC_IMAGE = \
+			, self.ALIGN_RIGHT_IMAGE, self.TTS_IMAGE, self.STT_IMAGE, self.KEY_IMAGE, self.DTT_IMAGE, self.CALC_IMAGE, self.TRANSLATE_IMAGE = \
 			[PhotoImage(file=f'new_assests/{image_name}.png', master=self) for image_name in image_names]
 
 		# adding program logo icon
@@ -778,7 +776,7 @@ class Window(Tk):
 							   'sort by characters': self.sort_by_characters, 'sort by words.': self.sort_by_words,
 							   'clipboard history.': self.clipboard_history, 'insert images': self.insert_image
 							   }
-		self.tool_functions = {'translate': self.translate, 'current datetime|(F5)': get_time(),
+		self.tool_functions = {'current datetime|(F5)': get_time(),
 							   'randomness tools!': self.ins_random, 'url shorter': self.url,
 							   'search online': self.search_www, 'sort input': self.sort,
 							   'dictionary': lambda: Thread(target=self.knowledge_window('dict'), daemon=True).start(),
@@ -2290,78 +2288,7 @@ class Window(Tk):
 		support auto detect, and have a UI that remind most of the translate tools UI
 		with input and output so the translation doesnt paste automatically to the main text box
 		'''
-		global translate_root
-
-		def translate_content():
-			to_translate = self.translate_box.get('1.0', 'end-1c')
-			cl = chosen_language.get()
-
-			if to_translate == '':
-				messagebox.showerror(self.title_struct + 'error', 'Please fill the box')
-			else:
-				translator = Translator()
-				self.translate_output = translator.translate(to_translate, dest=cl)
-				self.translate_resultbox.configure(state=NORMAL)
-				self.translate_resultbox.delete('1.0', END)
-				self.translate_resultbox.insert('1.0', self.translate_output.text)
-				self.translate_resultbox.configure(state=DISABLED)
-
-		def copy_from_file():
-			if self.is_marked():
-				self.translate_box.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
-			else:
-				self.translate_box.insert('end', self.EgonTE.get('1.0', 'end'))
-
-		def paste_to_ete():
-			content = self.translate_resultbox.get('1.0', END)
-			if content:
-				self.EgonTE.insert(self.get_pos(), content)
-
-		# window creation
-		translate_root = self.make_pop_ups_window(self.translate)
-		boxes_frame = Frame(translate_root)
-		combo_frame = Frame(translate_root)
-		button_frame = Frame(translate_root)
-		# string variables
-		auto_detect_string = StringVar()
-		languages = StringVar()
-		# combo-box creation
-		auto_detect = ttk.Combobox(combo_frame, width=20, textvariable=auto_detect_string, state='readonly',
-								   font='arial 10 bold')
-
-		chosen_language = ttk.Combobox(combo_frame, width=20, textvariable=languages, state='readonly', font='arial 10')
-
-		auto_detect['values'] = 'Auto Detect'
-		auto_detect.current(0)
-
-		chosen_language['values'] = languages_list
-		if self.fun_numbers.get():
-			lng_length = len(chosen_language['values'])
-			lng_index = randint(0, lng_length - 1)
-			chosen_language.current(lng_index)
-
-		# translate box & button
-		title = Label(translate_root, text='Translation tool', font='arial 12 underline')
-		self.translate_box = Text(boxes_frame, width=30, height=10, borderwidth=1, cursor=self.predefined_cursor,
-								  relief=self.predefined_relief)
-		self.translate_resultbox = Text(boxes_frame, width=30, height=10, borderwidth=1, cursor=self.predefined_cursor,
-										relief=self.predefined_relief, state=DISABLED)
-		translate_button = Button(button_frame, text='Translate', bd=1, borderwidth=2, font='arial 10 bold',
-								  command=translate_content)
-		copy_from = Button(button_frame, text='Copy from file', bd=1, command=copy_from_file)
-		paste_translation = Button(button_frame, text='Paste to ete', command=paste_to_ete, width=10, bd=1)
-		# placing the objects in the window
-		title.pack()
-		combo_frame.pack()
-		auto_detect.pack(side='left', fill=X, expand=True)
-		chosen_language.pack(side='right', fill=X, expand=True)
-		boxes_frame.pack(fill=BOTH, expand=True)
-		self.translate_box.pack(fill=BOTH, expand=True, side='left')
-		self.translate_resultbox.pack(fill=BOTH, expand=True, side='right')
-		button_frame.pack(pady=5)
-		copy_from.grid(row=0, column=0, columnspan=1, padx=2)
-		translate_button.grid(row=0, column=1, padx=2)
-		paste_translation.grid(row=0, column=2, padx=2)
+		open_translate(self)
 
 	def url(self):
 		'''
@@ -4665,172 +4592,7 @@ class Window(Tk):
 
 		(for the developer) asterisk broken
 		'''
-		global result_box
-		inline = False
-		result_box = ''
-
-		def enter():
-			self.ascii_dict, self.ascii_alph, newline_n = characters_dict[self.chosen_text_decorator]
-			alphabet = 'abcdefghijklmnopqrstuvwxyz 0123456789?!,.-+'
-			decorator_input = text_box.get('1.0', END).lower()
-
-			if decorator_input:
-				try:
-					if self.dec_plc.get() == 'vertical':
-						dec = 'horizontal'
-						nl_list = ['\n', '\n', '\n', '\n', '\n', '\n', '\n']
-						modified_ascii_dict = {}
-						for key, value in self.ascii_dict.items():
-							v_count = value.count('\n') - 1
-							if v_count < newline_n:
-								nl_needed = newline_n - v_count
-								newlines = ''.join(nl_list[0:nl_needed])
-								value = f'{newlines}{value}'
-							modified_ascii_dict[key] = value
-
-						res = ''
-						word_list = []
-						divided_list = []
-
-						for asc_value in self.ascii_alph:
-							asc_value = list(asc_value)
-							asc_value[-1], asc_value[-2] = '    ', '    '
-							asc_value = ''.join(asc_value)
-
-						for word in decorator_input:
-							if word in modified_ascii_dict.keys():
-								word_list.append(modified_ascii_dict[word])
-
-						print(word_list)
-
-						for word in word_list:
-							divided_list.append(word.split('\n'))
-
-						print(divided_list)
-
-						for index in range(newline_n):
-							for line in divided_list:
-								try:
-									res += ''.join(line[index])
-									res += '    '
-								except IndexError:
-									pass
-							res += '\n'
-
-						print(res)
-
-
-					else:
-						dec = 'vertical'
-						res = ''
-						for char in decorator_input:
-							if alphabet.find(char) != -1:
-								if char in list(self.ascii_dict.keys()):
-									res += self.ascii_dict[char]
-
-					# UI for result
-					global result_box, result_frame
-					if result_box:
-						result_frame.destroy()
-
-					paste_to_text.configure(state=ACTIVE)
-					result_frame = Frame(td_root)
-					result_box = Text(result_frame)
-					result_scroll = ttk.Scrollbar(result_frame, orient=dec)
-					if self.dec_plc.get() == 'horizontal':
-						result_scroll.config(command=result_box.yview)
-						result_scroll.pack(side=RIGHT, fill=Y)
-						result_box.configure(wrap=WORD, yscrollcommand=result_scroll.set)
-					elif self.dec_plc.get() == 'vertical':
-						result_scroll.config(command=result_box.xview)
-						result_scroll.pack(side=BOTTOM, fill=X)
-						result_box.configure(wrap=NONE, xscrollcommand=result_scroll.set)
-
-					result_box.insert('1.0', res)
-					result_box.configure(state=DISABLED)
-					result_frame.pack(expand=True, fill=BOTH)
-					result_box.pack(fill=BOTH, expand=True)
-				except ValueError:
-					messagebox.showerror('EgonTE', 'there isn\'t a single character from the alphabet')
-			else:
-				messagebox.showerror('EgonTE', 'text box is empty')
-
-		def change_style(s: str):
-			self.chosen_text_decorator = s
-			for style in td_styles_dict.values():
-				style.configure(bg='SystemButtonFace')
-			td_styles_dict[self.chosen_text_decorator].configure(bg='light grey')
-
-		def cft():
-			content = self.EgonTE.get('1.0', 'end')
-			text_box.insert('end', content)
-
-		def ptt():
-			content = result_box.get('1.0', 'end')
-			self.EgonTE.insert('end', '\n')
-			self.EgonTE.insert('end', content)
-
-		def show_sc():
-			if self.ascii_dict:
-				available_characters = ', '.join(self.ascii_dict.keys())
-				sc_window = Toplevel()
-				sc_frame, sc_text, sc_scroll = self.make_rich_textbox(sc_window)
-				sc_text.insert(1.0, available_characters)
-				sc_text.configure(state=DISABLED)
-
-		# settings variables
-		self.dec_plc = StringVar()
-		self.dec_plc.set('horizontal')
-		# window and it's widgets
-		td_root = self.make_pop_ups_window(self.text_decorators)
-		td_root.minsize(355, 311)
-		b_frame = Frame(td_root)
-		t_frame = Frame(td_root)
-		action_frame = Frame(b_frame)
-		text_box = Text(t_frame, height=10, width=40, borderwidth=3)
-		actions_title = Label(b_frame, text='Actions', font='arial 10 underline')
-		enter_button = Button(b_frame, text='Enter', command=enter)
-		copy_from_text = Button(b_frame, text='Copy from EgonTE', command=cft)
-		paste_to_text = Button(b_frame, text='Paste to EgonTE', command=ptt, state=DISABLED)
-		# setting
-		settings_title = Label(b_frame, text='Settings', font='arial 10 underline')
-		settings_frame = Frame(b_frame)
-		vertical_radio = Radiobutton(settings_frame, text='Vertical', variable=self.dec_plc, value='vertical')
-		horizontal_radio = Radiobutton(settings_frame, text='Horizontal', variable=self.dec_plc, value='horizontal')
-		# text decorator styles
-		styles_title = Label(b_frame, text='Styles', font='arial 10 underline')
-		bash_style = Button(b_frame, text='bash (#)', command=lambda: change_style('bash'))
-		binary_style = Button(b_frame, text='binary (10)', command=lambda: change_style('binary'))
-		asterisk_style = Button(b_frame, text='asterisk (*)', command=lambda: change_style('asterisk'))
-		show_characters_button = Button(b_frame, text='Show supported characters', bd=1, command=show_sc)
-
-		t_frame.pack(expand=True, fill=BOTH)
-		b_frame.pack()
-
-		text_box.pack(expand=True, fill=BOTH)
-
-		settings_title.grid(row=0, column=1)
-		settings_frame.grid(row=1, column=1)
-		vertical_radio.grid(row=1, column=0)
-		horizontal_radio.grid(row=1, column=2)
-
-		actions_title.grid(row=2, column=1)
-		copy_from_text.grid(row=3, column=0)
-		enter_button.grid(row=3, column=1)
-		paste_to_text.grid(row=3, column=2)
-
-		styles_title.grid(row=4, column=1)
-		bash_style.grid(row=5, column=0)
-		binary_style.grid(row=5, column=1)
-		asterisk_style.grid(row=5, column=2)
-		show_characters_button.grid(row=6, column=1)
-
-		td_styles_dict = {'bash': bash_style, 'binary': binary_style, 'asterisk': asterisk_style}
-		change_style('bash')
-
-		td_root.update_idletasks()
-		print(td_root.winfo_width(), td_root.winfo_height())
-
+		open_text_decorators(self)
 
 	def start_stopwatch(self):
 		if getattr(self, "_stopwatch_running", False):
@@ -5131,193 +4893,7 @@ class Window(Tk):
 		- Everything is nested in this main method.
 		- Selection window is an actual, interactive UI (no simpledialog).
 		'''
-
-		def _render_text_with_copy(result_root, text_output: str):
-			text_frame, text_widget, scroll = self.make_rich_textbox(result_root)
-			text_widget.insert('1.0', text_output)
-			text_widget.configure(state=DISABLED)
-			Button(result_root, text='Copy',
-				   command=lambda: (result_root.clipboard_clear(), result_root.clipboard_append(text_output))).pack(pady=6)
-
-		def _compose_youtube_transcript_text(transcript_items):
-			lines = []
-			for index, item in enumerate(transcript_items):
-				start_time = item.get('start', 0)
-				line_text = item.get('text', '')
-				lines.append(f'time: {start_time:.2f}, iteration: {index} | content: {line_text}')
-			return '\n'.join(lines)
-
-		def _transcribe_youtube_from_entry(video_id: str, parent_root):
-			if not video_id:
-				messagebox.showerror(self.title_struct + 'transcript', 'Please enter a YouTube video ID.')
-				return
-
-			try:
-				items = YouTubeTranscriptApi.get_transcript(video_id)
-			except Exception as e:
-				messagebox.showerror(self.title_struct + 'transcript', f'Failed to fetch YouTube transcript:\n{e}')
-				return
-
-			result_root = self.make_pop_ups_window(_transcribe_youtube_from_entry, custom_title='YouTube transcript')
-			try:
-				_render_text_with_copy(result_root, _compose_youtube_transcript_text(items))
-			except Exception as e:
-				messagebox.showerror(self.title_struct + 'transcript', f'Failed to display transcript:\n{e}')
-				try:
-					self.close_pop_ups(result_root)
-				except Exception:
-					pass
-
-		def _transcribe_local_audio_file():
-			audio_path = filedialog.askopenfilename(
-				title='Open audio file to transcribe',
-				filetypes=[('Audio files', '*.mp3 *.wav'), ('mp3 file', '*.mp3'), ('wav file', '*.wav')]
-			)
-			if not audio_path:
-				return
-
-			result_root = self.make_pop_ups_window(_transcribe_local_audio_file, custom_title='File transcript')
-
-			# Prepare a non-destructive WAV path if needed
-			base_name, extension = os.path.splitext(audio_path)
-			extension = extension.lower()
-			created_temp_wav = False
-			wav_path = audio_path
-
-			try:
-				if extension == '.mp3':
-					# Convert mp3 -> wav into a sibling file; do not rename the original
-					wav_path = base_name + '_converted.wav'
-					AudioSegment.from_mp3(audio_path).export(wav_path, format='wav')
-					created_temp_wav = True
-				elif extension != '.wav':
-					messagebox.showerror(self.title_struct + 'transcript', 'Unsupported file type. Choose an mp3 or wav file.')
-					self.close_pop_ups(result_root)
-					return
-			except Exception as e:
-				messagebox.showerror(self.title_struct + 'transcript', f'Failed preparing audio:\n{e}')
-				try:
-					self.close_pop_ups(result_root)
-				except Exception:
-					pass
-				return
-
-			# Transcribe the prepared WAV
-			try:
-				recognizer = Recognizer()
-				with AudioFile(wav_path) as source:
-					audio_blob = recognizer.record(source)
-				text_output = recognizer.recognize_google(audio_blob)
-				_render_text_with_copy(result_root, text_output)
-			except Exception as e:
-				messagebox.showerror(self.title_struct + 'transcript', f'Failed to transcribe audio:\n{e}')
-				try:
-					self.close_pop_ups(result_root)
-				except Exception:
-					pass
-			finally:
-				# Clean up temporary wav if created
-				try:
-					if created_temp_wav and wav_path and os.path.exists(wav_path):
-						os.remove(wav_path)
-				except Exception:
-					pass
-
-		# Interactive selection window UI (root created via make_pop_ups_window)
-		if yt_api:
-			selection_root = self.make_pop_ups_window(self.transcript, custom_title='Transcript')
-			# Title
-			title_label = Label(selection_root, text='Transcript source', font='arial 13 bold')
-			title_label.pack(pady=(6, 2))
-
-			# Description
-			desc_label = Label(selection_root, text='Choose a source and proceed. For YouTube, paste a video ID and press Enter or Fetch.',
-							   font='arial 9')
-			desc_label.pack(pady=(0, 8))
-
-			# Main container
-			main_frame = Frame(selection_root)
-			main_frame.pack(padx=10, pady=6)
-
-			# YouTube section
-			youtube_frame = LabelFrame(main_frame, text='YouTube', padx=8, pady=8, font='arial 10 bold')
-			youtube_frame.grid(row=0, column=0, sticky='nsew', padx=(0, 8))
-
-			youtube_id_label = Label(youtube_frame, text='Video ID:', font='arial 10')
-			youtube_id_entry = Entry(youtube_frame, width=36)
-			youtube_status_label = Label(youtube_frame, text='', font='arial 9')
-
-			def _update_status(msg: str, good=False):
-				try:
-					youtube_status_label.configure(fg=('dark green' if good else 'red'), text=msg)
-				except Exception:
-					pass
-
-			def _on_fetch_click():
-				_update_status('Fetching transcript...', good=False)
-				selection_root.update_idletasks()
-				_transcribe_youtube_from_entry(youtube_id_entry.get().strip(), selection_root)
-				_update_status('Done (or see error dialog).', good=True)
-
-			def _on_clear_click():
-				youtube_id_entry.delete(0, END)
-				_update_status('', good=False)
-
-			def _on_paste_click():
-				try:
-					clip = selection_root.clipboard_get()
-				except Exception:
-					clip = ''
-				if clip:
-					youtube_id_entry.delete(0, END)
-					youtube_id_entry.insert(0, clip.strip())
-					_update_status('Pasted from clipboard.', good=True)
-				else:
-					_update_status('Clipboard is empty.', good=False)
-
-			def _on_youtube_entry_return(event=None):
-				_on_fetch_click()
-
-			youtube_id_label.grid(row=0, column=0, sticky='w', pady=(0, 4))
-			youtube_id_entry.grid(row=0, column=1, sticky='ew', padx=(6, 0), pady=(0, 4))
-			youtube_frame.grid_columnconfigure(1, weight=1)
-
-			youtube_buttons_frame = Frame(youtube_frame)
-			youtube_buttons_frame.grid(row=1, column=0, columnspan=2, sticky='w')
-			youtube_fetch_btn = Button(youtube_buttons_frame, text='Fetch', bd=1, command=_on_fetch_click)
-			youtube_clear_btn = Button(youtube_buttons_frame, text='Clear', bd=1, command=_on_clear_click)
-			youtube_paste_btn = Button(youtube_buttons_frame, text='Paste', bd=1, command=_on_paste_click)
-			youtube_fetch_btn.grid(row=0, column=0, padx=(0, 8))
-			youtube_clear_btn.grid(row=0, column=1, padx=(0, 8))
-			youtube_paste_btn.grid(row=0, column=2, padx=(0, 0))
-
-			youtube_status_label.grid(row=2, column=0, columnspan=2, sticky='w', pady=(6, 0))
-
-			# Bindings for better UX
-			youtube_id_entry.bind('<Return>', _on_youtube_entry_return)
-			youtube_id_entry.focus_set()
-
-			# File section
-			file_frame = LabelFrame(main_frame, text='Local audio file', padx=8, pady=8, font='arial 10 bold')
-			file_frame.grid(row=0, column=1, sticky='nsew')
-
-			file_hint_label = Label(file_frame, text='Choose an mp3 or wav file and transcribe it.', font='arial 10')
-			file_browse_btn = Button(file_frame, text='Browse...', bd=1, command=_transcribe_local_audio_file)
-
-			file_hint_label.grid(row=0, column=0, sticky='w', pady=(0, 6))
-			file_browse_btn.grid(row=1, column=0, sticky='w')
-
-			# Bottom controls
-			bottom_frame = Frame(selection_root)
-			bottom_frame.pack(fill='x', padx=10, pady=(8, 10))
-			close_btn = Button(bottom_frame, text='Close', bd=1, command=lambda: self.close_pop_ups(selection_root))
-			close_btn.pack(side='right')
-
-			# Resize behavior
-			main_frame.grid_columnconfigure(0, weight=1)
-			main_frame.grid_columnconfigure(1, weight=1)
-		else:
-			_transcribe_local_audio_file()
+		open_transcript(self)
 
 
 	def content_stats(self):
@@ -6428,28 +6004,209 @@ class Window(Tk):
 	def usage_report(self):
 		# gather information
 		current_time = get_time()
-		current_usage_time = self.ut
-		# put in this file / inside this folder
-		dir_name = 'EgonTE-time-report'
-		if not (Path(dir_name).is_dir()):
-			os.makedirs(dir_name)
 
-		name_time = str(current_time).replace(':', '-')
-		file_name = f'Report of {name_time}.txt'
-		line_1 = f'used EgonTE from {self.stt_time} to {current_time}.'
-		line_2 = f'it is an estimated time of {current_usage_time} (S/M/H)'
-		line_3 = 'Here are some of the things you did (taken from record tool):'
+		# duration: use only the stopwatch variables (no local timers, no alternate trackers)
+		duration_seconds_value = None
+		try:
+			if hasattr(self, 'start_time') and isinstance(getattr(self, 'start_time'), (int, float)):
+				duration_seconds_value = max(0.0, time.perf_counter() - float(self.start_time))
+		except Exception:
+			duration_seconds_value = None
 
-		start_info = [line_1, line_2, line_3]
+		# helper: format timestamp as a string
+		def format_timestamp(timestamp_value):
+			try:
+				if hasattr(timestamp_value, 'strftime'):
+					return timestamp_value.strftime('%Y-%m-%d %H:%M:%S%z')
+				return str(timestamp_value)
+			except Exception:
+				return str(timestamp_value)
 
-		final_line = ('Note: if this information concerns you, EgonTE is an open-sourced project and you can\n'
-					  'see that this information does not go anywhere')
-		with open(rf'{dir_name}\{file_name}', 'w') as f:
-			for info in start_info:
-				f.write(info + '\n')
-			for record in self.record_list:
-				f.write(record + '\n')
-			f.write(final_line)
+		# helper: pretty-print a duration in seconds
+		def format_duration_seconds(duration_value):
+			try:
+				total_seconds = float(duration_value)
+			except Exception:
+				return 'unknown'
+			if total_seconds < 60:
+				return f'{total_seconds:.2f} s'
+			minutes_part, seconds_part = divmod(total_seconds, 60)
+			if minutes_part < 60:
+				return f'{int(minutes_part)} m {int(seconds_part)} s'
+			hours_part, minutes_rem = divmod(int(minutes_part), 60)
+			return f'{hours_part} h {minutes_rem} m {int(seconds_part)} s'
+
+		# destination directory (portable, created if missing)
+		reports_dir_path = 'EgonTE-time-report'
+		try:
+			if not os.path.isdir(reports_dir_path):
+				os.makedirs(reports_dir_path, exist_ok=True)
+		except Exception:
+			pass
+
+		# build a safe, informative file name
+		try:
+			if hasattr(current_time, 'strftime'):
+				timestamp_for_name = current_time.strftime('%Y-%m-%d_%H-%M-%S')
+			else:
+				timestamp_for_name = str(current_time)
+		except Exception:
+			timestamp_for_name = str(current_time)
+		timestamp_for_name = (
+			timestamp_for_name
+			.replace(':', '-')
+			.replace(' ', '_')
+			.replace('/', '-')
+			.replace('\\', '-')
+		)
+		report_file_name = f'Report_{timestamp_for_name}.txt'
+		report_file_path = os.path.join(reports_dir_path, report_file_name)
+
+		# header (prefer stopwatch start_date if available)
+		start_label_value = getattr(self, 'start_date', None)
+		start_time_str = str(start_label_value) if start_label_value else format_timestamp(
+			getattr(self, 'stt_time', 'unknown'))
+		end_time_str = format_timestamp(current_time)
+		duration_str = format_duration_seconds(duration_seconds_value) if duration_seconds_value is not None else 'unknown'
+
+		header_lines = [
+			'EgonTE Session Usage Report',
+			'---------------------------',
+			f'Session start: {start_time_str}',
+			f'Session end  : {end_time_str}',
+			f'Duration     : {duration_str}',
+			'',
+		]
+
+		# session statistics if available (dict-like)
+		statistics_lines = []
+		session_statistics_dict = None
+		try:
+			if hasattr(self, 'session_stats') and callable(getattr(self, 'session_stats')):
+				session_statistics_dict = self.session_stats()
+			elif hasattr(self, 'statistics'):
+				session_statistics_dict = self.statistics
+		except Exception:
+			session_statistics_dict = None
+
+		if isinstance(session_statistics_dict, dict) and session_statistics_dict:
+			statistics_lines.append('Session statistics:')
+			for statistics_key in sorted(session_statistics_dict.keys(), key=str):
+				statistics_value = session_statistics_dict.get(statistics_key)
+				try:
+					statistics_lines.append(f'  - {statistics_key}: {statistics_value}')
+				except Exception:
+					statistics_lines.append(f'  - {statistics_key}: <unavailable>')
+			statistics_lines.append('')
+		else:
+			statistics_lines.append('Session statistics: (none available)')
+			statistics_lines.append('')
+
+		# recorded actions and summary
+		recorded_actions = list(getattr(self, 'record_list', []) or [])
+		total_actions_count = len(recorded_actions)
+		unique_actions_count = len(set(map(str, recorded_actions))) if recorded_actions else 0
+
+		action_category_counts = {}
+		for record_entry in recorded_actions:
+			try:
+				record_text = str(record_entry).strip()
+			except Exception:
+				record_text = '<unprintable record>'
+			category_key = 'misc'
+			try:
+				if ' - ' in record_text:
+					after_dash = record_text.split(' - ', 1)[1].strip()
+					first_word = after_dash.split(' ', 1)[0].strip('>:').lower()
+					if first_word:
+						category_key = first_word
+			except Exception:
+				pass
+			action_category_counts[category_key] = action_category_counts.get(category_key, 0) + 1
+
+		sorted_categories = sorted(action_category_counts.items(),
+								   key=lambda kv: (-kv[1], kv[0])) if action_category_counts else []
+		top_categories_lines = []
+		if sorted_categories:
+			top_categories_lines.append('Top action categories:')
+			for category_name, category_count in sorted_categories[:5]:
+				top_categories_lines.append(f'  - {category_name}: {category_count}')
+			top_categories_lines.append('')
+		else:
+			top_categories_lines.append('Top action categories: (none)')
+			top_categories_lines.append('')
+
+		records_header_lines = [
+			'Recorded actions (from record tool):',
+			f'  Total actions : {total_actions_count}',
+			f'  Unique actions: {unique_actions_count}',
+			'',
+			*top_categories_lines,
+		]
+
+		# detailed actions (truncate very long logs for safety)
+		max_detailed_actions = 1000
+		detailed_record_lines = []
+		if recorded_actions:
+			detailed_record_lines.append('Detailed action log:')
+			truncated = False
+			for index_position, record_entry in enumerate(recorded_actions):
+				if index_position >= max_detailed_actions:
+					truncated = True
+					break
+				try:
+					flattened_record = str(record_entry).replace('\n', ' ').strip()
+				except Exception:
+					flattened_record = '<unprintable record>'
+				detailed_record_lines.append(f'  - {flattened_record}')
+			if truncated:
+				remaining_count = max(0, total_actions_count - max_detailed_actions)
+				detailed_record_lines.append(f'  ... ({remaining_count} more not shown)')
+			detailed_record_lines.append('')
+		else:
+			detailed_record_lines.append('No actions recorded.')
+			detailed_record_lines.append('')
+
+		# privacy note
+		privacy_note_lines = [
+			'Note: EgonTE is an open-source project; this report is generated locally.',
+			'No data is transmitted anywhere by this reporting functionality.',
+			'',
+		]
+
+		# compose full text
+		full_text_lines = []
+		full_text_lines.extend(header_lines)
+		full_text_lines.extend(statistics_lines)
+		full_text_lines.extend(records_header_lines)
+		full_text_lines.extend(detailed_record_lines)
+		full_text_lines.extend(privacy_note_lines)
+
+		# write the report
+		try:
+			with open(report_file_path, 'w', encoding='utf-8', newline='\n') as report_file:
+				report_file.write('\n'.join(full_text_lines))
+				if not full_text_lines or full_text_lines[-1] != '':
+					report_file.write('\n')
+		except Exception as write_exception:
+			fallback_path = os.path.join(reports_dir_path, 'Report_fallback.txt')
+			fallback_lines = [
+				'EgonTE Session Usage Report (partial)',
+				'-------------------------------------',
+				f'Failed to write full report to disk: {write_exception}',
+				'',
+				*header_lines,
+			]
+			try:
+				with open(fallback_path, 'w', encoding='utf-8', newline='\n') as fallback_file:
+					fallback_file.write('\n'.join(fallback_lines))
+					fallback_file.write('\n')
+			except Exception:
+				pass
+
+		# return the path to the generated report for convenience
+		return str(report_file_path)
+
 
 	def check_version(self):
 		current_ver = getattr(self, "ver", None)
@@ -6470,7 +6227,6 @@ class Window(Tk):
 		th = Thread(target=worker, args=(current_ver,), daemon=True)
 		th.start()
 		self._ver_thread = th  # optional: keep a handle
-
 
 	def other_transparency(self, event=False):
 		self.st_value = int(self.transparency_s.get()) / 100
