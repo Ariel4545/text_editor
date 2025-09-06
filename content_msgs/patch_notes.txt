@@ -1,5 +1,200 @@
 Version - name - release date
 
+[EgonTE 1.13.4 - Nifty tools - 6/9/25]
+
+EgonTE
+* Usage report
+    * Duration source unified
+      * Exclusively uses the existing stopwatch state for elapsed time; avoids duplicate local timing logic and alternative trackers
+      * Reads start_time and start_date; computes duration with perf_counter for accuracy and consistency
+    * Report structure and formatting
+      * Clear header with session start, end, and human‑friendly duration
+      * Stable ordering for session statistics; safe stringification of values
+    * Action analytics
+      * Totals and unique action counts from recorded actions
+      * Lightweight categorization by first token after the log dash
+      * Displays top categories for a quick overview
+    * Large‑log handling
+      * Truncates detailed action logs after a safe threshold with a clear remainder count
+      * Normalizes line breaks within records for single‑line readability
+    * Output and portability
+      * Creates a dedicated report directory if missing
+      * Generates safe, timestamped file names with sanitized characters
+      * Writes using UTF‑8 and normalized newlines for portability
+    * Resilience and fallbacks
+      * Graceful error handling during writes with a partial fallback report path
+      * Avoids raising to callers while still surfacing partial data
+    * Privacy and transparency
+      * Local‑generation privacy note clarifying no transmission of data
+    * Return value
+      * Returns the absolute path to the generated report for downstream use
+    * Project conventions
+      * Adheres to snake_case and single quotes; no leading‑underscore helpers; no in‑function imports
+* Others
+    * Added forwarders for all the standalone files of the improved tools and removed their legacy code (translate, text decorators, transcript)
+    * Added a new "Translation" graphic button instead of the ("Translation") drop-down menu's item.
+
+Translation tool (new standalone file)
+* Additions
+  * Language search fields beneath “From” and “To” with live filtering by display name and ISO code
+  * Runtime detection of supported language codes for both backends to validate and auto‑repair user inputs
+  * Auto backend preference (“auto”) that chooses the optimal backend at runtime
+  * History export to JSON and CSV with clear success/error status messages
+  * Modules tab “Reinstall Selected” action (uninstall + install), and live enable/disable of Translate based on availability
+  * Clear progress and result statuses, plus hints for the likely source language when auto‑detect is enabled
+* Changes/Improvements
+  * Backend‑aware language aliasing and normalization
+    * Robust handling for he/iw (Hebrew), jv/jw (Javanese), tl/fil (Filipino), zh/zh‑cn/zh‑tw (Chinese), ua/uk (Ukrainian), nb/nn→no (Norwegian), and more
+    * Canonicalization for codes returned from backends ensures consistency in the UI and history
+  * Translation pipeline
+    * Reuses a single translator instance per request; unified chunking strategy; fewer allocations
+    * “Auto” prefers deep‑translator when available; falls back to "googletrans" when needed
+    * "googletrans" path now attempts multiple service URLs for higher success rates; deep‑translator fallback if all fail
+  * UI/UX
+    * Debounced translation triggers applied uniformly to typing, selections, and programmatic changes
+    * Combobox typing further narrows the current filtered list while search fields persist their filters
+    * RTL alignment only reapplies when direction changes to reduce flicker
+  * History
+    * Efficient trimming based on configurable limit and smoother UI refresh
+  * Modules
+    * Clearer status/version display; action button text reflects install vs reinstall
+* Fixes
+  * Backend failures caused by mismatched language codes (e.g., he vs iw, tl vs fil, Chinese variants)
+  * Inconsistent normalization of backend‑detected language codes (now canonicalized)
+  * Cases where “auto” was inadvertently used as a target language
+  * Redundant state updates that led to minor UI stalls or jitter
+
+Text decorators (new standalone file)
+* Additions
+  * Standalone popup
+    * Top controls: Style, Layout, Preview, Options, Tools, Transforms, Outport, Window
+    * Main content: Input and Output with dedicated scrollbars
+  * Style validation
+    * One‑time check for malformed style triples, alphabet/dict mismatches, and glyph height inconsistencies
+  * Per‑style glyph cache
+    * Normalized, center‑padded fixed rectangles for each glyph; reused across renders for speed and consistency
+  * Vertical placement spacing
+    * Configurable blank‑row separation between stacked glyphs; integrates with auto‑spacing
+  * Combined preview window
+    * “Alphabet” and “Chars” tabs with font/size/placement/spacing controls, live status, copy, and save
+  * Tools and Transforms
+    * Quick actions: use editor text, clear input/output, trim trailing spaces
+    * Transforms: reverse chars/words, join, sort, toggle case, insert tab (targeted to Input/Output)
+  * Outport actions
+    * Insert rendered output to editor, copy to clipboard, or save as .txt
+  * Window and layout controls
+    * Lock min size, resizable toggle, compact padding, center window, swap tabs, and side‑by‑side editor layout
+* Changes/Improvements
+  * Rendering pipeline
+    * Unified normalization (expand tabs, strip trailing newline, optional case preservation)
+    * Robust character key resolution (space, dot, tab, line breaks) with sensible fallbacks
+    * Auto‑spacing derived from per‑style rect width; applied consistently to both horizontal and vertical modes
+  * Performance
+    * Render memoization keyed by (style, placement, text, spacing); fast per‑style rects
+    * Debounced live preview with safe scheduling to avoid stacked timers during rapid edits
+  * UI behavior and consistency
+    * Output wrap setting applied uniformly and mirrored when toggling between stacked and side‑by‑side layouts
+    * Live preview respects a “Focus Output after render” option only when Live is off
+    * Large‑input guard prompts before expensive renders
+    * Tab size edits trigger scheduled re‑render for immediate feedback
+  * Preview ergonomics
+    * Live status (chars/lines/spacing/placement) and polished copy/save flows
+    * Alphabet building favors single‑character keys; the character list is presented clearly per placement
+* Fixes
+  * Vertical mode reliability: always renders, caches, and returns output; no stale or empty results
+  * Spacing safety: defensive clamps for inter‑glyph spacing in both join and stack paths
+  * Safe blank‑row generation aligned to glyph rect width; handles edge widths gracefully
+  * Glyph edge cases: guards against empty glyph line lists and zero‑width conditions to prevent index errors
+  * Event duplication: removed redundant input bindings and duplicate Return handlers to stop double renders
+  * Unsupported characters flow: clear ask/auto‑replace‑with‑space path; predictable renders without crashes
+  * Layout sync: accurate content and wrap mirroring between stacked and side‑by‑side layouts during switches
+  * Debounce correctness: proper cancellation of pending after callbacks to avoid overlapping renders and flicker
+
+OpenAI's API tools (ChatGPT and DALL·E interfaces)
+* Additions
+  * Unified pop‑up factory integration
+    * Uses the app’s popup builder for consistent ownership, singleton behavior, theming, transparency, and logging; falls back gracefully when unavailable
+  * Key dialog UX
+    * Show/Hide key, Paste, and Clear helpers
+    * Inline status bar with progress indicator (separate row, auto‑wrapping)
+    * Test Connection button (background validation without closing the dialog)
+    * Secret bypass code via the API key field: plain secret from EGON_BYPASS_CODE or SHA‑256 hash in EGON_BYPASS_HASH
+    * Legacy Ctrl+Shift+B shortcut preserved
+  * Chat experience
+    * Sidebar “system prompt” editor with presets (Default/Concise/Detailed/Code) and one‑click Apply
+    * Streaming with a Stop button
+    * Token count indicator (lightweight approximation)
+    * Shortcuts: Enter to send; Ctrl+1/2/3 for style presets
+  * DALL·E experience
+    * Multi‑view modes: Split, Gallery, Viewer‑only, List‑only; quick switch with Alt+1/2/3/4; view mode persisted across sessions
+    * Inline viewer (when Pillow is installed) with zoom in/out, fit‑to‑screen, and Ctrl+Mouse wheel zoom
+    * Thumbnail grid with lazy loading and click‑to‑open source
+    * Right‑click actions on outputs (Copy selection, Open selection)
+  * Utilities
+    * Helpers for copying/opening selected URLs, downloading or copying images, decoding base64 images to temp files, fetching image bytes, and opening folders/files cross‑platform
+* Changes/Improvements
+  * Key dialog
+    * Single provider‑aware dialog (OpenAI/Azure) with dynamic fields (endpoint and deployment shown only for Azure)
+    * Status/progress now lives in a dedicated row; error text wraps for readability
+    * Provider selection is remembered (the last mode persisted on the app)
+    * Safer lifecycle management: buttons, status, and progress changes are guarded when the dialog closes mid‑operation
+  * Chat UI
+    * More modern look and behavior; simulated responses honored in bypass mode for fast UI testing
+    * Conversation trimming keeps only recent history and preserves at most one system message to control growth
+    * Cleaner threading and UI‑post patterns; all UI updates safely scheduled
+  * DALL·E UI
+    * Clear header settings (model/prompt/size/count/quality)
+    * Action bar separated from status to enhance readability; progress is indeterminate and unobtrusive
+    * Output list is read‑only by default; double‑click and context menu make it easy to act on results
+    * Viewer area made scrollable and centered; zoom preserves quality with proper resampling
+    * Smooth scrolling for thumbnails and the viewer is supported
+  * Consistency and resilience
+    * Everywhere: consistent snake_case, single‑quoted strings, and cohesive theming
+    * Centralized fallbacks ensure features degrade gracefully when optional dependencies are missing (e.g., Pillow, tooltip lib)
+    * Keyboard and mouse interactions are standardized across dialogs
+* Fixes
+  * Key dialog crash after bypass/close: guarded status/progress updates and background‑thread callbacks to avoid TclError when the dialog is destroyed
+  * Legacy name mismatch: compatibility shim so calls referencing on_service_change() continue to work
+  * UI race conditions: background workers now check the window still exists before posting UI updates or starting asynchronous flows
+  * Robust error surfacing: errors during connect/test/image generation are rendered to the status line (with wrapping) instead of raising or overlapping UI controls
+  * Output interactions: resolved context menu and selection behaviors in output lists; read‑only mode enforced to prevent accidental edits
+
+Transcription tool (new standalone file)
+* Additions
+  * Dedicated pop‑up entry point open_transcript(app) with complete transcript workflow
+  * Busy modal and background execution runner (run_async) with optional cancel support for long tasks
+  * YouTube transcript language selection, including graceful fallback to translated tracks when native captions are unavailable
+  * Local audio segmentation mode with configurable segment length for large files
+  * Large‑file prompt for local transcription to set user expectations on processing time
+  * Privacy controls: redaction of emails, long numeric sequences, and token‑like secrets; confirmation dialog before copying/saving unredacted content
+  * Export suite: TXT (with optional inline timestamps), SRT, VTT, Markdown, HTML, JSON, CSV, and DOCX; YouTube timestamp links export
+  * Result windows for text and captions, including format selection for insertion and timestamp toggle
+  * Keyboard shortcuts: copy/save/escape in result windows; Return to trigger YouTube fetch when valid
+  * Tooltips for all action buttons and controls
+  * Guardrails for DOCX export availability and for preventing writes when buffers are empty
+  * Consistent widget variable bindings so all widgets are retained and can be reconfigured safely
+* Changes/Improvements
+  * Unified and enforced project style: snake_case, descriptive identifiers, single‑quoted strings, and imports only at module top‑level
+  * Refactored to use app‑level UI builder functions (app.make_pop_ups_window, app.make_rich_textbox, app.place_toolt) for consistent behavior and theming
+  * Robust retries with exponential backoff for YouTube fetch and speech recognition calls to handle transient failures
+  * Safer YouTube URL/ID normalization and validation to handle common link shapes and extraneous parameters
+  * Caption normalization: safe default duration inference, whitespace collapsing, and optional removal of bracketed tags for cleaner output
+  * SRT/VTT correctness: reliable "hh:mm:ss,ms" and "hh:mm:ss.ms" formatting with line wrapping and sensible line limits for readability
+  * CSV export now preserves numeric precision and applies redaction selectively to text fields
+  * Editor insertion modes consolidated (replace selection, insert at cursor, append to end) with stable focus/scroll behavior
+  * Clearer UX: status feedback in the YouTube section, disabled/enabled fetch button based on validation, and consistent notifications for success/error
+  * Resource lifecycle: temporary files cleaned up after processing; UI elements re‑enabled and busy popups closed in all paths
+  * Segment‑based transcription pipeline tuned for responsiveness and stability on long audio
+* Fixes
+  * Prevented crashes when optional libraries are unavailable (YouTube API, pydub/ffmpeg, speech_recognition, python‑docx) with user‑facing guidance
+  * Resolved potential empty‑save issues by validating DOCX byte buffers before writing files
+  * Avoided Tk state errors by defensively toggling widget states and verifying existence before updates/binds
+  * Eliminated silent failures during clipboard/editor operations by handling missing editor selection/cursor gracefully
+  * Addressed potential GC‑related widget issues by keeping references for all created widgets and resources
+  * Ensured temporary WAV files produced from MP3 conversion are always removed on completion, error, or cancellation
+  * Hardened error surfaces with consistent, contextual message boxes and safe fallbacks across the UI and I/O boundaries
+
+
 [ 13.3.3 - Tools & fixes - 30/8/25 ]
 
 EgonTE:
