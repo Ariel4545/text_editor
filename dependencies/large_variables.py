@@ -1,24 +1,5 @@
 from socket import gethostname
 
-# humane data
-languages_list = (
-            'Afrikaans', 'Albanian', 'Arabic', 'Armenian', ' Azerbaijani', 'Basque', 'Belarusian', 'Bengali', 'Bosnian',
-            'Bulgarian', ' Catalan', 'Cebuano', 'Chichewa', 'Chinese', 'Corsican', 'Croatian', ' Czech', 'Danish',
-            'Dutch',
-            'English', 'Esperanto', 'Estonian', 'Filipino', 'Finnish', 'French', 'Frisian', 'Galician', 'Georgian',
-            'German', 'Greek', 'Gujarati', 'Haitian Creole', 'Hausa', 'Hawaiian', 'Hebrew', 'Hindi', 'Hmong',
-            'Hungarian',
-            'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian', 'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer',
-            'Kinyarwanda', 'Korean', 'Kurdish', 'Kyrgyz', 'Lao', 'Latin', 'Latvian', 'Lithuanian', 'Luxembourgish',
-            'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Maori', 'Marathi', 'Mongolian', 'Myanmar',
-            'Nepali',
-            'Norwegian''Odia', 'Pashto', 'Persian', 'Polish', 'Portuguese', 'Punjabi', 'Romanian', 'Russian', 'Samoan',
-            'Scots Gaelic', 'Serbian', 'Sesotho', 'Shona', 'Sindhi', 'Sinhala', 'Slovak', 'Slovenian', 'Somali',
-            'Spanish',
-            'Sundanese', 'Swahili', 'Swedish', 'Tajik', 'Tamil', 'Tatar', 'Telugu', 'Thai', 'Turkish', 'Turkmen',
-            'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa''Yiddish', 'Yoruba', 'Zulu',
-        )
-
 
 city_list = ['Agra', 'buenos aires', 'Amsterdam', 'los angeles', 'Antalya', 'Athens', 'Atlanta', 'Auckland', 'Bali',
                      'Bangkok', 'Barcelona', 'Beijing', 'Berlin', 'Bogota', 'Boston', 'Brussels', 'Bucharest',
@@ -26,26 +7,7 @@ city_list = ['Agra', 'buenos aires', 'Amsterdam', 'los angeles', 'Antalya', 'Ath
                      'Copenhagen', 'washington D.C.', 'Dallas', 'tokyo', 'Delhi', 'san diego', 'Dubai', 'Dublin', 'Edinburgh', 'Edirne',
                      'alexandria', 'Florence', 'san francisco', 'Guangzhou', 'Hong kong', 'Honolulu', 'Houston',
                      'Istanbul', 'Jakarta', 'Janeiro', 'Jerusalem', 'Johannesburg', 'Kiev', 'hanoi', 'riyadh', 'mecca']
-languages = {
-            '0x409': ['English - United States', 'en'], '0x809': ['English - United Kingdom', 'en'],
-            '0x0c09': ['English - Australia', 'en'], '0x2809': ['English - Belize', 'en'],
-            '0x1009': ['English - Canada', 'en'], '0x2409': ['English - Caribbean', 'en'],
-            '0x3c09': ['English - Hong Kong SAR', 'en'],
-            '0x4009': ['English - India', 'en'], '0x3809': ['English - Indonesia', 'en'],
-            '0x1809': ['English - Ireland', 'en'], '0x2009': ['English - Jamaica', 'en'],
-            '0x4409': ['English - Malaysia', 'en'],
-            '0x040c': ['French - France', 'fr'], '0x080c': ['French - Belgium', 'fr'],
-            '0x407': ['German - Germany', 'de'], '0x0c07': ['German - Austria', 'de'],
-            '0x1407': ['German - Liechtenstein', 'de'],
-            '0x1007': ['German - Luxembourg', 'de'], '0x807': ['German - Switzerland', 'de'],
-            '0x410': ['Italian - Italy', 'it'], '0x810': ['Italian - Switzerland', 'it'],
-            '0x816': ['Portuguese - Portugal', 'pt'], '0x429': ['Farsi', 'fa'],
-            '0x0c0a': ['Spanish - Spain (Modern Sort)', 'es'], '0x040a': ['Spanish - Spain (Traditional Sort)', 'es'],
-        }
-sr_supported_langs = {'English (US)' : 'en-US', 'English (UK)' : 'en-GB', 'Spanish (Spain)' : 'es-ES',
-                                   'French': 'fr-FR', 'Russian' : 'ru', 'Arabic (Egypt)' : 'ar-EG' , 'Japanese' : 'ja',
-                                   'Italian' : 'it-IT', 'Korean' : 'ko', 'Indonesian' : 'id', 'Hebrew' : 'he'
-                                   }
+
 
 
 # symbols translator
@@ -272,7 +234,6 @@ textt_list = ['<Control-Shift-Key-j>', '<Control-Shift-Key-J>', '<Control-Shift-
               '<Control-Shift-Key-r>', '<Control-Shift-Key-R>', '<Control-Shift-Key-c>', '<Control-Shift-Key-C>']
 win_list = ['<F11>', '<Control-Key-t>', '<Control-Key-T>']
 autof_list = ['<KeyPress>', '<KeyRelease>']
-right_aligned_l = ('Arabic', 'Hebrew', 'Persian', 'Pashto', 'Urdu', 'Kashmiri', 'Sindhi')
 
 # file's extensions
 text_extensions = (('Text Files', '*.txt'), ('HTML Files', '*.html'), ('Python Files', '*.py'))
@@ -295,8 +256,6 @@ library_list = [
     'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr', 'smtplib'
 ]
 
-# Optional extras (kept here so "most" lives in this file—
-# you can append more in the main file if you must)
 library_optional = [
     'openai',
     'youtube-transcript-api',
@@ -324,6 +283,94 @@ library_alias_map = {
     # Known better pin for many envs:
     'googletrans': 'googletrans==4.0.0rc1',
 }
+
+# Things we should NOT attempt to pip install (stdlib or core)
+# all checked as lowercased tokens
+library_blocklist = {
+    'urllib', 'webbrowser', 'email', 'ssl', 'sys', 'tkinter',}
+
+
+# Optional extras (kept here so "most" lives in this file—
+# you can append more in the main file if you must)
+# python
+
+# humane data
+# NOTE:
+# - Fixed stray leading spaces (e.g., " Catalan", " Azerbaijani", " Czech")
+# - Fixed concatenations caused by missing commas ("Norwegian''Odia" -> "Norwegian", "Odia";
+#   "Xhosa''Yiddish" -> "Xhosa", "Yiddish")
+# - Split ambiguous "Chinese" into explicit variants commonly used by backends
+# - Deduplicated and normalized casing of all entries
+languages_list = (
+    'Afrikaans', 'Albanian', 'Arabic', 'Armenian', 'Azerbaijani', 'Basque', 'Belarusian', 'Bengali', 'Bosnian',
+    'Bulgarian', 'Catalan', 'Cebuano', 'Chichewa', 'Chinese (Simplified)', 'Chinese (Traditional)', 'Corsican',
+    'Croatian', 'Czech', 'Danish', 'Dutch', 'English', 'Esperanto', 'Estonian', 'Filipino', 'Finnish', 'French',
+    'Frisian', 'Galician', 'Georgian', 'German', 'Greek', 'Gujarati', 'Haitian Creole', 'Hausa', 'Hawaiian',
+    'Hebrew', 'Hindi', 'Hmong', 'Hungarian', 'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian', 'Japanese',
+    'Javanese', 'Kannada', 'Kazakh', 'Khmer', 'Kinyarwanda', 'Korean', 'Kurdish', 'Kyrgyz', 'Lao', 'Latin',
+    'Latvian', 'Lithuanian', 'Luxembourgish', 'Macedonian', 'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Maori',
+    'Marathi', 'Mongolian', 'Myanmar', 'Nepali', 'Norwegian', 'Odia', 'Pashto', 'Persian', 'Polish', 'Portuguese',
+    'Punjabi', 'Romanian', 'Russian', 'Samoan', 'Scots Gaelic', 'Serbian', 'Sesotho', 'Shona', 'Sindhi', 'Sinhala',
+    'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Sundanese', 'Swahili', 'Swedish', 'Tajik', 'Tamil', 'Tatar',
+    'Telugu', 'Thai', 'Turkish', 'Turkmen', 'Ukrainian', 'Urdu', 'Uyghur', 'Uzbek', 'Vietnamese', 'Welsh', 'Xhosa',
+    'Yiddish', 'Yoruba', 'Zulu',
+)
+
+# Optional: canonical aliases for display names -> ISO codes (common subset)
+# Keep it small and non-breaking; translation tools may enrich this at runtime.
+languages_name_to_code = {
+    'English': 'en',
+    'Arabic': 'ar',
+    'Hebrew': 'he',
+    'Russian': 'ru',
+    'Hindi': 'hi',
+    'Chinese (Simplified)': 'zh-cn',
+    'Chinese (Traditional)': 'zh-tw',
+    'Japanese': 'ja',
+    'Korean': 'ko',
+    'French': 'fr',
+    'German': 'de',
+    'Spanish': 'es',
+    'Portuguese': 'pt',
+    'Italian': 'it',
+    'Norwegian': 'no',
+    'Odia': 'or',
+    'Persian': 'fa',
+    'Farsi': 'fa',
+    'Xhosa': 'xh',
+    'Yiddish': 'yi',
+}
+
+# Backward-compatible sanitized variant in case external callers prefer it as a distinct name.
+LANGUAGES_LIST_CLEAN = tuple(dict.fromkeys(x.strip() for x in languages_list if x and x.strip()))
+
+city_list = ['Agra', 'buenos aires', 'Amsterdam', 'los angeles', 'Antalya', 'Athens', 'Atlanta', 'Auckland', 'Bali',
+                     'Bangkok', 'Barcelona', 'Beijing', 'Berlin', 'Bogota', 'Boston', 'Brussels', 'Bucharest',
+                     'Budapest', 'Cairo', 'hebron', 'mexico city', 'cape town', 'Chennai', 'Chicago',
+                     'Copenhagen', 'washington D.C.', 'Dallas', 'tokyo', 'Delhi', 'san diego', 'Dubai', 'Dublin', 'Edinburgh', 'Edirne',
+                     'alexandria', 'Florence', 'san francisco', 'Guangzhou', 'Hong kong', 'Honolulu', 'Houston',
+                     'Istanbul', 'Jakarta', 'Janeiro', 'Jerusalem', 'Johannesburg', 'Kiev', 'hanoi', 'riyadh', 'mecca']
+languages = {
+            '0x409': ['English - United States', 'en'], '0x809': ['English - United Kingdom', 'en'],
+            '0x0c09': ['English - Australia', 'en'], '0x2809': ['English - Belize', 'en'],
+            '0x1009': ['English - Canada', 'en'], '0x2409': ['English - Caribbean', 'en'],
+            '0x3c09': ['English - Hong Kong SAR', 'en'],
+            '0x4009': ['English - India', 'en'], '0x3809': ['English - Indonesia', 'en'],
+            '0x1809': ['English - Ireland', 'en'], '0x2009': ['English - Jamaica', 'en'],
+            '0x4409': ['English - Malaysia', 'en'],
+            '0x040c': ['French - France', 'fr'], '0x080c': ['French - Belgium', 'fr'],
+            '0x407': ['German - Germany', 'de'], '0x0c07': ['German - Austria', 'de'],
+            '0x1407': ['German - Liechtenstein', 'de'],
+            '0x1007': ['German - Luxembourg', 'de'], '0x807': ['German - Switzerland', 'de'],
+            '0x410': ['Italian - Italy', 'it'], '0x810': ['Italian - Switzerland', 'it'],
+            '0x816': ['Portuguese - Portugal', 'pt'], '0x429': ['Farsi', 'fa'],
+            '0x0c0a': ['Spanish - Spain (Modern Sort)', 'es'], '0x040a': ['Spanish - Spain (Traditional Sort)', 'es'],
+        }
+sr_supported_langs = {'English (US)' : 'en-US', 'English (UK)' : 'en-GB', 'Spanish (Spain)' : 'es-ES',
+                                   'French': 'fr-FR', 'Russian' : 'ru', 'Arabic (Egypt)' : 'ar-EG' , 'Japanese' : 'ja',
+                                   'Italian' : 'it-IT', 'Korean' : 'ko', 'Indonesian' : 'id', 'Hebrew' : 'he'
+                                   }
+right_aligned_l = ('Arabic', 'Hebrew', 'Persian', 'Pashto', 'Urdu', 'Kashmiri', 'Sindhi')
 
 # Things we should NOT attempt to pip install (stdlib or core)
 # all checked as lowercased tokens
