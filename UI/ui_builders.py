@@ -520,30 +520,24 @@ class UIBuilders:
             if flag_var is not None:
                 try:
                     if not bool(flag_var.get()):
-                        # skip binding this group when flag is off
                         continue
                 except Exception:
                     pass
 
-            # Resolve target widget for this group
             target_widget = self._resolve_group_target(group_key)
             if target_widget is None:
                 continue
 
-            # Handlers and patterns for this group
             handlers_map = handler_groups.get(group_key, {}) or {}
 
-            # Special-case autol: single event, handler stored in handlers_map['KeyRelease']
             if group_key == 'autol':
                 handler = handlers_map.get('KeyRelease')
                 if callable(handler):
                     if self._safe_bind(target_widget, '<KeyRelease>', handler):
                         self._bound_by_mode.setdefault('autol', []).append((target_widget, '<KeyRelease>'))
-                # bindings_dict compatibility: autol must store the BooleanVar, not pattern
                 self._ensure_bindings_dict_shape(pattern_groups, autol_var=getattr(app, 'aul', None))
                 continue
 
-            # All other groups use explicit pattern lists from pattern_groups
             patterns = pattern_groups.get(group_key, [])
             bound_any = False
             for pattern in patterns:
@@ -551,15 +545,45 @@ class UIBuilders:
                 handler = handlers_map.get(ev_key) or self._pick_fallback_handler(ev_key, handler_groups)
                 if not callable(handler):
                     continue
-                if self._safe_bind(target_widget, pattern, handler):
-                    self._bound_by_mode.setdefault(group_key, []).append((target_widget, pattern))
+                # Ensure the actual bound sequence is bracketed
+                bound_seq = self._ensure_bracketed_pattern(pattern)
+                if self._safe_bind(target_widget, bound_seq, handler):
+                    self._bound_by_mode.setdefault(group_key, []).append((target_widget, bound_seq))
                     bound_any = True
-
-            # Ensure bindings_dict is left in expected shape for the options UI
             self._ensure_bindings_dict_shape(pattern_groups)
 
         # 6) For compatibility with your original method: right-click on main text
         self._attach_right_click()
+
+        # 7) Ensure Text 'modified' status updates (<<Modified>>) are bound
+        try:
+            tw = getattr(app, 'EgonTE', None)
+            if isinstance(tw, tk.Misc):
+                status_handler = getattr(app, 'status', None)
+                if callable(status_handler):
+                    tw.bind('<<Modified>>', status_handler, add='+')
+        except Exception:
+            pass
+
+        # 8) Bind any "initial" one-off keys not present in pattern lists (e.g., F5, Alt+F4, Ctrl+Delete, Ctrl+D)
+        try:
+            target_widget = self._resolve_group_target('initial')
+            if target_widget is not None:
+                all_patterns = set()
+                for plist in pattern_groups.values():
+                    for pat in plist:
+                        all_patterns.add(self._ensure_bracketed_pattern(pat))
+                initial_handlers = handler_groups.get('initial', {}) or {}
+                for key_name, handler in initial_handlers.items():
+                    if not callable(handler):
+                        continue
+                    seq = self._ensure_bracketed_pattern(key_name)
+                    if seq not in all_patterns:
+                        self._safe_bind(target_widget, seq, handler)
+                        self._bound_by_mode.setdefault('initial', []).append((target_widget, seq))
+        except Exception:
+            pass
+
 
     def unbind_group(self, mode: str) -> None:
         '''
@@ -621,6 +645,9 @@ class UIBuilders:
                                                                                          'sizes_shortcuts') else None,
                 'F5': getattr(app, 'dt', None),
                 'Alt-Key-r': (lambda e=None: app.exit_app(event='r')) if hasattr(app, 'exit_app') else None,
+                # Added convenience bindings irrespective of pattern lists:
+                'Control-Delete': getattr(app, 'clear', None),
+                'Control-Key-d': getattr(app, 'copy_file_path', None),
             },
             'autof': {
                 'KeyPress': getattr(app, 'emoji_detection', None),
@@ -648,6 +675,7 @@ class UIBuilders:
                 'Control-Key-n': getattr(app, 'new_file', None),
                 'Control-Key-p': getattr(app, 'print_file', None),
                 'Alt-Key-d': getattr(app, 'copy_file_path', None),
+                # Keep Alt+D for backward compatibility
             },
             'textt': {
                 'Control-Shift-Key-j': getattr(app, 'join_words', None),
@@ -663,14 +691,23 @@ class UIBuilders:
 
     def _build_pattern_groups(self) -> dict[str, list[str]]:
         app = self.app
-        filea = list(getattr(app, 'filea_list', [])) or []
-        typea = list(getattr(app, 'typef_list', [])) or []
-        editf = list(getattr(app, 'editf_list', [])) or []
-        textt = list(getattr(app, 'textt_list', [])) or []
-        windf = list(getattr(app, 'win_list', [])) or []
-        autof = list(getattr(app, 'autof_list', [])) or []
+        # Prefer attributes if provided; otherwise fall back to app.bindings_dict (which the app initializes)
+        bd = getattr(app, 'bindings_dict', None) if isinstance(getattr(app, 'bindings_dict', None), dict) else {}
 
-        # Ensure app.bindings_dict precisely matches your original shape
+        def _get_list(attr_name: str, dict_key: str) -> list[str]:
+            vals = list(getattr(app, attr_name, [])) or []
+            if not vals and bd:
+                vals = list(bd.get(dict_key, [])) or []
+            return vals
+
+        filea = _get_list('filea_list', 'filea')
+        typea = _get_list('typef_list', 'typea')
+        editf = _get_list('editf_list', 'editf')
+        textt = _get_list('textt_list', 'textt')
+        windf = _get_list('win_list', 'windf')
+        autof = _get_list('autof_list', 'autof')
+
+        # Ensure app.bindings_dict precisely matches expected shape
         if not hasattr(app, 'bindings_dict') or not isinstance(app.bindings_dict, dict):
             app.bindings_dict = {}
 
@@ -710,10 +747,11 @@ class UIBuilders:
 
     def _resolve_group_target(self, group_key: str) -> Optional[tk.Misc]:
         app = self.app
-        if group_key in ('autof', 'autol'):
-            tw = getattr(app, 'EgonTE', None)
-            if isinstance(tw, tk.Misc):
-                return tw
+        # Prefer the main Text widget for all key bindings if available
+        tw = getattr(app, 'EgonTE', None)
+        if isinstance(tw, tk.Misc):
+            return tw
+        # Fallbacks
         if isinstance(app, tk.Misc):
             return app
         root = getattr(app, 'root', None)
@@ -723,25 +761,61 @@ class UIBuilders:
         return dr if isinstance(dr, tk.Misc) else None
 
     def _normalize_event_key(self, pattern: str) -> str:
-        return pattern[1:-1] if pattern.startswith('<') and pattern.endswith('>') else pattern
+        """Normalize incoming patterns like '<Control-Key-b>' / '<Control-b>' / 'Control-o'
+        into a canonical comparison form and try to equalize Key presence."""
+        raw = pattern[1:-1] if pattern.startswith('<') and pattern.endswith('>') else pattern
+        # Canonicalize 'Control-Key-x' -> 'Control-Key-x'
+        parts = raw.split('-')
+        # If it's like Control-b, expand to Control-Key-b for lookups
+        if len(parts) >= 2 and parts[-2] != 'Key' and len(parts[-1]) == 1:
+            # Insert 'Key' before last segment
+            parts.insert(-1, 'Key')
+            raw = '-'.join(parts)
+        return raw
 
     def _pick_fallback_handler(self, ev_key: str, handler_groups: dict[str, dict[str, Any]]) -> Optional[Any]:
+        # Direct lookup
         for g in handler_groups.values():
             if ev_key in g and callable(g[ev_key]):
                 return g[ev_key]
+        # Try without the explicit 'Key' segment
+        if '-Key-' in ev_key:
+            no_key = ev_key.replace('-Key-', '-')
+            for g in handler_groups.values():
+                if no_key in g and callable(g[no_key]):
+                    return g[no_key]
+        else:
+            with_key = ev_key.replace('-', '-Key-', 1) if '-' in ev_key else ev_key
+            for g in handler_groups.values():
+                if with_key in g and callable(g[with_key]):
+                    return g[with_key]
+        # Try case flip on the trailing character
         parts = ev_key.split('-')
-        if len(parts) >= 2 and parts[-2] == 'Key' and len(parts[-1]) == 1 and parts[-1].isalpha():
+        if len(parts) >= 2 and len(parts[-1]) == 1 and parts[-1].isalpha():
             flip = parts.copy()
             flip[-1] = parts[-1].lower() if parts[-1].isupper() else parts[-1].upper()
             alt_key = '-'.join(flip)
             for g in handler_groups.values():
                 if alt_key in g and callable(g[alt_key]):
                     return g[alt_key]
+            # Also try the 'no Key' variant
+            if '-Key-' in alt_key:
+                no_key_alt = alt_key.replace('-Key-', '-')
+                for g in handler_groups.values():
+                    if no_key_alt in g and callable(g[no_key_alt]):
+                        return g[no_key_alt]
         return None
+
+    def _ensure_bracketed_pattern(self, pattern: str) -> str:
+        """Make sure pattern has angle brackets for Tkinter bind."""
+        if pattern.startswith('<') and pattern.endswith('>'):
+            return pattern
+        return f'<{pattern}>'
 
     def _safe_bind(self, widget: tk.Misc, pattern: str, handler: Any) -> bool:
         try:
-            widget.bind(pattern, handler)
+            # Always ensure a proper Tk pattern and do not clobber existing bindings
+            widget.bind(self._ensure_bracketed_pattern(pattern), handler, add='+')
             return True
         except Exception:
             return False
