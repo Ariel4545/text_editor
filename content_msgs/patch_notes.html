@@ -1,5 +1,273 @@
 <h3>Version - name - release date</h3>
 
+<h3>[ 1.13.5 - Services n' tools - 13/09/25 ]</h3>
+
+<h4>Clipboard (new standalone file)</h4>
+
+<h5>Added</h5>
+<ul>
+  <li>Pinned items section
+    <ul>
+      <li>Dedicated "Pins" area rendered above history, not subject to capacity limits</li>
+      <li>Pin/Unpin action via toolbar, context menu, and Ctrl+P shortcut</li>
+      <li>"Clear Pins" action (button, context menu, and Ctrl+Shift+Backspace)</li>
+    </ul>
+  </li>
+  <li>Multi-select operations
+    <ul>
+      <li>Copy, Paste, Delete, Move Up/Down all support multiple selections</li>
+      <li>Aggregated Copy/Paste behavior with newline-joined payloads</li>
+    </ul>
+  </li>
+  <li>Drag-and-drop reordering
+    <ul>
+      <li>Reorder items by dragging within the same section (Pins or Items)</li>
+      <li>Disabled while a filter is active to avoid index confusion</li>
+    </ul>
+  </li>
+  <li>System clipboard watcher
+    <ul>
+      <li>Lightweight polling that auto-adds new clipboard text to history while the popup is open</li>
+      <li>Pause watcher toggle to temporarily stop ingesting new items</li>
+    </ul>
+  </li>
+  <li>Live-refresh hook
+    <ul>
+      <li>app._clipboard_apply_filter is set while the popup is open and cleared on close, allowing external updates to refresh the UI instantly</li>
+    </ul>
+  </li>
+  <li>Platform-friendly context menu
+    <ul>
+      <li>Right-click, middle-click, and Ctrl+Click (macOS) all open the context menu</li>
+    </ul>
+  </li>
+  <li>UI details and controls
+    <ul>
+      <li>Selection counter and visible counts (Pins/Items)</li>
+      <li>"Auto-close on paste" option for fast workflows</li>
+    </ul>
+  </li>
+</ul>
+
+<h5>Changed / Improved</h5>
+<ul>
+  <li>Standalone architecture
+    <ul>
+      <li>Decoupled from the main window into a dedicated popup (popup builders or Toplevel fallback)</li>
+      <li>Adopts global window transparency and common behaviors</li>
+    </ul>
+  </li>
+  <li>Robust indexing
+    <ul>
+      <li>View-to-model index mapping for all actions, resilient to duplicates and active filters</li>
+    </ul>
+  </li>
+  <li>History semantics
+    <ul>
+      <li>Move-to-front with deduplication for both pinned and unpinned items</li>
+      <li>Capacity enforcement applies only to unpinned history</li>
+    </ul>
+  </li>
+  <li>Filtering
+    <ul>
+      <li>Case-insensitive, instant filter across both sections</li>
+      <li>Safe behavior by disabling reordering while filtered</li>
+    </ul>
+  </li>
+  <li>UX polish
+    <ul>
+      <li>Clear rendering with truncation for long entries (models store full text)</li>
+      <li>Cross-platform context triggers and consistent key bindings</li>
+      <li>Status labels update on selection and drag operations</li>
+    </ul>
+  </li>
+  <li>Integration hygiene
+    <ul>
+      <li>Live-refresh hook and watcher lifecycle cleaned up on window close</li>
+      <li>Works with app-level builders, styles, and optional alpha without extra configuration</li>
+    </ul>
+  </li>
+</ul>
+
+<h5>Fixed</h5>
+<ul>
+  <li>Duplicate-handling pitfalls
+    <ul>
+      <li>Operations use exact index mapping instead of raw value matching</li>
+    </ul>
+  </li>
+  <li>Filter-induced reorder bugs
+    <ul>
+      <li>Reordering is blocked while filtered to avoid unexpected positions</li>
+    </ul>
+  </li>
+  <li>Clipboard watcher spam
+    <ul>
+      <li>Last-seen guard plus dedup prevents redundant entries</li>
+    </ul>
+  </li>
+  <li>Context menu discoverability on macOS
+    <ul>
+      <li>Ctrl+Click and middle-click support ensure accessibility</li>
+    </ul>
+  </li>
+  <li>UI update race conditions
+    <ul>
+      <li>All UI refreshes scheduled on the Tk event loop; live hook and watcher tear down cleanly on close</li>
+    </ul>
+  </li>
+</ul>
+
+<h4>Weather tool (new standalone file)</h4>
+
+<h5>Added</h5>
+<ul>
+  <li>Standalone weather module and popup with clear responsibilities; imports/constants at file top</li>
+  <li>City suggestions dropdown with accent- and case-insensitive matching and deduplicated results</li>
+  <li>Recent/Recommended cities panel with capacity control and stable deduplication</li>
+  <li>Notebook tabs for Now, Hourly, Daily, Textual summary, and a "Last city" view to recall snapshots</li>
+  <li>Responsive Matplotlib charts with auto-resize handling and minimum readable sizes</li>
+  <li>Textual forecast fallback when plotting backends are unavailable</li>
+  <li>Icon rendering via OpenWeather icon codes using PIL (soft dependency with safe fallbacks)</li>
+  <li>Asynchronous fetch pipeline with background thread, UI-safe scheduling, and graceful error dialogs</li>
+  <li>Multi-provider sources: primary OpenWeather (with API key) and fallback to wttr.in; synthetic forecast if needed</li>
+  <li>Metric-normalized model internally with local unit toggling (C/F, m/s vs mph) without re-fetching</li>
+  <li>Copy action for current summary with optional paste-to-editor integration</li>
+  <li>Utility helpers for normalization, keys, time formatting with offsets, safe scheduling, and plotting</li>
+</ul>
+
+<h5>Changed / Improved</h5>
+<ul>
+  <li>Split and refactored previous monolithic logic into a drop-in module with snake_case naming</li>
+  <li>All widgets stored in variables for reliable updates, theming, and events</li>
+  <li>Suggestions and recents logic rewritten to be accent- and case-insensitive with stable dedupe; history capping enforced</li>
+  <li>Unified conversion flow: fetch once in metric, then convert instantly on UI unit toggle</li>
+  <li>Forecast normalization to a common structure; charts and text consume the same format</li>
+  <li>Chart rendering responsive with debounced resize and minimum size enforcement</li>
+  <li>Error handling hardened across network, image, and plotting paths with user-friendly messages</li>
+  <li>Snapshotting for "Last city" tab with summary and chart preview (when available)</li>
+  <li>Improved code organization: constants, helpers, providers, model, UI, and rendering separated</li>
+</ul>
+
+<h5>Fixed</h5>
+<ul>
+  <li>Duplicate entries in recents/suggestions due to casing/accents</li>
+  <li>Unit-toggle inconsistencies requiring re-fetch or losing precision</li>
+  <li>Crashes when plotting widgets resized rapidly or backends missing</li>
+  <li>Intermittent icon load issues; preloads and retains references safely</li>
+  <li>Missing or partial forecasts; fallback generation ensures charts/text remain populated</li>
+  <li>Suggestions panel now hides predictably on empty/unmatched queries</li>
+  <li>UI freezes from synchronous network calls replaced with threaded fetch and safe updates</li>
+</ul>
+
+<h4>Knowledge tool - Wiki and Dictionary (new standalone file)</h4>
+
+<h5>Added</h5>
+<ul>
+  <li>Dedicated popup with tabbed UI: Search, Results, Images (Wiki only)</li>
+  <li>Provider toggle and bridging: Dictionary and Wikipedia with one-click bridge actions</li>
+  <li>Shortcuts: Ctrl+1..4 for Wiki modes, Ctrl+Shift+D/W for bridging, Ctrl+. / Ctrl+, for image nav</li>
+  <li>Non-blocking networking with background threads and run-id tracking</li>
+  <li>Debounced auto-search with character threshold and provider-aware safeguards</li>
+  <li>Images pipeline: safe URL filtering, parallel downloads, two-stage sizing, first-ready rendering, source actions</li>
+  <li>Robust output actions: paste to editor, copy all/selection, open/copy article URL (Wiki)</li>
+  <li>Status and metrics: status bar for long tasks; result stats (length, chars, lines, paragraphs, sentences)</li>
+  <li>Soft preference persistence: auto-search, auto-pick (Wiki), auto-bridge (Dict), max images per session</li>
+  <li>UX polish: mode feedback, normalized whitespace, safe URL validation, pre-fill search from editor selection</li>
+</ul>
+
+<h5>Changed / Improved</h5>
+<ul>
+  <li>Extracted from main window into a reusable module; no UI blocking; better error isolation</li>
+  <li>Resilient UI composition with consistent notebook layout, min-sizes, and flexible layout usage</li>
+  <li>Safer state transitions with explicit run lifecycle and main-thread UI updates</li>
+  <li>Wikipedia modes: Summary, Related, Content, Images with tailored actions; optional auto-pick and disambiguation tips</li>
+  <li>Dictionary mode: grouped definitions; optional synonyms/antonyms; auto-bridge on no definitions (optional)</li>
+  <li>Images handling: first-success tab switch, accurate navigation info, container-aware fitting</li>
+  <li>Usability: tuned debounce, normalized search terms, keyboard-first usage, clear button states</li>
+</ul>
+
+<h5>Fixed</h5>
+<ul>
+  <li>Eliminated UI freezes and race conditions by removing blocking calls from main thread</li>
+  <li>Run-id guard prevents stale overwrite during fast typing or mode switches</li>
+  <li>Images tab edge cases fixed (no auto-switch on no images; waits for first-ready)</li>
+  <li>Images clamped/converted to renderable formats with fallbacks</li>
+  <li>Hardened error handling: disambiguation with tips; network/timeout messages restore ready state</li>
+  <li>URL safety checks: only opens valid http(s); stricter for Wiki actions</li>
+  <li>Whitespace/content normalization for tidy output</li>
+  <li>Consistent state reset when re-running or changing modes</li>
+</ul>
+
+<h4>EgonTE</h4>
+<ul>
+  <li>Added forwarders to the new standalone tools and replaced old methods</li>
+  <li>Improved "load_links" call to reduce lag</li>
+  <li>Added methods that ensure services availability and connect them to their features</li>
+  <li>Fixed info window text box blank when viewing patch notes in .txt format</li>
+  <li>Fixed class call reference names in various methods</li>
+  <li>Fixed text-twisters menu GUI representation of available shortcuts</li>
+  <li>Fixed variable type assignment in status bar management</li>
+  <li>Improved saved_settings file save process</li>
+  <li>Improved code writing quality for various methods</li>
+  <li>Improved emoji_detection conditioning</li>
+</ul>
+
+<h4>Services (new)</h4>
+
+<h5>ThemeService</h5>
+<ul>
+  <li>Smarter colors: auto-picks readable text against chosen background</li>
+  <li>Live preview: try changes safely and cancel if needed</li>
+  <li>Presets: save, load, delete favorite theme setups</li>
+  <li>Full app coverage: editor, menus, toolbars, popups</li>
+  <li>Works with Night Mode: warns before changing colors while active (optional)</li>
+</ul>
+
+<h5>SearchService</h5>
+<ul>
+  <li>Regex searches for pattern-based find/replace</li>
+  <li>Search within selection</li>
+  <li>Easy navigation with clear current-match highlight</li>
+  <li>Replace one/all/current</li>
+  <li>Match counts</li>
+</ul>
+
+<h5>FileService</h5>
+<ul>
+  <li>Reliable open/save: UTF-8 primary with fallbacks; protects against data loss</li>
+  <li>Open last file: restores state safely</li>
+  <li>HTML polish on open (when available)</li>
+  <li>Print support: one-click on Windows; open on other systems</li>
+  <li>Extras: new file, merge files, delete with confirm, file info summary</li>
+</ul>
+
+<h4>UI builders</h4>
+
+<h5>Added</h5>
+<ul>
+  <li>Popup builder features: title derivation, singleton registry, modal/topmost, geometry, icon, transparency, theming hook, centered placement</li>
+  <li>Tooltip system: tktooltip preferred, Tix fallback; shared Balloon with delay; version-tolerant attach</li>
+  <li>Rich textbox factory: scrollable container with HTML rendering when available; safe fallback</li>
+  <li>Window management: open-windows controller (duplicate suppression, bring-to-front, pruning, optional warning)</li>
+</ul>
+
+<h5>Changed / Improved</h5>
+<ul>
+  <li>Owner resolution robust across root/master/_root/app/default-root</li>
+  <li>Key binding system: canonicalizes patterns, preserves existing handlers, group-based binds with smart fallbacks, restores bindings_dict shape, honors autol semantics, adds helpful initial binds, routes editor events to status handler</li>
+  <li>Safer UI guards around transient, grab_set, iconphoto, attributes, focus, and geometry</li>
+</ul>
+
+<h5>Fixed</h5>
+<ul>
+  <li>Duplicate popups and stale registry entries via reliable tracking/pruning</li>
+  <li>Event binding pitfalls: missing brackets, clobbered handlers, inconsistent normalization</li>
+  <li>Tooltip double-binding and backend collisions (single backend per session)</li>
+  <li>Close/cleanup removes entries from app lists and builder registry</li>
+  <li>Owner resolution failures when parent/root absent (clear error only as last resort)</li>
+</ul>
+
 <h3>[ 1.13.4 - Nifty tools - 6/9/25 ]</h3>
 
 <h4>EgonTE</h4>
