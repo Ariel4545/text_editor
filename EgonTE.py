@@ -158,6 +158,10 @@ from pop_ups.text_decorators_app import open_text_decorators
 from pop_ups.translate_app import open_translate
 from pop_ups.transcript_app import open_transcript
 
+from pop_ups.weather_app import open_weather
+from pop_ups.clipboard_app import open_clipboard_history
+from pop_ups.knowledge_popup import open_knowledge_popup
+
 '''the optional libraries that can add a lot of extra content to the editor'''
 tes = ACTIVE
 try:
@@ -362,7 +366,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.4'
+		self.ver = '1.13.5'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -370,8 +374,7 @@ class Window(Tk):
 		self.protocol('WM_DELETE_WINDOW', self.exit_app)
 		# threads for a stopwatch function that works on advance option window and a function that loads images from the web
 		self.start_stopwatch()
-		# Thread(target=self.load_links, daemon=True).start()
-		self.load_links()
+		Thread(target=self.load_links, daemon=True).start()
 		# variables for the (UI) style of the program
 		self.titles_font = '@Microsoft YaHei Light', 16, 'underline'
 		self.title_struct = 'EgonTE - '
@@ -458,7 +461,7 @@ class Window(Tk):
 						(self.KEY_IMAGE, lambda: Thread(target=self.virtual_keyboard()).start()),
 						(self.DTT_IMAGE, lambda: self.open_windows_control(self.handwriting)),
 						(self.CALC_IMAGE, self.ins_calc),
-                        (self.TRANSLATE_IMAGE, self.translate))
+						(self.TRANSLATE_IMAGE, self.translate))
 		self.bold_button, self.italics_button, self.underline_button, self.color_button, self.align_left_button, \
 			self.align_center_button, self.align_right_button, self.tts_button, self.talk_button, self.v_keyboard_button, \
 			self.dtt_button, self.calc_button, self.translate_button = [
@@ -502,6 +505,39 @@ class Window(Tk):
 
 		self.opening_msg(insert_lf)
 		self.call_init_steps()
+
+	def _ensure_file_service(self):
+		'''
+		Lazy-initialize the FileService to avoid import order issues.
+		'''
+		if not hasattr(self, 'file_service') or self.file_service is None:
+			try:
+				from services.file_service import FileService
+				self.file_service = FileService(self)
+			except Exception:
+				self.file_service = None
+
+	def _ensure_search_service(self):
+		'''
+		Lazy-initialize the SearchService to avoid import order issues.
+		'''
+		if not hasattr(self, 'search_service') or self.search_service is None:
+			try:
+				from services.search_service import SearchService
+				self.search_service = SearchService(self)
+			except Exception:
+				self.search_service = None
+
+	def _ensure_theme_service(self):
+		'''
+		Lazy-initialize the ThemeService to avoid import order issues.
+		'''
+		if not hasattr(self, 'theme_service') or self.theme_service is None:
+			try:
+				from services.theme_service import ThemeService
+				self.theme_service = ThemeService(self)
+			except Exception:
+				self.theme_service = None
 
 
 	def build_main_textbox(self, parent_container):
@@ -580,16 +616,20 @@ class Window(Tk):
 					except Exception:
 						pass
 
-				if not tesseract_path and platform_system.startswith('win'):
+				# Normalize platform string once
+				try:
+					_sys = (platform_system() or '').lower()
+				except Exception:
+					_sys = ''
 					for candidate_path in (
-							r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-							r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+						r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+						r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
 					):
 						if os.path.exists(candidate_path):
 							tesseract_path = candidate_path
 							break
 
-				if not tesseract_path and platform_system == 'darwin':
+				if not tesseract_path and (_sys == 'darwin'):
 					for candidate_path in ('/opt/homebrew/bin/tesseract', '/usr/local/bin/tesseract'):
 						if os.path.exists(candidate_path):
 							tesseract_path = candidate_path
@@ -639,7 +679,7 @@ class Window(Tk):
 				return
 		except Exception:
 			# If widget not ready for any reason, try a bit later
-			self.after(50, lambda: self._maybe_insert_opening_message(insert_lf))
+			self.after(50, lambda: self.opening_msg(insert_lf))
 			return
 
 
@@ -769,10 +809,10 @@ class Window(Tk):
 							   'undo|(ctrl+z)': self.EgonTE.edit_undo, 'redo|(ctrl+y).': self.EgonTE.edit_redo,
 							   'select all|(ctrl+a)': self.select_all, 'clear all|(ctrl+del).': self.clear,
 							   'find text|(ctrl+f)': self.find_replace,
-							   'replace|(ctrl+h)': self.replace, 'go to|(ctrl+g).': self.goto,
-							   'reverse characters|(ctrl+c)': self.reverse_characters,
-							   'reverse words|(ctrl+c)': self.reverse_words, 'join words|(ctrl+c)': self.join_words,
-							   'upper/lower|(ctrl+c)': self.lower_upper,
+							   'replace|(ctrl+h)': self.replace_dialog, 'go to|(ctrl+g).': self.goto,
+							   'reverse characters|(ctrl+shift+c)': self.reverse_characters,
+							   'reverse words|(ctrl+shift+r)': self.reverse_words, 'join words|(ctrl+shift+r)': self.join_words,
+							   'upper/lower|(ctrl+shift+u)': self.lower_upper,
 							   'sort by characters': self.sort_by_characters, 'sort by words.': self.sort_by_words,
 							   'clipboard history.': self.clipboard_history, 'insert images': self.insert_image
 							   }
@@ -981,137 +1021,48 @@ class Window(Tk):
 
 
 	def get_file(self, mode='open', message=''):
-		'''+ global filedialog function that use return
-
-		in-effective because we need a brief way to integrate every file extensions type
 		'''
-		if mode == 'open':
-			file = filedialog.askopenfilename(title=f'{mode}{message} file', filetypes=text_extensions)
-		elif mode == 'new':
-			file = filedialog.asksaveasfilename(defaultextension='.*', initialdir='C:/EgonTE', title='Save File',
-													 filetypes=text_extensions)
-		return file
+		Centralized file dialog helper (delegates to FileService).
+		'''
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.get_file(mode=mode, message=message)
+		return ''
 
 
 	def new_file(self, event=None):
 		'''
-		creates blank workspace (without file)
+		Creates a blank workspace (delegates to FileService).
 		'''
-		if check_file_changes(self.file_name, self.EgonTE.get('1.0', 'end')):
-			self.file_name = ''
-			self.file_bar.config(text='New file')
-			self.EgonTE.delete('1.0', END)
-			self.open_status_name = ''
-			self.record_list.append(f'> [{get_time()}] - New black file opened')
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.new_file(event=event)
 
 	def open_file(self, event=None):
-		'''
-		opens file, have special support also for html and python files
-		'''
-
-
-		content = self.EgonTE.get('1.0', 'end')
-		if event == 'initial':
-			self.text_name = self.data['open_last_file']
-
-		else:
-			self.text_name = self.get_file('Open')
-
-		if check_file_changes(self.file_name, self.EgonTE.get('1.0', 'end')):
-			if self.text_name:
-				try:
-					self.EgonTE.delete('1.0', END)
-					self.open_status_name = self.text_name
-					self.file_name = self.text_name
-					self.file_bar.config(text=f'Opened file: {GetShortPathName(self.file_name)}')
-					'''+ add a special mode to redirect the files to and egon library
-					
-					make it in the users document library
-					'''
-					if self.egon_dir.get():
-						self.file_name.replace('', 'C:/EgonTE/')
-					text_file = open(self.text_name, 'r')
-					stuff = text_file.read()
-					# disable python IDE if python functionalities are on
-					if self.python_file:
-						self.python_file = ''
-						self.outputFrame.destroy()
-						self.app_menu.delete('Run')
-						self.app_menu.delete('Clear console')
-						self.options_menu.delete('Auto clear console')
-						self.options_menu.delete('Save by running')
-						if self.dev_mode.get():
-							self.options_menu.delete(15)
-						else:
-							self.options_menu.delete(14)
-					# make the html files formatted when opened
-					if self.file_name.endswith('.html'):
-						self.soup = BeautifulSoup(stuff, 'html')
-						stuff = self.soup.prettify()
-					# adds functionality to compile python in EgonTE
-					elif self.file_name.endswith('.py'):
-						self.python_file = True
-						self.output_frame, self.output_box, self.output_scroll = self.make_rich_textbox(frame, size=[100, 1]
-									, selectbg='blue', wrap=None, font='arial 12', bd=2)
-						self.output_box.configure(state='disabled')
-					self.manage_menus(mode='python')
-
-					self.EgonTE.insert(END, stuff)
-					text_file.close()
-
-					if self.data['open_last_file']:
-						self.save_last_file()
-
-					self.record_list.append(f'> [{get_time()}] - Opened {self.file_name}')
-
-				except UnicodeDecodeError:
-					messagebox.showerror(self.title_struct + 'error', 'File contains not supported characters')
-					self.EgonTE.insert('1.0', content) # kind of revert mechanism
-			else:
-				messagebox.showerror(self.title_struct + 'error', 'File not found / selected')
+			'''
+			Opens a file with HTML/Python handling (delegates to FileService).
+			'''
+			self._ensure_file_service()
+			if getattr(self, 'file_service', None):
+				return self.file_service.open_file(event=event)
 
 	# save file as function
 	def save_as(self, event=None):
 		'''
-		saves file by new location that the user will give it
+		Saves buffer to a new location (delegates to FileService).
 		'''
-		if event == None:
-			text_file = filedialog.asksaveasfilename(defaultextension='.*', initialdir='C:/EgonTE', title='Save File',
-													 filetypes=text_extensions)
-			if text_file:
-				self.file_name = text_file
-				self.file_name = self.file_name.replace('C:/EgonTE', '')
-				self.file_bar.config(text=f'Saved: {self.file_name} - {get_time()}')
-
-				text_file = open(text_file, 'w')
-				text_file.write(self.EgonTE.get(1.0, END))
-				text_file.close()
-
-				if self.data['open_last_file']:
-					self.save_last_file()
-
-				self.record_list.append(f'> [{get_time()}] - Saved {text_file}')
-
-		if event == 'get name':
-			try:
-				return self.file_name
-			except NameError:
-				messagebox.showerror(self.title_struct + 'error',
-									 'You cant copy a file name if you doesn\'t use a file ')
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.save_as(event=event)
 
 	# save function
 	def save(self, event=None):
-		'''
-		saves file in its existing location (if its have one)
-		'''
-		if self.open_status_name:
-			text_file = open(self.open_status_name, 'w')
-			text_file.write(self.EgonTE.get(1.0, END))
-			text_file.close()
-			self.file_bar.config(text=f'Saved: {self.file_name} - {get_time()}')
-			self.record_list.append(f'> [{get_time()}] - Saved {self.file_name}')
-		else:
-			self.save_as(event=None)
+			'''
+			Saves buffer to existing path or falls back to Save As (delegates to FileService).
+			'''
+			self._ensure_file_service()
+			if getattr(self, 'file_service', None):
+				return self.file_service.save(event=event)
 
 	def cut(self):
 		if self.is_marked():
@@ -1160,8 +1111,14 @@ class Window(Tk):
 	def right_click_menu(self, event):
 		# it's the same pointer so it's ineffective
 		right_click_menu = self.clone_menu()
-		right_click_menu.delete('Correct writing'), right_click_menu.delete('Organize writing'), right_click_menu.delete(4)
-		[right_click_menu.delete(LAST) for i in range(4)]
+		try:
+			right_click_menu.delete('Correct writing')
+			right_click_menu.delete('Organize writing')
+			right_click_menu.delete(4)
+			for _ in range(4):
+				right_click_menu.delete(LAST)
+		except Exception:
+			pass
 		# a condition that will prevent duplicate packing of menus
 
 		if not self.menu_pop.get() and event.num == 3:
@@ -1184,6 +1141,7 @@ class Window(Tk):
 				new_menu.add_command(label=label, command=commands[command_index])  # command can't be directly retrieved
 				command_index += 1
 		return new_menu
+
 
 	def add_to_clipboard_history(self, item_text: str):
 		'''Add text to the clipboard history, keeping most recent at index 0 and skipping consecutive duplicates.'''
@@ -1210,262 +1168,12 @@ class Window(Tk):
 		if len(self.copy_list) > max_history_items:
 			del self.copy_list[max_history_items:]
 
+
 	def clipboard_history(self):
-		# Ensure storage exists
-		if not hasattr(self, 'copy_list') or self.copy_list is None:
-			self.copy_list = []
-		# Optional: set a capacity for the history
-		max_items = getattr(self, 'clipboard_history_capacity', 100)
-
-		# Helpers to manage history
-		def add_to_clipboard_history(text: str):
-			if not text:
-				return
-			s = str(text)
-			# skip immediate duplicates at the head
-			if self.copy_list and self.copy_list[0] == s:
-				return
-			self.copy_list.insert(0, s)
-			# enforce capacity
-			if len(self.copy_list) > max_items:
-				del self.copy_list[max_items:]
-			apply_filter(refresh_list=True)
-
-		# Expose for external use (e.g., copy/cut hooks can call this)
-		self.add_to_clipboard_history = add_to_clipboard_history
-
-		# Build the pop-up window with your standardized helper
-		root = self.make_pop_ups_window(self.clipboard_history)
-		root.title('Clipboard History')
-		# root is a tk.Toplevel returned by the helper
-
-		# UI state
-		filter_var = StringVar() if hasattr(self, 'tk') else __import__('tkinter').StringVar()
-		filtered_view = []  # snapshot of items after filter
-		listbox = None
-		dragging_model_index = None
-
-		# ---- Data/UI sync helpers ----
-		def apply_filter(refresh_list=False):
-			nonlocal filtered_view
-			q = filter_var.get().strip().lower()
-			if q:
-				filtered_view = [s for s in self.copy_list if q in s.lower()]
-			else:
-				filtered_view = list(self.copy_list)
-			if refresh_list and listbox is not None:
-				listbox.delete(0, 'end')
-				for s in filtered_view:
-					display = s if len(s) <= 120 else (s[:117] + '...')
-					listbox.insert('end', display)
-
-		def get_view_selection():
-			sel = listbox.curselection()
-			return sel[0] if sel else None
-
-		def get_selected_text():
-			idx = get_view_selection()
-			if idx is None or not (0 <= idx < len(filtered_view)):
-				return None
-			return filtered_view[idx]
-
-		def model_index_from_view():
-			txt = get_selected_text()
-			if txt is None:
-				return None
-			try:
-				return self.copy_list.index(txt)
-			except ValueError:
-				return None
-
-		def select_model_index(model_idx: int):
-			if not (0 <= model_idx < len(self.copy_list)):
-				return
-			target_value = self.copy_list[model_idx]
-			try:
-				view_idx = filtered_view.index(target_value)
-			except ValueError:
-				return
-			listbox.selection_clear(0, 'end')
-			listbox.selection_set(view_idx)
-			listbox.activate(view_idx)
-			listbox.see(view_idx)
-
-		# ---- Actions ----
-		def do_copy():
-			txt = get_selected_text()
-			if txt is None:
-				return
-			try:
-				root.clipboard_clear()
-				root.clipboard_append(txt)
-				root.update_idletasks()
-			except Exception:
-				pass
-
-		def do_paste():
-			# paste into main text area if available
-			txt = get_selected_text()
-			if txt is None:
-				return
-			try:
-				root.clipboard_clear()
-				root.clipboard_append(txt)
-			except Exception:
-				pass
-			try:
-				if hasattr(self, 'EgonTE') and self.EgonTE:
-					self.EgonTE.insert(self.get_pos(), txt)
-			except Exception:
-				pass
-
-		def do_delete():
-			mi = model_index_from_view()
-			if mi is None:
-				return
-			del self.copy_list[mi]
-			apply_filter(refresh_list=True)
-
-		def do_clear():
-			self.copy_list.clear()
-			apply_filter(refresh_list=True)
-
-		def do_move(delta: int):
-			mi = model_index_from_view()
-			if mi is None:
-				return
-			new_idx = max(0, min(len(self.copy_list) - 1, mi + delta))
-			if new_idx == mi:
-				return
-			self.copy_list[mi], self.copy_list[new_idx] = self.copy_list[new_idx], self.copy_list[mi]
-			apply_filter(refresh_list=True)
-			select_model_index(new_idx)
-
-		def on_activate_row():
-			# Default: copy; if text widget exists, also paste
-			do_copy()
-			if hasattr(self, 'EgonTE') and self.EgonTE:
-				do_paste()
-
-		# ---- Drag-and-drop handlers ----
-		def on_drag_start(e):
-			nonlocal dragging_model_index
-			idx = listbox.nearest(e.y)
-			if 0 <= idx < listbox.size():
-				listbox.selection_clear(0, 'end')
-				listbox.selection_set(idx)
-				listbox.activate(idx)
-				dragging_model_index = model_index_from_view()
-			else:
-				dragging_model_index = None
-
-		def on_drag_motion(e):
-			if dragging_model_index is None:
-				return
-			idx = listbox.nearest(e.y)
-			if 0 <= idx < listbox.size():
-				listbox.selection_clear(0, 'end')
-				listbox.selection_set(idx)
-				listbox.activate(idx)
-
-		def on_drag_release(e):
-			nonlocal dragging_model_index
-			if dragging_model_index is None:
-				return
-			drop_view_idx = listbox.nearest(e.y)
-			if not (0 <= drop_view_idx < listbox.size()):
-				dragging_model_index = None
-				return
-			target_value = filtered_view[drop_view_idx]
-			try:
-				new_model_idx = self.copy_list.index(target_value)
-			except ValueError:
-				dragging_model_index = None
-				return
-			if new_model_idx != dragging_model_index:
-				item = self.copy_list.pop(dragging_model_index)
-				self.copy_list.insert(new_model_idx, item)
-				apply_filter(refresh_list=True)
-				select_model_index(new_model_idx)
-			dragging_model_index = None
-
-		# ---- Layout ----
-		# Top: filter row
-		top = Frame(root)
-		top.pack(fill='x', padx=8, pady=(8, 4))
-		Label(top, text='Filter:').pack(side='left')
-		ent_filter = ttk.Entry(top, textvariable=filter_var, width=30)
-		ent_filter.pack(side='left', fill='x', expand=True, padx=(6, 0))
-		filter_var.trace_add('write', lambda *_: apply_filter(refresh_list=True))
-
-		# Middle: listbox + scrollbar
-		mid = Frame(root)
-		mid.pack(fill='both', expand=True, padx=8, pady=4)
-		yscroll = ttk.Scrollbar(mid, orient='vertical')
-		listbox = __import__('tkinter').Listbox(mid, selectmode='browse', activestyle='dotbox',
-												yscrollcommand=yscroll.set)
-		yscroll.config(command=listbox.yview)
-		listbox.pack(side='left', fill='both', expand=True)
-		yscroll.pack(side='right', fill='y')
-
-		# Bottom: control buttons
-		btns = Frame(root)
-		btns.pack(fill='x', padx=8, pady=(4, 8))
-		Button(btns, text='Copy', command=do_copy).pack(side='left')
-		Button(btns, text='Paste', command=do_paste).pack(side='left', padx=(6, 0))
-		Button(btns, text='Delete', command=do_delete).pack(side='left', padx=(6, 0))
-		Button(btns, text='Move Up', command=lambda: do_move(-1)).pack(side='left', padx=(6, 0))
-		Button(btns, text='Move Down', command=lambda: do_move(1)).pack(side='left', padx=(6, 0))
-		Button(btns, text='Clear All', command=do_clear).pack(side='left', padx=(6, 0))
-
-		# Context menu
-		ctx = __import__('tkinter').Menu(root, tearoff=False)
-		ctx.add_command(label='Copy', command=do_copy)
-		ctx.add_command(label='Paste', command=do_paste)
-		ctx.add_separator()
-		ctx.add_command(label='Move Up', command=lambda: do_move(-1))
-		ctx.add_command(label='Move Down', command=lambda: do_move(1))
-		ctx.add_separator()
-		ctx.add_command(label='Delete', command=do_delete)
-		ctx.add_command(label='Clear All', command=do_clear)
-
-		def show_ctx(e):
-			try:
-				listbox.selection_clear(0, 'end')
-				idx = listbox.nearest(e.y)
-				if 0 <= idx < listbox.size():
-					listbox.selection_set(idx)
-					listbox.activate(idx)
-				ctx.tk_popup(e.x_root, e.y_root)
-			finally:
-				try:
-					ctx.grab_release()
-				except Exception:
-					pass
-
-		# Bindings
-		listbox.bind('<Button-3>', show_ctx)  # Right-click
-		listbox.bind('<Double-Button-1>', lambda e: on_activate_row())
-		listbox.bind('<Return>', lambda e: on_activate_row())
-		listbox.bind('<Delete>', lambda e: do_delete())
-		listbox.bind('<Control-BackSpace>', lambda e: do_clear())
-		listbox.bind('<Control-Up>', lambda e: do_move(-1))
-		listbox.bind('<Control-Down>', lambda e: do_move(1))
-		root.bind('<Escape>', lambda e: root.destroy())
-		root.bind('<Control-l>', lambda e: do_clear())
-		root.bind('<Control-f>', lambda e: ent_filter.focus_set())
-
-		# Drag-and-drop
-		listbox.bind('<ButtonPress-1>', on_drag_start)
-		listbox.bind('<B1-Motion>', on_drag_motion)
-		listbox.bind('<ButtonRelease-1>', on_drag_release)
-
-		# Populate initial data and focus
-		apply_filter(refresh_list=True)
-		if listbox.size() > 0:
-			listbox.selection_set(0)
-			listbox.activate(0)
-		ent_filter.focus_set()
+		'''
+			Forwarder: open the standalone Clipboard History popup.
+			'''
+		return open_clipboard_history(self)
 
 	def typefaces(self, tf: str):
 		'''
@@ -1571,122 +1279,24 @@ class Window(Tk):
 
 	def custom_ui_colors(self, components: str):
 		'''
-		custom UI colors for all of the main windows components, and for the "knowledge" (wiki/dictionary) window,
-		for the help / patch notes window, and for the virtual keyboard
-
-		NEW; WIP color picking algorithm that works for most instances
+		Delegate UI color customization to ThemeService.
 		'''
-		if self.night_mode.get():
-			if not (messagebox.askyesno('EgonTE', 'Night mode is on, still want to proceed?')):
-				return
-
-		if components in tuple(self.singular_colors_d.keys()):
-			widget, type_ = self.singular_colors_d[components]
-
-			if '-' in type_:
-				type_lst = type_.split('-')
-			else:
-				type_lst = type_
-
-			for type in type_lst:
-				if type:
-					if isinstance(type_lst, str) and len(type) < 2:
-						type = type_lst
-
-					color = colorchooser.askcolor(title=f'{components} {type} color')[1]
-					if color:
-						if isinstance(widget, list):
-							for widget_ in widget:
-								# not all the widgets need to be colored, some does not support it the same way
-								try:
-									widget_[type] = color
-								except TclError:
-									pass
-						else:
-							widget[type] = color
-						self.record_list.append(f'> [{get_time()}] - {components} {type} changed to {color}')
-
-					# checking if it the list contains one item
-					if type == type_lst:
-						break
-
-
-		elif components == 'app':
-			selected_main_color = colorchooser.askcolor(title='Frames color')[1]
-			selected_second_color = colorchooser.askcolor(title='Text box color')[1]
-			selected_text_color = colorchooser.askcolor(title='Text color')[1]
-			if selected_main_color and selected_second_color and selected_text_color:
-				self.config(bg=selected_main_color)
-				self.status_frame.configure(bg=selected_main_color)
-				self.status_bar.config(bg=selected_main_color, fg=selected_text_color)
-				self.file_bar.config(bg=selected_main_color, fg=selected_text_color)
-				self.EgonTE.config(bg=selected_second_color)
-				self.toolbar_frame.config(bg=selected_main_color)
-				self.record_list.append(
-					f'> [{get_time()}] - App\'s color changed to {selected_main_color}\n  '
-					f'App\'s secondary color changed'
-					f' to {selected_second_color}\n  App\'s text color changed to {selected_text_color}')
-
-
-		elif components == 'info_page':
-			if self.info_page_active:
-				bg_color = colorchooser.askcolor(title='Backgrounds color')[1]
-				text_color = colorchooser.askcolor(title='Text color')[1]
-				self.info_page_text.config(bg=bg_color, fg=text_color)
-				self.info_page_title.config(bg=bg_color, fg=text_color)
-			else:
-				messagebox.showerror('EgonTE', 'Information window isn\'t opened')
-
-		elif components == 'v_keyboard':
-			if self.vk_active:
-				bg_color = colorchooser.askcolor(title='Backgrounds color')[1]
-				text_color = colorchooser.askcolor(title='Text color')[1]
-				if text_color and bg_color:
-					for vk_btn in self.all_vk_buttons:
-						vk_btn.config(bg=bg_color, fg=text_color)
-			else:
-				messagebox.showerror('EgonTE', 'Virtual keyboard window isn\'t opened')
-		elif components == 'advance_options':
-			if self.op_active:
-				frames_color = colorchooser.askcolor(title='Frames color')[1]
-				buttons_color = colorchooser.askcolor(title='buttons bg color')[1]
-				buttons_t_color = colorchooser.askcolor(title='buttons text color')[1]
-				titles_colors = colorchooser.askcolor(title='Titles text color')[1]
-				title_bg_colors = colorchooser.askcolor(title='Titles bg color')[1]
-
-				if frames_color and buttons_color and buttons_t_color and titles_colors:
-					self.night_frame.configure(bg=buttons_color)
-					full_buttons_list = self.opt_commands + self.dynamic_buttons
-					for opt_frame in self.opt_frames:
-						opt_frame.configure(bg=frames_color)
-					for button in full_buttons_list:
-						button.configure(bg=buttons_color, fg=buttons_t_color)
-					for title in self.opt_labels:
-						title.configure(fg=titles_colors, bg=title_bg_colors)
-
-			else:
-				messagebox.showerror('EgonTE', 'Advance options window isn\'t opened')
-
+		self._ensure_theme_service()
+		if getattr(self, 'theme_service', None):
+			return self.theme_service.custom_ui_colors(components=components)
 
 	def make_rich_textbox(self, root, place='pack_top', wrap=None, font='arial 10', size=None,
 			selectbg='dark cyan', bd=0, relief='', format='txt',):
 		return self._popup.make_rich_textbox(root=root, place=place, wrap=wrap, font=font,
 			size=size, selectbg=selectbg, bd=bd, relief=relief, format=format,)
 
-	def print_file(self, event=None):
+	def print_file(self):
 		'''
-		old function that aims to print your file
+		Best-effort print for the current file (delegates to FileService).
 		'''
-		file2p = filedialog.askopenfilename(initialdir='C:/EgonTE/', title='Open file', filetypes=text_extensions)
-		if platform_system().lower() == 'windows':
-			printer_name = GetDefaultPrinter()
-			if file2p:
-				if messagebox.askquestion('EgonTE', f'are you wish to print with {printer_name}?'):
-					ShellExecute(0, 'print', file2p, None, '.', 0)
-		else:
-			printer_name = simpledialog.askstring(self.title_struct + 'Print', 'What is your printer name?')
-			if printer_name and file2p:
-				os.platform_system(f'lpr -P f{printer_name} f{file2p}')
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.print_file()
 
 	# select all text function
 	def select_all(self, event=None):
@@ -1700,18 +1310,18 @@ class Window(Tk):
 		'''
 		option to hide all of the informative text in the bottom of the program (file bar, status bar)
 		'''
-		if not (self.show_statusbar.get()):
+		if not self.show_statusbar.get():
 			self.status_bar.pack_forget()
 			self.file_bar.pack_forget()
 			self.geometry(f'{self.width}x{self.height - 30}')
 			self.show_statusbar.set(False)
-			self.bars_active = False
+			self.bars_active.set(False)
 		else:
 			self.status_bar.pack(side=LEFT)
 			self.file_bar.pack(side=RIGHT)
 			self.geometry(f'{self.width}x{self.height - 20}')
 			self.show_statusbar.set(True)
-			self.bars_active = True
+			self.bars_active.set(True)
 
 	# hide tool bar function
 	def hide_toolbar(self):
@@ -1724,10 +1334,10 @@ class Window(Tk):
 			self.EgonTE.focus_displayof()
 			self.EgonTE.pack_forget()
 			self.text_scroll.pack_forget()
-			self.eFrame.pack_forget()
+			self.editor_container_frame.pack_forget()
 			self.toolbar_frame.pack(fill=X, anchor=W)
 			self.text_scroll.pack(side=RIGHT, fill=Y)
-			self.eFrame.pack(fill=BOTH, expand=True)
+			self.editor_container_frame.pack(fill=BOTH, expand=True)
 			self.EgonTE.pack(fill=BOTH, expand=True, side=BOTTOM)
 			self.EgonTE.focus_set()
 			self.height = 805
@@ -1890,7 +1500,7 @@ class Window(Tk):
 
 		self.record_list.append(f'> [{get_time()}] - font size changed to {self.chosen_size}')
 
-	def replace(self, event=None):
+	def replace_dialog(self, event=None):
 		'''
 		function that takes user input to change some terms with the thing that you will write
 		'''
@@ -1915,7 +1525,7 @@ class Window(Tk):
 			self.EgonTE.insert(1.0, new_content)
 
 		# window creation
-		replace_root = self.make_pop_ups_window(self.replace)
+		replace_root = self.make_pop_ups_window(self.replace_dialog)
 		# ui components
 		replace_text = Label(replace_root, text='Enter the word that you wish to replace')
 		find_input = Entry(replace_root, width=20)
@@ -2107,11 +1717,8 @@ class Window(Tk):
 
 		if self._stt_attempts < self._stt_max_attempts and messagebox.askyesno('EgonTE', 'Do you want to try again?'):
 			Thread(target=self._stt_worker_once, daemon=True).start()
-		self.root.after(50, self._poll_stt_queue)
+		self.after(50, self._poll_stt_queue)
 		return
-
-		self.read_text(text=f"{choice(['ok', 'goodbye', 'sorry', 'my bad'])}, I will try to do my best next time!")
-		self._finish_stt()
 
 	def _finish_stt(self):
 		self._stt_running = False
@@ -2163,7 +1770,6 @@ class Window(Tk):
 
 
 
-
 	# Backward-compatible entry points
 	def find_text(self, event=None):
 		return self.find_replace(event)
@@ -2183,15 +1789,14 @@ class Window(Tk):
 		'''
 		insert the current date/time to where the pointer of your text are
 		'''
-
-
-
 		message = get_time() + ' '
 
-		# message = self.text_formatter(message)
 		line, col = map(int, self.get_pos().split('.'))
-		prev_ind = f'{line}.{col - 1}'
-		before_char = self.EgonTE.get(prev_ind)
+		prev_ind = f'{line}.{max(0, col - 1)}'
+		try:
+			before_char = self.EgonTE.get(prev_ind)
+		except Exception:
+			before_char = ''
 
 		if before_char in ascii_letters or before_char in digits:
 			message = ' ' + message
@@ -2362,7 +1967,7 @@ class Window(Tk):
 		words = content.split()
 		reversed_words = words[::-1]
 		self.EgonTE.delete(*self.text_index)
-		self.EgonTE.insert(self.first_index, reversed_words)
+		self.EgonTE.insert(self.first_index, ' '.join(reversed_words))
 
 	def join_words(self, event=None):
 		self.get_indexes()
@@ -2417,7 +2022,7 @@ class Window(Tk):
 		if content == sorted_words:
 			sorted_words = sorted(sorted_words, reverse=True)
 		self.EgonTE.delete(*self.text_index)
-		self.EgonTE.insert(self.first_index, sorted_words)
+		self.EgonTE.insert(self.first_index, ' '.join(sorted_words))
 
 
 	# font size up / down by 1 iteration
@@ -2513,14 +2118,44 @@ class Window(Tk):
 			make scrollbars work with html-tkinter
 			'''
 			self.info_page_text.delete('1.0', END)
-			file_path = fr'content_msgs\{path}.{self.content_mode}'
-			with open(file_path) as ht:
-				if self.content_mode == 'txt':
-					for line in ht:
-						self.info_page_text.insert('end', line)
-				else:
-					html_content = ht.read()
+			# Build a cross-platform path and read with robust encoding handling
+			try:
+				file_path = os.path.join('content_msgs', f'{path}.{self.content_mode}')
+			except Exception:
+				file_path = fr'content_msgs\{path}.{self.content_mode}'
+
+			def _read_file_text(p):
+				# Try UTF-8 first, then fall back to a common ANSI codepage with replacement
+				try:
+					with open(p, 'r', encoding='utf-8') as f:
+						return f.read()
+				except UnicodeDecodeError:
+					with open(p, 'r', encoding='cp1252', errors='replace') as f:
+						return f.read()
+
+			if self.content_mode == 'txt':
+				try:
+					content = _read_file_text(file_path)
+					# Strip potential UTF‑8 BOM
+					if content.startswith('\ufeff'):
+						content = content.lstrip('\ufeff')
+					self.info_page_text.insert('end', content)
+				except Exception:
+					# Best effort: leave the widget as-is if reading fails
+					pass
+			else:
+				try:
+					html_content = _read_file_text(file_path)
+					# Strip potential BOM
+					if html_content.startswith('\ufeff'):
+						html_content = html_content.lstrip('\ufeff')
 					self.info_page_text.set_html(html_content)
+				except Exception:
+					# If HTML rendering is unavailable or read failed, insert raw text as fallback
+					try:
+						self.info_page_text.insert('end', _read_file_text(file_path).lstrip('\ufeff'))
+					except Exception:
+						pass
 
 		def find_content(event=False):
 			global entry_content, starting_index, ending_index, offset
@@ -3352,300 +2987,63 @@ class Window(Tk):
 		goto_input.grid(row=3, column=0)
 		goto_button.grid(row=4, column=0, pady=5)
 
-	def sort(self):
-		'''
-		this function sorts the input you put in it with ascending and descending orders,
-		and if you put characters it will use their ASCII values
-		'''
-		global mode_, sort_data_sorted, str_loop, sort_rot, sort_input
 
-		def sort_():
-			global mode_, sort_data_sorted, str_loop
-			sort_data = sort_input.get('1.0', 'end')
-			sort_data_sorted = (sorted(sort_data))
-			sort_input.delete('1.0', 'end')
-			if mode_ == 'dec':
-				for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
-					sort_input.insert('insert linestart', f'{sort_data_sorted[num]}')
-			else:
-				for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
-					sort_input.insert('insert lineend', f'{sort_data_sorted[num]}')
+    def sort(self):
+        '''
+            this function sorts the input you put in it with ascending and descending orders,
+            and if you put characters it will use their ASCII values
+            '''
+        global mode_, sort_data_sorted, str_loop, sort_rot, sort_input
 
-		def mode():
-			global mode_, str_loop, end_loop
-			if mode_ == 'ascending':
-				mode_ = 'descending'
-				str_loop, end_loop = 0, 1
-			else:
-				mode_ = 'ascending'
-				str_loop, end_loop = 1, 0
-			mode_button.config(text=f'Mode: {mode_}')
+        def sort_():
+            global mode_, sort_data_sorted, str_loop
+            sort_data = sort_input.get('1.0', 'end')
+            sort_data_sorted = (sorted(sort_data))
+            sort_input.delete('1.0', 'end')
+            if mode_ == 'dec':
+                for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
+                    sort_input.insert('insert linestart', f'{sort_data_sorted[num]}')
+            else:
+                for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
+                    sort_input.insert('insert lineend', f'{sort_data_sorted[num]}')
 
-		def enter():
-			for character in list(str(sort_input.get('1.0', 'end'))):
-				if str(character).isdigit():
-					self.EgonTE.insert(self.get_pos(), sort_input.get('1.0', 'end'))
-					break
+        def mode():
+            global mode_, str_loop, end_loop
+            if mode_ == 'ascending':
+                mode_ = 'descending'
+                str_loop, end_loop = 0, 1
+            else:
+                mode_ = 'ascending'
+                str_loop, end_loop = 1, 0
+            mode_button.config(text=f'Mode: {mode_}')
 
-		# window creation
-		sort_root = self.make_pop_ups_window(self.sort)
-		# variables
-		mode_ = 'ascending'
-		str_loop, end_loop = 1, 0
-		# UI components
-		sort_text = Label(sort_root, text='Enter the numbers/characters you wish to sort:', font='arial 10 bold')
-		sort_frame, sort_input, sort_scroll = self.make_rich_textbox(sort_root, size=[30, 15])
-		sort_button = Button(sort_root, text='Sort', command=sort_)
-		mode_button = Button(sort_root, text='Mode: ascending', command=mode)
-		sort_insert = Button(sort_root, text='Insert', command=enter)
-		sort_text.pack(fill=X, anchor=W, padx=3)
-		sort_button.pack(pady=2)
-		mode_button.pack(pady=2)
-		sort_insert.pack(pady=2)
+        def enter():
+            for character in list(str(sort_input.get('1.0', 'end'))):
+                if str(character).isdigit():
+                    self.EgonTE.insert(self.get_pos(), sort_input.get('1.0', 'end'))
+                    break
+
+        # window creation
+        sort_root = self.make_pop_ups_window(self.sort)
+        # variables
+        mode_ = 'ascending'
+        str_loop, end_loop = 1, 0
+        # UI components
+        sort_text = Label(sort_root, text='Enter the numbers/characters you wish to sort:', font='arial 10 bold')
+        sort_frame, sort_input, sort_scroll = self.make_rich_textbox(sort_root, size=[30, 15])
+        sort_button = Button(sort_root, text='Sort', command=sort_)
+        mode_button = Button(sort_root, text='Mode: ascending', command=mode)
+        sort_insert = Button(sort_root, text='Insert', command=enter)
+        sort_text.pack(fill=X, anchor=W, padx=3)
+        sort_button.pack(pady=2)
+        mode_button.pack(pady=2)
+        sort_insert.pack(pady=2)
 
 	def knowledge_window(self, mode: str):
 		'''
 		the window for the dictionary and wikipedia tools
 		'''
-
-		def redirect():
-			if mode == 'wiki':
-				self.wiki_thread.start()
-			else:
-				search()
-
-		def search():
-			meaning_box.configure(state=NORMAL)
-			self.paste_b_info.configure(state=DISABLED)
-			output_ready = True
-			if mode == 'dict':
-				try:
-					dict_ = PyDictionary()
-					self.def_ = dict_.meaning(par_entry.get())
-					meaning_box.delete('1.0', 'end')
-					for key, value in self.def_.items():
-						meaning_box.insert(END, key + '\n\n')
-						for values in value:
-							meaning_box.insert(END, f'-{values}\n\n')
-				except AttributeError:
-					messagebox.showerror(self.title_struct + 'error', 'check your internet / your search!')
-					output_ready = False
-			else:
-				try:
-					if self.last_wiki_image and not (self.wiki_var.get() == 4):
-						meaning_frame.grid(row=3, column=1)
-						self.paste_b_info.grid(row=5, column=1)
-					self.last_wiki_image = False
-
-					if self.wiki_var.get() == 3 or self.wiki_var.get() == 4:
-						wiki_page = page(par_entry.get())
-
-					if self.wiki_var.get() == 1:
-						self.wiki_request = summary(par_entry.get())
-					elif self.wiki_var.get() == 2:
-						articles = wiki_search(par_entry.get())
-						articles = list(articles)
-						if articles:
-							meaning_box.delete('1.0', 'end')
-							for line, article in enumerate(articles):
-								meaning_box.insert(f'{line}.0', article + '\n')
-						else:
-							output_ready = False
-					elif self.wiki_var.get() == 3:
-						self.wiki_request = f'{wiki_page.title}\n{wiki_page.content}'
-
-
-					elif self.wiki_var.get() == 4:
-						self.last_wiki_image = True
-						self.image_selected_index = 0
-						meaning_frame.grid_forget()
-						self.paste_b_info.grid_forget()
-						self.wiki_img_frame.grid(row=3, column=1)
-						self.wiki_nav_frame.grid(row=4, column=1)
-						self.wiki_nav_backwards.grid(row=4, column=0)
-						self.wiki_nav_forward.grid(row=4, column=2)
-
-						row_index = 0
-						self.wiki_request = wiki_page.images
-						self.wiki_img_list = []
-						label_list = []
-						for index, img_link in enumerate(self.wiki_requsest):
-							# label_list.append(Label(self.wiki_img_frame))
-							with urllib.request.urlopen(img_link) as img_url:
-								continue_ = False
-								# img_url.seek(0)
-								img = img_url.read()
-								# img = img.read()
-								bytes_image = BytesIO(img)
-								try:
-									img = Image.open(bytes_image)
-								except UnidentifiedImageError as e:
-									image_short_name = os.path.basename(urlparse(img_link).path)
-									url = urllib.request.urlretrieve(img_link, image_short_name)
-									try:
-										img = Image.open(image_short_name)
-									except:
-										continue_ = True
-									finally:
-										os.remove(image_short_name)
-								if continue_:
-									continue
-
-								multi = 1, 2
-								starting_limit = 600
-								img_condition = True
-								while img_condition:
-									img_width, img_height = img.size
-									if (img_width > starting_limit * multi[0]) or (
-											img_height > starting_limit * multi[0]):
-										img_width, img_height = img_width // multi[1], img_height // multi[1]
-										img = img.resize((img_width, img_height))
-										multi = multi[0] + 1, multi[1] + 1
-									else:
-										img_condition = False
-										img = ImageTk.PhotoImage(img)
-										self.wiki_img_list.append(img)
-										break
-
-						if self.wiki_img_list:
-							navigate_pics('initial')
-
-						'''+ 
-						initial image - takes time to load / or indexes bugs
-						'''
-
-					if not (self.wiki_var.get() == 2):
-						meaning_box.delete('1.0', 'end')
-						meaning_box.insert('1.0', self.wiki_requsest)
-				except requests.exceptions.ConnectionError:
-					messagebox.showerror(self.title_struct + 'error', 'check your internet connection')
-					output_ready = False
-				except exceptions.DisambiguationError as e:
-					messagebox.showerror(self.title_struct + 'error',
-										 'check your searched term\ninserting the most close match')
-					print(f'Error :{e}')
-					search_terms = (str(e)).split('\n')
-					closest = search_terms[1]
-					par_entry.delete(0, END)
-					par_entry.insert(0, closest)
-					output_ready = False
-				except exceptions.PageError:
-					messagebox.showerror(self.title_struct + 'error', 'Invalid page ID')
-					output_ready = False
-
-			if output_ready:
-				self.paste_b_info.configure(state=ACTIVE)
-			else:
-				self.paste_b_info.configure(state=DISABLED)
-			meaning_box.configure(state=DISABLED)
-
-		def paste():
-			content_to_paste = meaning_box.get('1.0', 'end')
-			self.EgonTE.insert(self.get_pos(), content_to_paste)
-
-		'''+ make when navigating that the window will more from the upward pos and not the bottom'''
-
-		def navigate_pics(mode, event=False):
-			def bind_links(event=False):
-				webbrowser.open_new(self.wiki_requsest[self.image_selected_index])
-
-			if self.wiki_var.get() == 4 and self.wiki_requsest:  # and self.wiki_img_list
-				# if self.mode
-				if mode == 'b' or mode == 'f':
-					if mode == 'f':
-						limit_value, index_change, limit_reset = -1, 1, 0
-					elif mode == 'b':
-						limit_value, index_change, limit_reset = 0, -1, self.wiki_img_list.index(self.wiki_img_list[-1])
-					try:
-						limit_condition = self.wiki_img_list[self.image_selected_index] == self.wiki_img_list[
-							limit_value]
-					except IndexError:
-						limit_condition = True
-					if not limit_condition:
-						self.image_selected_index += index_change
-					else:
-						self.image_selected_index = limit_reset
-					print(self.image_selected_index)
-				elif mode == 'initial':
-					self.image_selected_index = 0
-					self.wiki_image_label.grid(row=3, column=1)
-					# for image in
-					# image_condition =  self.wiki_img_list[self.image_selected_index].verify()
-					# if not image_condition:
-
-				self.wiki_image_label.unbind_all('<ButtonRelease-1>')
-				self.wiki_image_label.grid_forget()
-				try:
-					selected_image = self.wiki_img_list[self.image_selected_index]
-				except IndexError:
-					self.image_selected_index = 0
-					selected_image = self.wiki_img_list[self.image_selected_index]
-
-				self.wiki_image_label.configure(image=selected_image)
-				self.wiki_image_label.grid(row=3, column=1)
-				self.wiki_image_label.bind('<ButtonRelease-1>', bind_links)
-			else:
-				messagebox.showerror(self.title_struct + 'wiki', 'you are not in images mode \ didn\'t search')
-
-		par_root = Toplevel()
-		self.opened_windows.append(par_root)
-		# self.func_window[self.knowledge_window] = par_root
-		par_root.protocol('WM_DELETE_WINDOW', lambda: self.close_pop_ups(par_root, th=self.wiki_thread))
-		self.make_tm(par_root)
-		if self.limit_w_s.get():
-			par_root.resizable(False, False)
-		par_root.attributes('-alpha', self.st_value)
-		par_entry = Entry(par_root, width=35)
-		knowledge_search = Button(par_root, text='Search', command=redirect)
-		meaning_frame = Frame(par_root)
-		meaning_box = Text(meaning_frame, height=15, width=50, wrap=WORD)
-		meaning_box.configure(state=DISABLED)
-		self.paste_b_info = Button(par_root, text='Paste to ETE', command=paste, bd=1)
-		self.paste_b_info.configure(state=DISABLED)
-
-		par_entry.grid(row=1, column=1, pady=3)
-		knowledge_search.grid(row=2, column=1, pady=3)
-		if not (mode == 'wiki' and self.wiki_var.get() == 4):
-			meaning_box.grid(row=3, column=1)
-			self.paste_b_info.grid(row=5, column=1, pady=4)
-			self.last_wiki_image = False
-		else:
-			self.wiki_img_frame.grid(row=3, column=1)
-			self.wiki_nav_frame.grid(row=4, column=1)
-			self.wiki_nav_backwards.grid(row=4, column=0)
-			self.wiki_nav_forward.grid(row=4, column=2)
-			self.last_wiki_image = True
-
-		par_root.unbind('<Control-Key-.>')
-		par_root.unbind('<Control-Key-,>')
-		if mode == 'wiki':
-			par_root.title(self.title_struct + 'Wikipedia')
-			self.wiki_requsest = ''
-			self.wiki_img_list = []
-			self.wiki_img_frame = Frame(par_root, width=35, height=40)
-			self.wiki_image_label = Label(self.wiki_img_frame)
-			self.wiki_nav_frame = Frame(self.wiki_img_frame)
-			self.wiki_nav_forward = Button(self.wiki_nav_frame, text='>>', command=lambda: navigate_pics(mode='f'))
-			self.wiki_nav_backwards = Button(self.wiki_nav_frame, text='<<', command=lambda: navigate_pics(mode='b'))
-			par_root.bind('<Control-Key-.>', lambda e: navigate_pics('f', event=e))
-			par_root.bind('<Control-Key-,>', lambda e: navigate_pics('b', event=e))
-
-			radio_frame = Frame(par_root)
-			return_summery = Radiobutton(radio_frame, text='Summery', variable=self.wiki_var, value=1)
-			return_related_articles = Radiobutton(radio_frame, text='Related articles', variable=self.wiki_var, value=2)
-			return_content = Radiobutton(radio_frame, text='Content', variable=self.wiki_var, value=3)
-			return_images = Radiobutton(radio_frame, text='Images', variable=self.wiki_var, value=4)
-
-			radio_frame.grid(row=4, column=1)
-
-			return_summery.grid(row=0, column=0)
-			return_related_articles.grid(row=0, column=2)
-			return_content.grid(row=1, column=0)
-			return_images.grid(row=1, column=2)
-
-		else:
-			par_root.title(self.title_struct + 'dictionary')
-			self.record_list.append(f'> [{get_time()}] - Dictionary tool window opened')
+		open_knowledge_popup(self, mode)
 
 	def virtual_keyboard(self):
 		'''
@@ -3861,6 +3259,7 @@ class Window(Tk):
 				new_content = []
 				indexes = []
 				rep_nl = False
+				any_replaced = False
 				for index, word in enumerate(content):
 					if word != ' ' and word != '' and word != '\n':
 						# to make the detection more precise
@@ -3885,7 +3284,7 @@ class Window(Tk):
 
 					# detecting if word is emoji - only if it is the text will be replaced
 					if emoji.is_emoji(word):
-						replace_text = True
+						any_replaced = True
 						fail_msg = False
 						# a message for the manual use of the function about the result - positive
 						if via_settings:
@@ -3893,7 +3292,6 @@ class Window(Tk):
 
 					else:
 						fail_msg = True
-						replace_text = False
 
 					# returning the character after it doesn't bother the detecting process
 					if rep_nl:
@@ -3908,7 +3306,7 @@ class Window(Tk):
 					messagebox.showinfo('EgonTE', 'emoji(s) didn\'t found!')
 
 				# replacing text with a condition - to not spam it
-				if replace_text:
+				if any_replaced:
 					new_content = ' '.join(new_content)
 					self.EgonTE.delete('1.0', 'end')
 					self.EgonTE.insert('end', new_content)
@@ -3955,65 +3353,14 @@ class Window(Tk):
 
 		sym_text.configure(state=DISABLED)
 
-	def file_info(self):
+	def file_info(self, path: str | None = None):
 		'''
-		basic and general statistics of any file, work on the file youre running in the program - and if you dont use
-		a saved file it will ask for another file location
+		Return file stats and optionally reflect to status (delegates to FileService).
 		'''
-		res_font = 'consolas 14'
-
-		if self.file_name:
-			file_info_name = self.file_name
-
-		else:
-			file_info_name = self.get_file('Open', ' file to get info about')
-		try:
-			if file_info_name:
-				stat = os.stat(file_info_name)
-				# getting the actual file info
-				file_size = os.path.getsize(file_info_name)
-
-				if platform_system().lower() == 'windows':
-					creation_time = datetime.fromtimestamp((os.path.getctime(file_info_name)))
-					modified_time = datetime.fromtimestamp((os.path.getmtime(file_info_name)))
-				else:
-					try:
-						creation_time = stat.st_birthtime
-						modified_time = stat.st_mtime
-					except AttributeError:
-						pass
-
-				# creating the window
-				file_info_root = self.make_pop_ups_window(self.find_text, 'File information')
-				# creating the widgets
-				access_time = datetime.fromtimestamp(stat.st_atime)
-				file_type = os.path.splitext(file_info_name)[-1][1:]
-				lib_path = Path(file_info_name)
-				try:
-					owner = f'{lib_path.owner()} : {lib_path.group()}'
-				except:
-					owner = ''
-				# attaching info to labels
-				size_label = Label(file_info_root, text=f'file size - {file_size} bytes', font=res_font)
-				modified_time_label = Label(file_info_root, text=f'file modified time - {modified_time}', font=res_font)
-				creation_time_label = Label(file_info_root, text=f'file creation time - {creation_time}', font=res_font)
-				access_time_label = Label(file_info_root, text=f'file accessed time - {access_time}', font=res_font)
-				file_type_label = Label(file_info_root, text=f'file type - {file_type}', font=res_font)
-				if owner:
-					owner_label = Label(file_info_root, text=f'file owner - {owner}', font=res_font)
-
-				size_label.pack(expand=True)
-				modified_time_label.pack(expand=True)
-				creation_time_label.pack(expand=True)
-				access_time_label.pack(expand=True)
-				file_type_label.pack(expand=True)
-				if owner:
-					owner_label.pack(expand=True)
-
-		except NameError:
-			messagebox.showerror(self.title_struct + 'error', 'you aren\'nt using a file!')
-		except PermissionError:
-			messagebox.showerror(self.title_struct + 'error', 'you are not using a file!')
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.file_info(path=path)
+		return {}
 
 	def auto_save_time(self):
 		if self.file_name:
@@ -4366,7 +3713,6 @@ class Window(Tk):
 
 			except UnicodeDecodeError:
 				messagebox.showerror(self.title_struct + 'error', 'unsupported characters')
-				self.compare_root.destroy()
 
 	def corrector(self):
 		def insert():
@@ -4518,10 +3864,20 @@ class Window(Tk):
 		file_name = 'EgonTE_settings.json'
 
 		if special_mode == 'save':
-			os.remove(file_name)
-			with open(file_name, 'w') as f:
-				dump(self.data, f)
-				print('save 1', self.data)
+			# Write safely without removing the file first; use UTF-8
+			try:
+				with open(file_name, 'w', encoding='utf-8') as f:
+					dump(self.data, f)
+					print('save 1', self.data)
+			except Exception:
+				# Fallback to atomic replace if direct write fails
+				try:
+					tmp = file_name + '.tmp'
+					with open(tmp, 'w', encoding='utf-8') as f:
+						dump(self.data, f)
+					os.replace(tmp, file_name)
+				except Exception:
+					pass
 
 			if self.data['open_last_file']:
 				self.save_last_file()
@@ -4530,7 +3886,7 @@ class Window(Tk):
 
 			if os.path.exists(file_name):
 				print('saved settings file exist')
-				with open(file_name, 'r') as f:
+				with open(file_name, 'r', encoding='utf-8') as f:
 					self.data = load(f)
 					print(self.data)
 				self.match_saved_settings()
@@ -4541,10 +3897,8 @@ class Window(Tk):
 				print('saved settings file doesn\'t exist')
 				self.data = self.make_default_data()
 
-				with open(file_name, 'w') as f:
+				with open(file_name, 'w', encoding='utf-8') as f:
 					dump(self.data, f)
-				# self.data = load(file_name)
-				# print(self.data)
 
 				return True
 
@@ -4615,80 +3969,29 @@ class Window(Tk):
 		# Store the after() id so we can cancel it on exit/restart
 		self._sw_after = self.after(500, self._update_stopwatch)
 
-
-	def merge_files(self):
+	def merge_files(self, paths=None, separator='\n'):
 		'''
-		this function created a shared content from the content that on the main text box and from a content of
-		another file
+		Merge multiple files into the editor (delegates to FileService).
 		'''
-		data = ''
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.merge_files(paths=paths, separator=separator)
 
-		def outport_data(where):
-			ask_op_root.destroy()
-			if where == 'new':
-				save_file_name = filedialog.asksaveasfilename(title='Save merged file', filetypes=text_extensions)
-				if save_file_name:
-					with open(save_file_name, 'w') as fp:
-						fp.write(data)
-			else:
-				self.EgonTE.delete('1.0', 'end')
-				self.EgonTE.insert('1.0', data)
-				if messagebox.askquestion('EgonTE', 'Would you like to save the changes right away'):
-					self.save()
 
-		# saving the content from the text box
-		data_1 = self.EgonTE.get('1.0', 'end')
-		# getting a file name to merge the content with another file
-		file_name = filedialog.askopenfilename(title='Open file to merge',
-											   filetypes=(('Text Files', '*.txt'), ('HTML FILES', '*.html')))
-
-		# Reading the file and combining the content
-		if file_name:
-			with open(file_name) as fp:
-				data2 = fp.read()
-
-			data = data_1 + '\n' + data2
-
-			ask_op_root = Toplevel()
-			self.make_tm(ask_op_root)
-			ask_op_root.title(self.title_struct + 'merge files')
-			q_label = Label(ask_op_root, text='where you would like to put the merged data?')
-			this_file = Button(ask_op_root, text='In this file', command=lambda: outport_data('this'))
-			new_file = Button(ask_op_root, text='In new file', command=lambda: outport_data('new'))
-
-			q_label.grid(row=1, column=1)
-			this_file.grid(row=2, column=0)
-			new_file.grid(row=2, column=2)
-
-	def delete_file(self, custom: str = ''):
-		if self.file_name or custom:
-			advance = False
-			remove_fn = False
-			if self.file_name and not custom:
-				if messagebox.askyesno('EgonTE', 'Are tou sure you want to delete this file?'):
-					self.EgonTE.delete('1.0', 'end')
-					advance = True
-					file_to_del = self.file_name
-					remove_fn = True
-			if custom:
-				advance = True
-				file_to_del = custom
-
-			if advance:
-				os.remove(file_to_del)
-				self.file_bar.configure(text=f'deleted {file_to_del}')
-
-			if remove_fn:
-				self.file_name = ''
-
-		else:
-			messagebox.showerror(self.title_struct + 'error', 'you are not using a file')
+	def delete_file(self, path: str | None = None):
+		'''
+		Delete a file (delegates to FileService).
+		'''
+		self._ensure_file_service()
+		if getattr(self, 'file_service', None):
+			return self.file_service.delete_file(path=path)
 
 	def insp_quote(self, op_msg: bool=False):
 		'''
 		This function is outputting a formated text of a quote with the name of its owner with API
 		'''
 		# consider making the function a thread
+		quote = None
 		try:
 			# making the get request
 			response = requests.get('https://zenquotes.io/api/random')
@@ -4731,7 +4034,7 @@ class Window(Tk):
 		root_name.attributes('-topmost', True)
 		sp_x = 0
 		if sp_mode == 'main':
-			sp_x = (self.eFrame.winfo_width() - self.EgonTE.winfo_width())
+			sp_x = (self.editor_container_frame.winfo_width() - self.EgonTE.winfo_width())
 		x = root_name.winfo_rootx() + widget_name.winfo_x() + sp_x
 		if upper_name:
 			y = root_name.winfo_rooty() + widget_name.winfo_y() + upper_name.winfo_height()
@@ -4748,114 +4051,7 @@ class Window(Tk):
 		'''
 		this function will get you the info about the weather of the city you wrote via google
 		'''
-
-		def activate_weather():
-			global loc_text, temp_text, time_text, weather_desc
-			city_name = city_entry.get()
-			ask_w.destroy()
-
-			city_name = city_name.replace(' ', '+').replace('_', '+')
-			headers = {
-				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-			}
-			try:
-				# create url
-				url = 'https://www.google.com/search?q=' + 'weather' + city_name
-				html = requests.get(url).content
-				location = city_name
-				soup = BeautifulSoup(html, 'html.parser')
-				temperature = soup.find('div', attrs={'class': 'BNeawe iBp4i AP7Wnd'}).text
-
-				# this contains time and sky description
-				string = soup.find('div', attrs={'class': 'BNeawe tAd8D AP7Wnd'}).text
-
-				# format the data
-				data = string.split('\n')
-				time = data[0]
-				info = data[1]
-
-				# getting all div tag
-				listdiv = soup.findAll('div', attrs={'class': 'BNeawe s3v9rd AP7Wnd'})
-				strd = listdiv[5].text
-
-				# getting other required data
-				pos = strd.find('Wind')
-				other_data = strd[pos:]
-				working = True
-			except:
-				try:
-					res = requests.get(
-						f'https://www.google.com/search?q={city_name}&oq={city_name}&aqs=chrome.0.35i39l2j0l4j46j69i60.6128j1j7&sourceid=chrome&ie=UTF-8',
-						headers=headers)
-					soup = BeautifulSoup(res.text, 'html.parser')
-					location = soup.select('#wob_loc')[0].getText().strip()
-					time = soup.select('#wob_dts')[0].getText().strip()
-					info = soup.select('#wob_dc')[0].getText().strip()
-					temperature = soup.select('#wob_tm')[0].getText().strip()
-					working = True
-				except:
-					messagebox.showerror('EgonTE', 'Please enter a valid city name')
-					working = False
-
-			if working:
-				weather_root = self.make_pop_ups_window(activate_weather, custom_title=(self.title_struct + 'Weather'))
-				weather_root.tk.call('wm', 'iconphoto', weather_root._w, self.weather_image)
-				w_font = 'arial 10'
-
-				if '+' in location:
-					location = location.replace('+', ' ')
-
-				loc_text = ('Location: ' + location.capitalize())
-				temp_text = ('Temperature: ' + temperature + '&deg;C')
-				time_text = ('Time: ' + time)
-				weather_desc = ('Weather Description: ' + info)
-
-				loc = Label(weather_root, text=loc_text, font=w_font)
-				temp = Label(weather_root, text=temp_text, font=w_font)
-				tim = Label(weather_root, text=time_text, font=w_font)
-				des = Label(weather_root, text=weather_desc, font=w_font)
-				copy_button = Button(weather_root, text='Copy', command=copy_paste_weather, pady=2, bd=1)
-				paste_button = Button(weather_root, text='Paste to ETE', command=lambda: copy_paste_weather('p')
-									  , pady=2, bd=1)
-
-				loc.pack(fill='none', expand=True)
-				temp.pack(fill='none', expand=True)
-				tim.pack(fill='none', expand=True)
-				des.pack(fill='none', expand=True)
-				copy_button.pack(fill='none', expand=True)
-				paste_button.pack(fill='none', expand=True)
-
-		def copy_paste_weather(mode: str = 'copy'):
-			all_content = f'{loc_text}\n{temp_text}\n{time_text}\n{weather_desc}'
-			if mode == 'copy':
-				copy(all_content)
-			else:
-				self.EgonTE.insert('end', '\n')
-				self.EgonTE.insert('end', all_content)
-
-		def rand_city():
-			chosen_city = choice(city_list)
-			city_entry.delete(0, END)
-			city_entry.insert(0, chosen_city)
-
-		# a more advanced window to select the city
-		ask_w = Toplevel()
-		self.make_tm(ask_w)
-		ask_w.title(self.title_struct + 'city selector')
-		if self.limit_w_s.get():
-			ask_w.resizable(False, False)
-
-		ask_title = Label(ask_w, text='Select city', font=self.titles_font)
-		weather_subtitle = Label(ask_w, text='What is the name of the city\n you want to get the weather for')
-		city_entry = Entry(ask_w)
-		random_city = Button(ask_w, text='Random known city', command=rand_city, bd=1)
-		enter_city = Button(ask_w, text='Enter', command=lambda: self.open_windows_control(activate_weather), bd=1)
-
-		ask_title.grid(row=0, column=1, pady=3)
-		weather_subtitle.grid(row=1, column=1)
-		city_entry.grid(row=2, column=1)
-		random_city.grid(row=3, column=1, pady=3)
-		enter_city.grid(row=4, column=1, pady=5)
+		open_weather(self)
 
 
 	def send_email(self):
@@ -5332,7 +4528,7 @@ class Window(Tk):
 			else:
 				word = emoticon(word)
 			new_content.append(word)
-		' '.join(new_content)
+		new_content = ' '.join(new_content)
 		self.EgonTE.delete('1.0', 'end')
 		self.EgonTE.insert('1.0', new_content)
 
@@ -5582,7 +4778,7 @@ class Window(Tk):
 
 	def update_insert_image_list(self, event=False):
 		if self.in_images_list_n:
-			for image in self.in_images_list_n:
+			for image in list(self.in_images_list_n):
 				try:
 					index = self.EgonTE.index(image)
 				except TclError:
@@ -5623,7 +4819,7 @@ class Window(Tk):
 		def add_image(sp_name: str = '', sp_image: str = ''):
 			if not (sp_name):
 				self.image_name = filedialog.askopenfilename(title='Open file', filetypes=img_extensions)
-				self.current_inserted_image = PhotoImage(self.image_name)
+				self.current_inserted_image = PhotoImage(file=self.image_name, master=self)
 			else:
 				self.image_name = sp_name
 				self.current_inserted_image = sp_image
@@ -5765,7 +4961,7 @@ class Window(Tk):
 		show_image = Button(buttons_frame, text='Show image', command=show_image, bd=1, bg=self.dynamic_bg,
 							fg=self.dynamic_text)
 
-		self.current_images_list.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.self.image_entry, e, self.current_images_list))
+		self.current_images_list.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.image_entry, e, self.current_images_list))
 		self.image_entry.bind('<KeyRelease>', keyrelease_events)
 
 		title.grid(row=0, column=1, pady=5)
