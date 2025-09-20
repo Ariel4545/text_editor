@@ -162,6 +162,10 @@ from pop_ups.weather_app import open_weather
 from pop_ups.clipboard_app import open_clipboard_history
 from pop_ups.knowledge_popup import open_knowledge_popup
 
+from pop_ups.sort_popup import open_sort
+from pop_ups.virtual_keyboard_popup import open_virtual_keyboard
+from pop_ups.web_assistant_popup import open_web_tools
+
 '''the optional libraries that can add a lot of extra content to the editor'''
 tes = ACTIVE
 try:
@@ -315,15 +319,61 @@ class Window(Tk):
 							 'typea': self.typefaces_actions_v,
 							 'editf': self.edit_functions_v, 'windf': self.win_actions_v, 'autof': self.auto_functions,
 							 'autol': self.aul}
+		# virtual keyboard variables
+		self.vk_feedback = False  # sound/haptic hooks (off by default)
+		self.vk_smart_spacing = False  # Smart insert spacing (off by default)
+		self.vk_repeat_enabled = True  # Key repeat on by default
+		self.vk_repeat_initial_delay_ms = 550  # slower than before
+		self.vk_repeat_interval_ms = 85  # slower than before
+		self.vk_indent_size = 4  # spaces per indent when using spaces
+		self.indent_method = StringVar()
+		self.indent_method.set('tab')
+		# Ensure ALL VK-related runtime attributes exist before loading settings,
+		# so values don't "snap back" when the Options window closes.
+		self.vk_feedback_modes_muted = True
+		self.vk_feedback_min_interval_ms = 70
+		self.vk_repeat_feedback_every = 4
+		self.vk_sound_path = ''
+		try:
+			self.vk_sound_gain_db = float(-8.0)
+		except Exception:
+			self.vk_sound_gain_db = -8.0
+		self.vk_advanced_mode = False
+
+		# Virtual Keyboard Tk variables (single source of truth for UI)
+		self.vk_feedback_v = BooleanVar(value=self.vk_feedback)
+		self.vk_smart_spacing_v = BooleanVar(value=self.vk_smart_spacing)
+		self.vk_repeat_enabled_v = BooleanVar(value=self.vk_repeat_enabled)
+		self.vk_repeat_initial_delay_ms_v = IntVar(value=self.vk_repeat_initial_delay_ms)
+		self.vk_repeat_interval_ms_v = IntVar(value=self.vk_repeat_interval_ms)
+		self.vk_indent_size_v = IntVar(value=self.vk_indent_size)
+		self.vk_feedback_modes_muted_v = BooleanVar(value=self.vk_feedback_modes_muted)
+		self.vk_feedback_min_interval_ms_v = IntVar(value=self.vk_feedback_min_interval_ms)
+		self.vk_repeat_feedback_every_v = IntVar(value=self.vk_repeat_feedback_every)
+		self.vk_sound_path_v = StringVar(value=self.vk_sound_path)
+		# DoubleVar is supported as textvariable for Spinbox; fallback to StringVar if needed
+		try:
+			self.vk_sound_gain_db_v = DoubleVar(value=self.vk_sound_gain_db)
+		except Exception:
+			self.vk_sound_gain_db_v = StringVar(value=str(self.vk_sound_gain_db))
+		self.vk_advanced_mode_v = BooleanVar(value=self.vk_advanced_mode)
+
+		self.vk_shift_enabled = True
+		self.vk_shift_toggle_enabled = True
+		self.vk_shift_tap_timeout_ms = 300
+		self.vk_shift_hold_threshold_ms = 220
+		# Tk variables for Shift settings
+		self.vk_shift_enabled_v = BooleanVar(value=self.vk_shift_enabled)
+		self.vk_shift_toggle_enabled_v = BooleanVar(value=self.vk_shift_toggle_enabled)
+		self.vk_shift_tap_timeout_ms_v = IntVar(value=self.vk_shift_tap_timeout_ms)
+		self.vk_shift_hold_threshold_ms_v = IntVar(value=self.vk_shift_hold_threshold_ms)
+
 		# other tools
 		self.del_previous_file = BooleanVar()
 		self.chosen_text_decorator = 'bash'
 		self.fnt_sz_var = IntVar()
-		self.tab_type = 'spaces'
 		self.capital_opt, self.by_characters = BooleanVar(), BooleanVar()
 		self.capital_opt.set(True), self.by_characters.set(True)
-		self.indent_method = StringVar()
-		self.indent_method.set('tab')
 		self.find_tool_searched = BooleanVar()
 		self.menu_pop = BooleanVar()
 		self.content_preference_v = StringVar()
@@ -419,6 +469,12 @@ class Window(Tk):
 		# create main menu's component
 		self.app_menu = Menu(frame)
 		self.config(menu=self.app_menu)
+
+		# Initialize and wire the TextStyleService so font family/size work via the service
+		self._ensure_text_style_service()
+		if getattr(self, 'text_style_service', None):
+			self.text_style_service.initialize_from_widget()
+			self.text_style_service.wire_toolbar()
 
 		self.load_function_links()
 		self.menu_assests()
@@ -539,6 +595,16 @@ class Window(Tk):
 			except Exception:
 				self.theme_service = None
 
+	def _ensure_text_style_service(self):
+		'''
+		Lazy-initialize the TextStyleService to avoid import order issues.
+		'''
+		if not hasattr(self, 'text_style_service') or self.text_style_service is None:
+			try:
+				from services.text_style_service import TextStyleService
+				self.text_style_service = TextStyleService(self)
+			except Exception:
+				self.text_style_service = None
 
 	def build_main_textbox(self, parent_container):
 		'''
@@ -817,8 +883,8 @@ class Window(Tk):
 							   'clipboard history.': self.clipboard_history, 'insert images': self.insert_image
 							   }
 		self.tool_functions = {'current datetime|(F5)': get_time(),
-							   'randomness tools!': self.ins_random, 'url shorter': self.url,
-							   'search online': self.search_www, 'sort input': self.sort,
+							   'randomness tools!': self.ins_random, 'Web assistant': self.url,
+							   'sort input': self.sort,
 							   'dictionary': lambda: Thread(target=self.knowledge_window('dict'), daemon=True).start(),
 							   'wikipedia!': lambda: Thread(target=self.knowledge_window('wiki'), daemon=True).start(),
 							   'web scrapping!': self.web_scrapping, 'text decorators': self.text_decorators,
@@ -1178,103 +1244,27 @@ class Window(Tk):
 	def typefaces(self, tf: str):
 		'''
 		Toggle simple typeface styles over the selection (or whole document if no selection).
-
 		Supported:
 		  - 'weight-bold'
 		  - 'slant-italic'
 		  - 'underline'
 		  - 'overstrike'
 		  - 'normal'  -> clears all the above styles
-
-		Notes:
-		- No size or family handling here.
-		- Uses the widget's base font as the starting point to keep rendering consistent.
-		- Avoids trailing-newline issues by operating up to 'end-1c'.
 		'''
-
-		def base_font_copy(widget):
-			spec = widget.cget('font')
-			try:
-				# Works only if spec is a named font
-				return font.nametofont(spec).copy()
-			except TclError:
-				# spec is a literal like 'Arial 16' -> make a Font from it
-				return font.Font(widget, font=spec)
-
-		# Normalize selection bounds
-		first, last = self.get_indexes()
-		if str(last) == END:
-			last = 'end-1c'
-
-		STYLE_TAGS = ('weight-bold', 'slant-italic', 'underline', 'overstrike')
-
-		# Clear everything for 'normal'
-		if tf == 'normal':
-			for tag in STYLE_TAGS:
-				self.EgonTE.tag_remove(tag, first, last)
+		self._ensure_text_style_service()
+		if getattr(self, 'text_style_service', None):
+			self.text_style_service.apply_typeface(tf)
 			return
-
-		if tf not in STYLE_TAGS:
-			return
-
-		# Build base font safely (no nametofont error)
-		base = base_font_copy(self.EgonTE)
-
-		# Minimal config
-		font_cfg = {}
-		tag_cfg = {}
-
-		if tf == 'weight-bold':
-			font_cfg['weight'] = 'bold'
-		elif tf == 'slant-italic':
-			font_cfg['slant'] = 'italic'
-		elif tf == 'underline':
-			tag_cfg['underline'] = 1
-		elif tf == 'overstrike':
-			tag_cfg['overstrike'] = 1
-
-		if font_cfg:
-			base.configure(**font_cfg)
-
-		# Configure tag idempotently
-		if font_cfg and tag_cfg:
-			self.EgonTE.tag_configure(tf, font=base, **tag_cfg)
-		elif font_cfg:
-			self.EgonTE.tag_configure(tf, font=base)
-		elif tag_cfg:
-			self.EgonTE.tag_configure(tf, **tag_cfg)
-		else:
-			self.EgonTE.tag_configure(tf, font=base)
-
-		# Toggle based on presence in current range
-		if self.EgonTE.tag_nextrange(tf, first, last):
-			self.EgonTE.tag_remove(tf, first, last)
-		else:
-			self.EgonTE.tag_add(tf, first, last)
 
 
 	def text_color(self):
 		'''
 		texts color, if the content isnt marked it will choose to apply it for all the text
 		'''
-		# choose custom color
-		selected_color = colorchooser.askcolor(title='Text color')[1]
-		if selected_color:
-			# create the color font
-			color_font = font.Font(self.EgonTE, self.EgonTE.cget('font'))
-			# configure with tags
-			self.EgonTE.tag_configure('colored_txt', font=color_font, foreground=selected_color)
-			current_tags = self.EgonTE.tag_names('1.0')
-			if 'underline' in current_tags:
-				if self.is_marked():
-					self.EgonTE.tag_remove('colored_txt', 'sel.first', 'sel.last')
-				else:
-					self.EgonTE.tag_remove('colored_txt', '1.0', 'end')
-			else:
-				if self.is_marked():
-					self.EgonTE.tag_add('colored_txt', 'sel.first', 'sel.last')
-				else:
-					self.EgonTE.tag_add('colored_txt', '1.0', 'end')
+		self._ensure_text_style_service()
+		if getattr(self, 'text_style_service', None):
+			self.text_style_service.apply_text_color(None)
+			return
 
 
 	def custom_ui_colors(self, components: str):
@@ -1462,9 +1452,11 @@ class Window(Tk):
 		global chosen_font
 		chosen_font = self.font_family.get()
 		self.delete_tags()
-		self.EgonTE.configure(font=(chosen_font, str(self.size_var.get())))
-
-		self.change_font_size()
+		# Use TextStyleService for robust font setting
+		self._ensure_text_style_service()
+		if getattr(self, 'text_style_service', None):
+			self.text_style_service.set_font(family=chosen_font, size=self.size_var.get())
+			return
 		self.record_list.append(f'> [{get_time()}] - font changed to {chosen_font}')
 
 
@@ -1487,17 +1479,12 @@ class Window(Tk):
 		self.chosen_size = self.size_var.get()
 		self.font_Size_c = self.size_order()
 		self.font_size.current(self.font_Size_c)
-		size = font.Font(self.EgonTE, self.EgonTE.cget('font'))
-		size.configure(size=self.chosen_size)
-		# config tags to switch font size
-		self.EgonTE.tag_configure('size', font=size)
-		current_tags = self.EgonTE.tag_names('1.0')
-		if not 'size' in current_tags:
-			if self.font_size.get() == '4':
-				self.EgonTE.tag_remove('size', '1.0', END)
-			else:
-				self.EgonTE.tag_add('size', '1.0', END)
 
+		# Delegate to TextStyleService
+		self._ensure_text_style_service()
+		if getattr(self, 'text_style_service', None):
+			self.text_style_service.set_font_size(self.chosen_size)
+			return
 		self.record_list.append(f'> [{get_time()}] - font size changed to {self.chosen_size}')
 
 	def replace_dialog(self, event=None):
@@ -1550,17 +1537,10 @@ class Window(Tk):
 
 	def align_text(self, place='left'):
 		'''align the main boxes text specifically if you marker, and all if you dont'''
-		if self.is_marked():
-			text_content = self.EgonTE.get('sel.first', 'sel.last')
-		else:
-			self.EgonTE.tag_add('sel', 'insert linestart', 'insert lineend')
-			text_content = self.EgonTE.get('insert linestart', 'insert lineend')
-		self.EgonTE.tag_config(place, justify=place)
-		try:
-			self.EgonTE.delete('sel.first', 'sel.last')
-			self.EgonTE.insert(INSERT, text_content, place)
-		except:
-			messagebox.showerror(self.title_struct + 'error', 'choose a content')
+		self._ensure_text_style_service()
+		if getattr(self, 'text_style_service', None):
+			self.text_style_service.align_text(place)
+			return
 
 	def status(self, event=None):
 		''' get & display character and word count for the status bar '''
@@ -1894,37 +1874,6 @@ class Window(Tk):
 		with input and output so the translation doesnt paste automatically to the main text box
 		'''
 		open_translate(self)
-
-	def url(self):
-		'''
-		a simple tool that takes an input of url and inserts a shorter version
-		'''
-
-		# window creation
-		url_root = self.make_pop_ups_window(self.url)
-		# ui components creation & placement
-		url_text = Label(url_root, text='Enter url below:', font='arial 10 underline')
-		url_entry = Entry(url_root, relief=GROOVE, width=40)
-		enter = Button(url_root, relief=FLAT, text='Enter')
-		url_text.grid(row=0)
-		url_entry.grid(row=1, padx=10)
-		enter.grid(row=2)
-
-		def shorter():
-			try:
-				urls = url_entry.get()
-				s = Shortener()
-				short_url = s.tinyurl.short(urls)
-				self.EgonTE.insert(self.get_pos(), short_url)
-			except requests.exceptions.ConnectionError:
-				messagebox.showerror('EgonTE', 'Device not connected to internet')
-			except:
-				messagebox.showerror(self.title_struct + 'error', 'Please Paste a valid url')
-
-		enter.config(command=shorter)
-
-		if self.is_marked():
-			url_entry.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
 
 	def get_indexes(self):
 		'''
@@ -2329,91 +2278,12 @@ class Window(Tk):
 			if lan in right_aligned_l:
 				self.align_text('right')
 
-	def search_www(self):
+	def url(self):
 		'''
-		this tool is a shortcut for web usage, you can also choose some browser beside the default one,
-		and choose session type
+		a simple tool that takes an input of url and inserts a shorter version
 		'''
 
-		ser_root = self.make_pop_ups_window(self.search_www)
-
-		def enter():
-			if not (str(br_modes.get()) == 'default'):
-				if entry_box.get() != '':
-					try:
-						b = webbrowser.get(using=br_modes.get())
-						if entry_box.get() != '':
-							if ser_var.get() == 'current tab':
-								b.open(entry_box.get())
-							else:
-								b.open_new_tab(entry_box.get())
-					except webbrowser.Error:
-						messagebox.showerror(self.title_struct + 'error', 'browser was not found')
-					except IndexError:
-						messagebox.showerror(self.title_struct + 'error', 'internet connection / general problems')
-			else:
-				if entry_box.get() != '':
-					if str(ser_var.get()) == 'current tab':
-						webbrowser.open(entry_box.get())
-					else:
-						webbrowser.open_new_tab(entry_box.get())
-
-		def copy_from_file():
-			if self.is_marked():
-				entry_box.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
-			else:
-				entry_box.insert('end', self.EgonTE.get('1.0', 'end'))
-
-		title = Label(ser_root, text='Search Online', font=self.titles_font)
-		entry_box = Entry(ser_root, relief=GROOVE, width=40)
-		enter_button = Button(ser_root, relief=FLAT, command=enter, text='Enter')
-		from_text_button = Button(ser_root, relief=FLAT, command=copy_from_file, text='Copy from text')
-
-		title.grid(row=0, column=1, padx=10, pady=3)
-		entry_box.grid(row=1, column=1, padx=10)
-		enter_button.grid(row=2, column=1)
-		from_text_button.grid(row=3, column=1, pady=5)
-
-		# advance options of the search function
-		def adv():
-			# ui changes
-			adv_button.grid_forget()
-			tab_title.grid(row=4, column=0)
-			tab_modes.grid(row=5, column=0)
-			browser_title.grid(row=4, column=2)
-			br_modes.grid(row=5, column=2)
-
-			# browser register to select
-			chrome_path = 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
-			webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
-
-			firefox_path = 'C:/Program Files/Mozilla Firefox/firefox.exe'
-			webbrowser.register('firefox', None, webbrowser.BackgroundBrowser(firefox_path))
-
-			opera_path = f'C:/Users/{gethostname()}/AppData/Local/Programs/Opera/opera.exe'
-			webbrowser.register('opera', None, webbrowser.BackgroundBrowser(opera_path))
-
-			edge_path = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
-			webbrowser.register('edge', None, webbrowser.BackgroundBrowser(edge_path))
-
-		adv_button = Button(ser_root, text='Advance options', command=adv, relief=FLAT)
-
-		tab_title = Label(ser_root, text='Tabs options', font='arial 10 underline')
-		ser_var = StringVar()
-		tab_modes = ttk.Combobox(ser_root, width=10, textvariable=ser_var, state='readonly')
-		tab_modes['values'] = ['current tab', 'new tab']
-		tab_modes.current(0)
-
-		browser_title = Label(ser_root, text='Browser options', font='arial 10 underline')
-		br_var = StringVar()
-		br_modes = ttk.Combobox(ser_root, width=10, textvariable=br_var, state='readonly')
-		br_modes['values'] = ['default', 'firefox', 'chrome', 'opera', 'edge']
-		br_modes.current(0)
-
-		adv_button.grid(row=4, column=1)
-
-		if self.is_marked():
-			entry_box.insert('end', self.EgonTE.get('sel.first', 'sel.last'))
+		open_web_tools(self)
 
 	def save_outvariables(self):
 		self.data['fun_numbers'] = self.fun_numbers.get()
@@ -2594,17 +2464,24 @@ class Window(Tk):
 			if self.bars_active:
 				self.status_ = True
 				self.file_ = False
-				self.show_statusbar = BooleanVar()
-				self.show_statusbar.set(True)
+				# Do NOT recreate self.show_statusbar; just set the existing one
+				try:
+					self.show_statusbar.set(True)
+				except Exception:
+					pass
 				self.def_val1.set(1)
 				self.def_val2.set(1)
 			else:
 				self.status_ = False
 				self.file_ = False
-				self.show_statusbar = BooleanVar()
-				self.show_statusbar.set(False)
+				# Do NOT recreate self.show_statusbar; just set the existing one
+				try:
+					self.show_statusbar.set(False)
+				except Exception:
+					pass
 				self.def_val1.set(0)
 				self.def_val2.set(0)
+
 
 				# the assignment of the builtin boolean values is important to make the file & status bar work well
 
@@ -2675,11 +2552,17 @@ class Window(Tk):
 		self.night_frame = Frame(styles_frame, bg=self.dynamic_bg)
 		bar_frame = Frame(functional_frame)
 		predefined_checkbuttons()
+
 		# creating adv-options window UI
 		opt_title = Label(self.opt_root, text='Advance Options', font='calibri 16 bold', bg=self.dynamic_overall,
 						  fg=self.dynamic_text)
+		# Place the title at the very top of the window, above the tabs
+		opt_title.pack(pady=(6, 4))  # centered by default
+		# Now place the tabs beneath the title (single pack call)
+		settings_tabs.pack()
+
 		cursor_title = Label(styles_frame, text='Advance Cursor configuration', font=font_, bg=self.dynamic_overall,
-							 fg=self.dynamic_text)
+								 fg=self.dynamic_text)
 		cursor_values = 'tcross', 'arrow', 'crosshair', 'pencil', 'fleur', 'xterm'
 		self.tcross_button, self.arrow_button, self.crosshair_button, self.pencil_button, self.fleur_button, self.xterm_button = \
 			[Button(styles_frame, text=cursor_b, command=lambda cursor_b=cursor_b: adv_custom_cursor(cursor_b),
@@ -2691,6 +2574,7 @@ class Window(Tk):
 									bg=self.dynamic_bg, fg=self.dynamic_text)
 		statusbar_check = Checkbutton(bar_frame, text='statusbar', command=lambda: hide_('statusbar'),
 									  variable=self.def_val2, bg=self.dynamic_bg, fg=self.dynamic_text)
+
 		style_title = Label(styles_frame, text='Advance style configuration', font=font_, bg=self.dynamic_overall,
 							fg=self.dynamic_text)
 
@@ -2770,10 +2654,8 @@ class Window(Tk):
 		by_press_rb = Checkbutton(auto_save_frame, text='By pressing', variable=self.autosave_by_p,
 								  command=autosave_changes, bg=self.dynamic_bg, fg=self.dynamic_text)
 
-		indent_title = Label(functional_frame, text='indent method (virtual keyboard)', font=font_)
-		indent_frame = Frame(functional_frame)
-		indent_tab = Radiobutton(indent_frame, text='Tab', variable=self.indent_method, value='tab')
-		indent_space = Radiobutton(indent_frame, text='Space', variable=self.indent_method, value='space')
+		# REMOVED from Functions tab: indent controls now live under "Virtual keyboard" tab
+
 
 		state_title = Label(bindings_frame, text='State of shortcuts', font=font_, bg=self.dynamic_overall,
 							fg=self.dynamic_text)
@@ -2824,17 +2706,377 @@ class Window(Tk):
 		duplicate_windows = Checkbutton(pop_ups_frame, text='Allow duplicates', variable=self.adw,
 										bg=self.dynamic_bg, fg=self.dynamic_text, command=save_variables)
 
-		# placing all the widgets
-		opt_title.pack(pady=5)
+		# NEW: Virtual keyboard tab and controls
+		vk_frame = Frame(settings_tabs, bg=self.dynamic_overall)
 
-		settings_tabs.pack()
-		styles_frame.pack(expand=True, fill=BOTH)
-		functional_frame.pack(expand=True, fill=BOTH)
+		# Use ONLY class-level VK variables initialized in __init__
+		# No local duplicates; keep single source of truth
+
+		# Configure the VK tab grid (center content, single widget per row)
+		try:
+			vk_frame.grid_columnconfigure(0, weight=1)
+		except Exception:
+			pass
+
+		# Internal tabs to keep the VK UI compact
+		try:
+			vk_tabs = ttk.Notebook(vk_frame)
+			tab_basic = Frame(vk_tabs, bg=self.dynamic_overall)
+			tab_repeat_indent = Frame(vk_tabs, bg=self.dynamic_overall)
+			tab_feedback = Frame(vk_tabs, bg=self.dynamic_overall)
+			tab_sound_layout = Frame(vk_tabs, bg=self.dynamic_overall)
+			# NEW: Shift tab
+			tab_shift = Frame(vk_tabs, bg=self.dynamic_overall)
+			for _f in (tab_basic, tab_repeat_indent, tab_feedback, tab_sound_layout, tab_shift):
+				try:
+					_f.grid_columnconfigure(0, weight=1)
+				except Exception:
+					pass
+			vk_tabs.pack(fill='both', expand=True, padx=4, pady=4)
+			vk_tabs.add(tab_basic, text='Basics')
+			vk_tabs.add(tab_repeat_indent, text='Repeat & Indent')
+			vk_tabs.add(tab_feedback, text='Feedback')
+			vk_tabs.add(tab_sound_layout, text='Sound & Layout')
+			vk_tabs.add(tab_shift, text='Shift')
+		except Exception:
+			# Fallback: no inner tabs (place directly on vk_frame)
+			tab_basic = tab_repeat_indent = tab_feedback = tab_sound_layout = tab_shift = vk_frame
+
+		row_i = 0
+		# Basics: direct binding to class variables
+		vk_feedback_chk = Checkbutton(
+			tab_basic, text='Sound / Haptic hooks', variable=self.vk_feedback_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_feedback_chk.grid(row=row_i, column=0, pady=2, sticky='w')
+		row_i += 1
+
+		vk_smart_spacing_chk = Checkbutton(
+			tab_basic, text='Smart insert spacing', variable=self.vk_smart_spacing_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_smart_spacing_chk.grid(row=row_i, column=0, pady=2, sticky='w')
+		row_i += 1
+
+		vk_repeat_enabled_chk = Checkbutton(
+			tab_basic, text='Key repeat (press-and-hold)', variable=self.vk_repeat_enabled_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_repeat_enabled_chk.grid(row=row_i, column=0, pady=2, sticky='w')
+
+		# Repeat & Indent tab (bind spinboxes to variables)
+		repeat_group = Frame(tab_repeat_indent, bg=self.dynamic_overall)
+		repeat_group.grid(row=0, column=0, pady=(8, 4), sticky='w')
+		repeat_title = Label(repeat_group, text='Repeat timings (ms)', font='arial 10',
+							 bg=self.dynamic_overall, fg=self.dynamic_text)
+		repeat_title.grid(row=0, column=0, sticky='w')
+		repeat_row = Frame(repeat_group, bg=self.dynamic_overall)
+		repeat_row.grid(row=1, column=0, pady=2, sticky='w')
+
+		repeat_delay_lbl = Label(repeat_row, text='Initial delay:', bg=self.dynamic_overall, fg=self.dynamic_text)
+		repeat_delay_spin = Spinbox(
+			repeat_row, from_=0, to=5000, increment=25, width=8,
+			textvariable=self.vk_repeat_initial_delay_ms_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		repeat_interval_lbl = Label(repeat_row, text='Interval:', bg=self.dynamic_overall, fg=self.dynamic_text)
+		repeat_interval_spin = Spinbox(
+			repeat_row, from_=10, to=1000, increment=5, width=8,
+			textvariable=self.vk_repeat_interval_ms_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+
+		repeat_delay_lbl.grid(row=0, column=0, padx=(0, 6), sticky='w')
+		repeat_delay_spin.grid(row=0, column=1, padx=(0, 6), sticky='w')
+		repeat_interval_lbl.grid(row=1, column=0, padx=(0, 6), sticky='w')
+		repeat_interval_spin.grid(row=1, column=1, padx=(0, 6), sticky='w')
+
+		indent_group = Frame(tab_repeat_indent, bg=self.dynamic_overall)
+		indent_group.grid(row=2, column=0, pady=(10, 4), sticky='w')
+		indent_title_vk = Label(indent_group, text='Indent method', font='arial 10',
+								bg=self.dynamic_overall, fg=self.dynamic_text)
+		indent_title_vk.grid(row=0, column=0, sticky='w')
+
+		indent_row_vk = Frame(indent_group, bg=self.dynamic_overall)
+		indent_row_vk.grid(row=1, column=0, pady=2, sticky='w')
+
+		indent_tab_vk = Radiobutton(indent_row_vk, text='Tab', variable=self.indent_method, value='tab',
+									bg=self.dynamic_overall, fg=self.dynamic_text, selectcolor=self.dynamic_bg)
+		indent_space_vk = Radiobutton(indent_row_vk, text='Space', variable=self.indent_method, value='space',
+									  bg=self.dynamic_overall, fg=self.dynamic_text, selectcolor=self.dynamic_bg)
+		indent_tab_vk.grid(row=0, column=0, padx=(0, 12), sticky='w')
+		indent_space_vk.grid(row=0, column=1, sticky='w')
+
+		indent_size_group = Frame(tab_repeat_indent, bg=self.dynamic_overall)
+		indent_size_group.grid(row=3, column=0, pady=(8, 6), sticky='w')
+		indent_size_lbl = Label(indent_size_group, text='Spaces per indent:', bg=self.dynamic_overall, fg=self.dynamic_text)
+		indent_size_spin = Spinbox(
+			indent_size_group, from_=1, to=12, increment=1, width=6,
+			textvariable=self.vk_indent_size_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		indent_size_lbl.grid(row=0, column=0, padx=(0, 6), sticky='w')
+		indent_size_spin.grid(row=0, column=1, sticky='w')
+
+		# Feedback tab (bind to variables)
+		feedback_group = Frame(tab_feedback, bg=self.dynamic_overall)
+		feedback_group.grid(row=0, column=0, pady=(8, 6), sticky='w')
+		feedback_title = Label(feedback_group, text='Feedback behavior', font='arial 10',
+							   bg=self.dynamic_overall, fg=self.dynamic_text)
+		feedback_title.grid(row=0, column=0, sticky='w')
+
+		feedback_row = Frame(feedback_group, bg=self.dynamic_overall)
+		feedback_row.grid(row=1, column=0, pady=2, sticky='w')
+
+		vk_modes_muted_chk = Checkbutton(
+			feedback_row, text='Mute mode keys (Caps/Shift/Symbols)', variable=self.vk_feedback_modes_muted_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_modes_muted_chk.grid(row=0, column=0, pady=2, sticky='w')
+
+		lbl_deb = Label(feedback_group, text='Debounce (ms):', bg=self.dynamic_overall, fg=self.dynamic_text)
+		lbl_deb.grid(row=2, column=0, sticky='w')
+		vk_debounce_spin = Spinbox(
+			feedback_group, from_=0, to=300, increment=5, width=6,
+			textvariable=self.vk_feedback_min_interval_ms_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_debounce_spin.grid(row=3, column=0, sticky='w', pady=(0, 2))
+
+		lbl_rep = Label(feedback_group, text='Repeat feedback every:', bg=self.dynamic_overall, fg=self.dynamic_text)
+		lbl_rep.grid(row=4, column=0, sticky='w')
+		vk_repeat_every_spin = Spinbox(
+			feedback_group, from_=1, to=10, increment=1, width=6,
+			textvariable=self.vk_repeat_feedback_every_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_repeat_every_spin.grid(row=5, column=0, sticky='w')
+
+		# Sound & Layout tab
+		sound_group = Frame(tab_sound_layout, bg=self.dynamic_overall)
+		sound_group.grid(row=0, column=0, pady=(8, 6), sticky='w')
+		sound_title = Label(sound_group, text='Feedback sound', font='arial 10',
+							bg=self.dynamic_overall, fg=self.dynamic_text)
+		sound_title.grid(row=0, column=0, sticky='w')
+
+		sound_row1 = Frame(sound_group, bg=self.dynamic_overall)
+		sound_row1.grid(row=1, column=0, pady=2, sticky='w')
+
+		Label(sound_row1, text='Custom click sound:', bg=self.dynamic_overall, fg=self.dynamic_text).grid(row=0, column=0,
+																										  sticky='w')
+		vk_sound_path_entry = Entry(sound_row1, width=30, textvariable=self.vk_sound_path_v, bg=self.dynamic_bg,
+									fg=self.dynamic_text)
+		vk_sound_path_entry.grid(row=1, column=0, pady=(2, 0), sticky='w')
+
+		def _browse_sound_file():
+			try:
+				from tkinter import filedialog as _fd
+				p = _fd.askopenfilename(title='Choose click sound',
+										filetypes=[('Audio files', '*.wav *.mp3 *.ogg *.flac'), ('All files', '*.*')])
+				if p:
+					self.vk_sound_path_v.set(p)
+					apply_vk_settings()
+			except Exception:
+				pass
+
+		vk_sound_browse_btn = Button(sound_row1, text='Browse...', command=_browse_sound_file, bg=self.dynamic_button,
+									 fg=self.dynamic_text)
+		vk_sound_browse_btn.grid(row=2, column=0, pady=(4, 0), sticky='w')
+
+		sound_row2 = Frame(sound_group, bg=self.dynamic_overall)
+		sound_row2.grid(row=2, column=0, pady=(6, 2), sticky='w')
+
+		Label(sound_row2, text='Volume gain (dB):', bg=self.dynamic_overall, fg=self.dynamic_text).grid(row=0, column=0,
+																										sticky='w')
+		vk_sound_gain_spin = Spinbox(
+			sound_row2, from_=-30.0, to=12.0, increment=0.5, width=8,
+			textvariable=self.vk_sound_gain_db_v,
+			bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_sound_gain_spin.grid(row=1, column=0, sticky='w')
+
+		layout_group = Frame(tab_sound_layout, bg=self.dynamic_overall)
+		layout_group.grid(row=3, column=0, pady=(10, 6), sticky='w')
+		layout_title = Label(layout_group, text='Layout', font='arial 10',
+							 bg=self.dynamic_overall, fg=self.dynamic_text)
+		layout_title.grid(row=0, column=0, sticky='w')
+		vk_advanced_mode_chk = Checkbutton(
+			layout_group, text='Use advanced layout (numbers/nav rows)',
+			variable=self.vk_advanced_mode_v, bg=self.dynamic_bg, fg=self.dynamic_text
+		)
+		vk_advanced_mode_chk.grid(row=1, column=0, sticky='w')
+
+		# Auto-apply VK settings on any change (no separate Apply button)
+		def apply_vk_settings():
+			# Read from class Tk variables
+			self.vk_feedback = bool(self.vk_feedback_v.get())
+			self.vk_smart_spacing = bool(self.vk_smart_spacing_v.get())
+			self.vk_repeat_enabled = bool(self.vk_repeat_enabled_v.get())
+			self.vk_repeat_initial_delay_ms = max(0, min(5000, int(self.vk_repeat_initial_delay_ms_v.get())))
+			self.vk_repeat_interval_ms = max(10, min(1000, int(self.vk_repeat_interval_ms_v.get())))
+			self.vk_indent_size = max(1, min(12, int(self.vk_indent_size_v.get())))
+
+			self.vk_feedback_modes_muted = bool(self.vk_feedback_modes_muted_v.get())
+			self.vk_feedback_min_interval_ms = max(0, min(300, int(self.vk_feedback_min_interval_ms_v.get())))
+			self.vk_repeat_feedback_every = max(1, min(10, int(self.vk_repeat_feedback_every_v.get())))
+			self.vk_sound_path = self.vk_sound_path_v.get().strip()
+			try:
+				self.vk_sound_gain_db = float(self.vk_sound_gain_db_v.get())
+			except Exception:
+				try:
+					self.vk_sound_gain_db = float(str(self.vk_sound_gain_db_v.get()))
+				except Exception:
+					self.vk_sound_gain_db = -8.0
+			self.vk_sound_gain_db = max(-30.0, min(12.0, self.vk_sound_gain_db))
+			self.vk_advanced_mode = bool(self.vk_advanced_mode_v.get())
+
+			self.vk_shift_enabled = bool(self.vk_shift_enabled_v.get())
+			self.vk_shift_toggle_enabled = bool(self.vk_shift_toggle_enabled_v.get())
+			try:
+				self.vk_shift_tap_timeout_ms = max(100, min(1000, int(self.vk_shift_tap_timeout_ms_v.get())))
+			except Exception:
+				self.vk_shift_tap_timeout_ms = 300
+			try:
+				self.vk_shift_hold_threshold_ms = max(100, min(1000, int(self.vk_shift_hold_threshold_ms_v.get())))
+			except Exception:
+				self.vk_shift_hold_threshold_ms = 220
+
+			#  Persist (only through the saved_settings mechanism)
+			try:
+				if not hasattr(self, 'data') or not isinstance(self.data, dict):
+					# Keep a dict so saved_settings can dump
+					self.data = {}
+				self.data['vk_feedback'] = self.vk_feedback
+				self.data['vk_smart_spacing'] = self.vk_smart_spacing
+				self.data['vk_repeat_enabled'] = self.vk_repeat_enabled
+				self.data['vk_repeat_initial_delay_ms'] = self.vk_repeat_initial_delay_ms
+				self.data['vk_repeat_interval_ms'] = self.vk_repeat_interval_ms
+				self.data['vk_indent_size'] = self.vk_indent_size
+
+				self.data['vk_feedback_modes_muted'] = self.vk_feedback_modes_muted
+				self.data['vk_feedback_min_interval_ms'] = self.vk_feedback_min_interval_ms
+				self.data['vk_repeat_feedback_every'] = self.vk_repeat_feedback_every
+				self.data['vk_sound_path'] = self.vk_sound_path
+				self.data['vk_sound_gain_db'] = self.vk_sound_gain_db
+				self.data['vk_advanced_mode'] = self.vk_advanced_mode
+
+				self.data['vk_shift_enabled'] = self.vk_shift_enabled
+				self.data['vk_shift_toggle_enabled'] = self.vk_shift_toggle_enabled
+				self.data['vk_shift_tap_timeout_ms'] = self.vk_shift_tap_timeout_ms
+				self.data['vk_shift_hold_threshold_ms'] = self.vk_shift_hold_threshold_ms
+
+				self.saved_settings(special_mode='save')
+			except Exception:
+				pass
+
+			# Live refresh hook
+			try:
+				if self.vk_active and callable(getattr(self, 'on_vk_settings_changed', None)):
+					self.on_vk_settings_changed()
+			except Exception:
+				pass
+
+		# Bind auto-apply on variable changes and relevant entries
+		try:
+			for v in (
+					self.vk_feedback_v, self.vk_smart_spacing_v, self.vk_repeat_enabled_v,
+					self.vk_repeat_initial_delay_ms_v, self.vk_repeat_interval_ms_v, self.vk_indent_size_v,
+					self.vk_feedback_modes_muted_v, self.vk_feedback_min_interval_ms_v, self.vk_repeat_feedback_every_v,
+					self.vk_sound_path_v, self.vk_sound_gain_db_v, self.vk_advanced_mode_v,
+					# NEW: Shift variables
+					self.vk_shift_enabled_v, self.vk_shift_toggle_enabled_v,
+					self.vk_shift_tap_timeout_ms_v, self.vk_shift_hold_threshold_ms_v
+			):
+				if hasattr(v, 'trace_add'):
+					v.trace_add('write', lambda *args: apply_vk_settings())
+		except Exception:
+			pass
+		try:
+			vk_sound_path_entry.bind('<FocusOut>', lambda _e: apply_vk_settings())
+			vk_sound_path_entry.bind('<KeyRelease>', lambda _e: apply_vk_settings())
+		except Exception:
+			pass
+
+		# --- Shift tab UI (Virtual keyboard → Shift) ---
+		try:
+			shift_group = Frame(tab_shift, bg=self.dynamic_overall)
+			shift_group.grid(row=0, column=0, pady=(8, 6), sticky='w')
+
+			shift_title = Label(
+				shift_group, text='Shift behavior', font='arial 10',
+				bg=self.dynamic_overall, fg=self.dynamic_text
+			)
+			shift_title.grid(row=0, column=0, columnspan=2, sticky='w')
+
+			shift_enabled_cb = Checkbutton(
+				shift_group, text='Enable Shift keys', variable=self.vk_shift_enabled_v,
+				bg=self.dynamic_bg, fg=self.dynamic_text
+			)
+			shift_enabled_cb.grid(row=1, column=0, pady=(4, 2), sticky='w')
+
+			shift_toggle_cb = Checkbutton(
+				shift_group,
+				text='Tap to toggle (double-tap → Caps); off = one‑shot',
+				variable=self.vk_shift_toggle_enabled_v,
+				bg=self.dynamic_bg, fg=self.dynamic_text
+			)
+			shift_toggle_cb.grid(row=2, column=0, pady=(2, 2), sticky='w')
+
+			# Timings
+			timing_group = Frame(tab_shift, bg=self.dynamic_overall)
+			timing_group.grid(row=1, column=0, pady=(8, 6), sticky='w')
+
+			timing_title = Label(
+				timing_group, text='Timings (ms)', font='arial 10',
+				bg=self.dynamic_overall, fg=self.dynamic_text
+			)
+			timing_title.grid(row=0, column=0, columnspan=2, sticky='w')
+
+			lbl_tap = Label(timing_group, text='Double‑tap window:', bg=self.dynamic_overall, fg=self.dynamic_text)
+			spin_tap = Spinbox(
+				timing_group, from_=100, to=1000, increment=20, width=8,
+				textvariable=self.vk_shift_tap_timeout_ms_v,
+				bg=self.dynamic_bg, fg=self.dynamic_text
+			)
+			lbl_hold = Label(timing_group, text='Hold threshold:', bg=self.dynamic_overall, fg=self.dynamic_text)
+			spin_hold = Spinbox(
+				timing_group, from_=100, to=1000, increment=20, width=8,
+				textvariable=self.vk_shift_hold_threshold_ms_v,
+				bg=self.dynamic_bg, fg=self.dynamic_text
+			)
+
+			lbl_tap.grid(row=1, column=0, padx=(0, 6), pady=(2, 2), sticky='w')
+			spin_tap.grid(row=1, column=1, padx=(0, 6), pady=(2, 2), sticky='w')
+			lbl_hold.grid(row=2, column=0, padx=(0, 6), pady=(2, 2), sticky='w')
+			spin_hold.grid(row=2, column=1, padx=(0, 6), pady=(2, 2), sticky='w')
+		except Exception:
+			pass
+
+		# Fit height on tab change
+		def _fit_options_height(_event=None):
+			try:
+				self.opt_root.update_idletasks()
+				cur_w = self.opt_root.winfo_width()
+				new_h = self.opt_root.winfo_height()
+				self.opt_root.geometry(f'{cur_w}x{new_h}')
+			except Exception:
+				pass
+
+		try:
+			if 'vk_tabs' in locals() and hasattr(vk_tabs, 'bind'):
+				vk_tabs.bind('<<NotebookTabChanged>>', _fit_options_height)
+		except Exception:
+			pass
+
+		# Initial sync (apply current values)
+		apply_vk_settings()
+
+		# tabs assembly (only once)
 		settings_tabs.add(styles_frame, text='Styles')
 		settings_tabs.add(functional_frame, text='Functions')
 		settings_tabs.add(bindings_frame, text='Bindings')
-		settings_tabs.add(pop_ups_frame, text='Other windows')
-
+		settings_tabs.add(pop_ups_frame, text='Alt Windows')
+		settings_tabs.add(vk_frame, text='V-keyboard')
 		# styles widgets
 		cursor_title.grid(row=1, column=1)
 
@@ -2866,15 +3108,13 @@ class Window(Tk):
 		# functional widgets
 		pack_functional = (
 			hide_title, bar_frame, stt_title, stt_lang, file_opt_title, last_file_checkbox, usage_report_checkbox
-			, title_other, check_v_checkbox, reset_button, tt_checkbox, auto_save_title, auto_save_frame, indent_title, indent_frame)
+			, title_other, check_v_checkbox, reset_button, tt_checkbox, auto_save_title, auto_save_frame)
 		for widget in pack_functional:
 			widget.pack()
 		filebar_check.grid(row=1, column=0)
 		statusbar_check.grid(row=1, column=2)
 		by_time_rb.grid(row=0, column=0)
 		by_press_rb.grid(row=0, column=2)
-		indent_tab.grid(row=0, column=0)
-		indent_space.grid(row=0, column=2)
 		preference_text.grid(row=0, column=0)
 		preference_html.grid(row=0, column=2)
 
@@ -2897,17 +3137,21 @@ class Window(Tk):
 		self.usage_time.pack()
 		# creating buttons list
 
-		self.opt_frames = styles_frame, functional_frame, self.opt_root, bindings_frame, pop_ups_frame, order_frame
+		self.opt_frames = styles_frame, functional_frame, self.opt_root, bindings_frame, pop_ups_frame, order_frame, preference_frame
+
 		self.opt_commands = (nm_black_checkbox, nm_blue_checkbox, transparency_config, filebar_check, statusbar_check,
 							 last_file_checkbox, reset_button, tt_checkbox, by_time_rb, by_press_rb, corrector_preview,
 							 file_actions_check, typefaces_action_check, edit_functions_check, auto_function_check,
-							 auto_list_check, indent_tab, indent_space, preference_text, preference_html,
+							 auto_list_check, preference_text, preference_html,
 							 textt_function_check, win_actions_check, open_m_s, never_limit_s, self.transparency_s,
 							 usage_report_checkbox, biggest_top, biggest_bottom,
-							 duplicate_windows, many_windows_checkbox, top_most_s, check_v_checkbox, reset_binds_button)
+							 duplicate_windows, many_windows_checkbox, top_most_s, check_v_checkbox, reset_binds_button,
+							 shift_enabled_cb, shift_toggle_cb, spin_tap, spin_hold)
 		self.opt_labels = (opt_title, cursor_title, style_title, relief_title, nm_title, transparency_title, hide_title,
 						   stt_title, file_opt_title, title_other, auto_save_title, self.usage_time, state_title,
-						   attr_title, trans_s_title, corrector_title, warning_title, other_w_title, order_title)
+						   attr_title, trans_s_title, corrector_title, warning_title, other_w_title, order_title,
+						   shift_title, timing_title, lbl_tap, lbl_hold)
+
 
 		self.dynamic_buttons = {'arrow': self.arrow_button, 'tcross': self.tcross_button, 'fleur': self.fleur_button,
 								'pencil': self.pencil_button
@@ -2988,56 +3232,12 @@ class Window(Tk):
 		goto_button.grid(row=4, column=0, pady=5)
 
 
-    def sort(self):
-        '''
-            this function sorts the input you put in it with ascending and descending orders,
-            and if you put characters it will use their ASCII values
-            '''
-        global mode_, sort_data_sorted, str_loop, sort_rot, sort_input
-
-        def sort_():
-            global mode_, sort_data_sorted, str_loop
-            sort_data = sort_input.get('1.0', 'end')
-            sort_data_sorted = (sorted(sort_data))
-            sort_input.delete('1.0', 'end')
-            if mode_ == 'dec':
-                for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
-                    sort_input.insert('insert linestart', f'{sort_data_sorted[num]}')
-            else:
-                for num in range(str_loop, len(sort_data_sorted) - end_loop, 1):
-                    sort_input.insert('insert lineend', f'{sort_data_sorted[num]}')
-
-        def mode():
-            global mode_, str_loop, end_loop
-            if mode_ == 'ascending':
-                mode_ = 'descending'
-                str_loop, end_loop = 0, 1
-            else:
-                mode_ = 'ascending'
-                str_loop, end_loop = 1, 0
-            mode_button.config(text=f'Mode: {mode_}')
-
-        def enter():
-            for character in list(str(sort_input.get('1.0', 'end'))):
-                if str(character).isdigit():
-                    self.EgonTE.insert(self.get_pos(), sort_input.get('1.0', 'end'))
-                    break
-
-        # window creation
-        sort_root = self.make_pop_ups_window(self.sort)
-        # variables
-        mode_ = 'ascending'
-        str_loop, end_loop = 1, 0
-        # UI components
-        sort_text = Label(sort_root, text='Enter the numbers/characters you wish to sort:', font='arial 10 bold')
-        sort_frame, sort_input, sort_scroll = self.make_rich_textbox(sort_root, size=[30, 15])
-        sort_button = Button(sort_root, text='Sort', command=sort_)
-        mode_button = Button(sort_root, text='Mode: ascending', command=mode)
-        sort_insert = Button(sort_root, text='Insert', command=enter)
-        sort_text.pack(fill=X, anchor=W, padx=3)
-        sort_button.pack(pady=2)
-        mode_button.pack(pady=2)
-        sort_insert.pack(pady=2)
+	def sort(self):
+		'''
+		this function sorts the input you put in it with ascending and descending orders,
+		and if you put characters it will use their ASCII values
+		'''
+		open_sort(self)
 
 	def knowledge_window(self, mode: str):
 		'''
@@ -3050,177 +3250,8 @@ class Window(Tk):
 		virtual keyboard tool, that have most of the important functionalities:
 		tab, symbols, caps, numbers, and english characters in the qwert organization
 		'''
+		open_virtual_keyboard(self)
 
-		def close_vk():
-			self.opened_windows.remove(keyboard_root)
-			keyboard_root.destroy()
-			self.vk_active = False
-
-		global last_abc
-		# window creation and settings
-		keyboard_root = Toplevel()
-		self.make_tm(keyboard_root)
-		keyboard_root.attributes('-alpha', self.st_value)
-		if self.limit_w_s.get():
-			keyboard_root.resizable(False, False)
-		self.sym_var1 = False
-		self.sym_var2 = False
-		keyboard_root.configure(bg='black')
-		keyboard_root.protocol('WM_DELETE_WINDOW', close_vk)
-		self.opened_windows.append(keyboard_root)
-		if not (self.vk_active) and keyboard_root in self.opened_windows:
-			self.vk_active = True
-		last_abc = 'upper'
-		exp = ' '  # global variable
-
-		def quick_grid(w_list, row_number):
-			for index, widget in enumerate(w_list):
-				widget.grid(row=row_number, column=index, ipady=10)
-
-		def press(expr: str):
-			global exp
-			self.EgonTE.insert(self.get_pos(), expr)
-
-		def tab():
-			if self.indent_method.get() == 'space':
-				exp = '    '
-			else:
-				exp = '		'
-			self.EgonTE.insert(self.get_pos(), exp)
-
-		def modes(mode: str):
-			global last_abc
-			modes_buttons = caps, sym_button
-
-			if self.night_mode.get():
-				if self.nm_palette.get() == 'black':
-					highlighted_color = '#042f42'
-				else:
-					highlighted_color = '#051d29'
-			else:
-				highlighted_color = 'light grey'
-
-			for mode_button in modes_buttons:
-				mode_button.configure(bg=self.dynamic_button)
-
-			if mode == 'upper' or mode == 'lower':
-				last_abc = mode
-				sym_button.configure(command=lambda: modes('sym'))
-				sym_button_2.configure(command=lambda: modes('sym2'))
-
-			if mode == 'upper':
-				for asc in range(len(ascii_uppercase)):
-					characters[asc].configure(text=ascii_uppercase[asc],
-											  command=lambda i=asc: press(ascii_uppercase[i]))
-					caps.configure(command=lambda: modes('lower'))
-					caps.configure(bg=highlighted_color)
-			elif mode == 'lower':
-				for asc in range(len(ascii_lowercase)):
-					characters[asc].configure(text=ascii_lowercase[asc],
-											  command=lambda i=asc: press(ascii_lowercase[i]))
-					caps.configure(command=lambda: modes('upper'))
-			elif mode == 'sym':
-				if not (self.sym_var1):
-					for counter, sn in enumerate(sym_n):
-						characters_by_order[counter].configure(text=sn,
-															   command=lambda i=sn: press(i))
-					sym_button.configure(command=lambda: modes(last_abc), bg=highlighted_color)
-					if self.sym_var2:
-						self.sym_var2 = False
-						sym_button_2.configure(bg=self.dynamic_button, command=lambda: modes('sym2'))
-				self.sym_var1 = not (self.sym_var1)
-
-			elif mode == 'sym2':
-				if not self.sym_var2:
-					for counter, sn in enumerate(syn_only):
-						characters_by_order[counter].configure(text=sn,
-															   command=lambda i=sn: press(i))
-					sym_button_2.configure(command=lambda: modes(last_abc), bg=highlighted_color)
-					if self.sym_var1:
-						self.sym_var1 = False
-						sym_button.configure(bg=self.dynamic_button, text='1!*', command=lambda: modes('sym'))
-				self.sym_var2 = not (self.sym_var2)
-
-			if mode == 'upper' or mode == 'lower':
-				self.sym_var1 = False
-				self.sym_var2 = False
-				sym_button.configure(command=lambda: modes('sym'), bg=self.dynamic_button)
-				sym_button_2.configure(bg=self.dynamic_button, command=lambda: modes('sym2'))
-
-		btn_frame = Frame(keyboard_root)
-		extras_frame = Frame(keyboard_root)
-		btn_frame.pack()
-		extras_frame.pack()
-
-		# creating buttons
-		b_width = 6
-		Q, W, E, R, T, Y, U, I, O, P, A, S, D, F, G, H, J, K, L, Z, X, C, V, B, N, M = \
-			[Button(btn_frame, text=button, width=b_width, command=lambda: press(button)) for button in characters_str]
-
-
-		sym_list = '{', '}', '\\', ';', '"', '<', '>', '/', '?', ',', '.'
-		cur, cur_c, back_slash, semi_co, d_colon, less_sign, more_sign, slas, q_mark, coma, dot = \
-			[Button(btn_frame, text=button, width=b_width, command=lambda: press(button)) for button in sym_list]
-
-		space = Button(extras_frame, text='Space', width=b_width, command=lambda: press(' '))
-		caps = Button(extras_frame, text='Caps', width=b_width, command=lambda: modes('lower'))
-		sym_button = Button(extras_frame, text='1!*', width=b_width, command=lambda: modes('sym'))
-		sym_button_2 = Button(extras_frame, text='ƒ√€', width=b_width, command=lambda: modes('sym2'))
-		new_line_b = Button(extras_frame, text='Enter', width=b_width, command=lambda: press('\n'))
-		open_b = Button(extras_frame, text='(', width=b_width, command=lambda: press('('))
-		close_b = Button(extras_frame, text=')', width=b_width, command=lambda: press(')'))
-
-		tab_b = Button(extras_frame, text='Tab', width=b_width, command=tab)
-
-
-
-		# placing buttons
-		grid_list_1 = (Q, W, E, R, T, Y, U, I, O, P, cur, cur_c)
-		grid_list_2 = (A, S, D, F, G, H, J, K, L, semi_co, d_colon, dot)
-		grid_list_3 = (Z, X, C, V, B, N, M, less_sign, more_sign, slas, q_mark, coma)
-
-		quick_grid(grid_list_1, 1)
-		back_slash.grid(row=1, column=10, ipady=10)
-		quick_grid(grid_list_2, 2)
-		quick_grid(grid_list_3, 3)
-
-		space.grid(row=0, column=1, ipadx=90, ipady=10)
-		new_line_b.grid(row=0, column=2, ipadx=14, ipady=10)
-		open_b.grid(row=0, column=3, ipady=10)
-		close_b.grid(row=0, column=4, ipady=10)
-		tab_b.grid(row=0, column=5, ipady=10)
-		caps.grid(row=0, column=6, ipady=10)
-		sym_button.grid(row=0, column=7, ipady=10)
-		sym_button_2.grid(row=0, column=8, ipady=10)
-
-		self.record_list.append(f'> [{get_time()}] - Virtual Keyboard tool window opened')
-
-		characters = A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
-		characters_by_order = Q, W, E, R, T, Y, U, I, O, P, A, S, D, F, G, H, J, K, L, Z, X, C, V, B, N, M
-		symbols = semi_co, cur, cur_c, back_slash, d_colon, less_sign, more_sign, slas, q_mark, coma, dot, open_b, close_b
-		functional_buttons = space, new_line_b, tab_b, caps, sym_button, sym_button_2
-		self.all_vk_buttons = characters_by_order + symbols + functional_buttons
-
-		for vk_btn in self.all_vk_buttons:
-			vk_btn.config(bg=self.dynamic_button, fg=self.dynamic_text)
-
-		keyboard_root.update_idletasks()
-		win_w, win_h = keyboard_root.winfo_width(), keyboard_root.winfo_height()
-		ete_x, ete_y = (self.winfo_x()), (self.winfo_y())
-		ete_w, ete_h = self.winfo_width(), self.winfo_height()
-		mid_x, mid_y = round(ete_x + (ete_w / 2) - (win_w / 2)), (round((ete_h) + ete_y - win_h))
-		if abs(mid_y - self.winfo_screenheight()) <= 80:
-			mid_y = self.winfo_screenheight() // 2
-		keyboard_root.geometry(f'{win_w}x{win_h}+{mid_x}+{mid_y}')
-		if self.limit_w_s.get():
-			keyboard_root.resizable(False, False)
-
-		modes('lower')
-
-		self.vk_sizes = win_w, win_h
-		self.limit_list.append([keyboard_root, self.vk_sizes])
-
-		keyboard_root.mainloop()  # using ending point
 
 	def emoji_detection(self, event=None, via_settings: bool = False, reverse : bool =False):
 		'detects emojis and replaces their identification mark with the emoji itself'
@@ -3909,7 +3940,25 @@ class Window(Tk):
 				'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
 				'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
 				'night_type': 'black', 'preview_cc': False, 'fun_numbers': True, 'usage_report': False,
-				'check_version': False, 'window_c_warning': True, 'allow_duplicate': False}
+				'check_version': False, 'window_c_warning': True, 'allow_duplicate': False,
+				'vk_feedback': False,
+				'vk_smart_spacing': False,
+				'vk_repeat_enabled': True,
+				'vk_repeat_initial_delay_ms': 550,
+				'vk_repeat_interval_ms': 85,
+				'vk_indent_size': 4,
+				# Newly added VK defaults
+				'vk_feedback_modes_muted': True,
+				'vk_advanced_mode': False,
+				'vk_sound_path': '',
+				'vk_sound_gain_db': -8.0,
+				'vk_feedback_min_interval_ms': 70,
+				'vk_repeat_feedback_every': 4,
+				'vk_shift_enabled': True,
+				'vk_shift_toggle_enabled': True,
+				'vk_shift_tap_timeout_ms': 300,
+				'vk_shift_hold_threshold_ms': 220,
+		}
 
 	def match_saved_settings(self):
 
@@ -3935,8 +3984,70 @@ class Window(Tk):
 		self.predefined_cursor = self.custom_cursor_v.get()
 		self.predefined_style = self.cs.get()
 		self.predefined_relief = self.data['relief']
+		self.vk_feedback = bool(self.data.get('vk_feedback', False))
+		self.vk_smart_spacing = bool(self.data.get('vk_smart_spacing', False))
+		self.vk_repeat_enabled = bool(self.data.get('vk_repeat_enabled', True))
+		self.vk_repeat_initial_delay_ms = int(self.data.get('vk_repeat_initial_delay_ms', 550))
+		self.vk_repeat_interval_ms = int(self.data.get('vk_repeat_interval_ms', 85))
+		self.vk_indent_size = int(self.data.get('vk_indent_size', 4))
+
+		# Newly added VK settings (load from saved data)
+		self.vk_feedback_modes_muted = bool(self.data.get('vk_feedback_modes_muted', True))
+		self.vk_advanced_mode = bool(self.data.get('vk_advanced_mode', False))
+		self.vk_sound_path = self.data.get('vk_sound_path', '') or ''
+		try:
+			self.vk_sound_gain_db = float(self.data.get('vk_sound_gain_db', -8.0))
+		except Exception:
+			self.vk_sound_gain_db = -8.0
+
+		try:
+			self.vk_feedback_min_interval_ms = int(self.data.get('vk_feedback_min_interval_ms', 70))
+		except Exception:
+			self.vk_feedback_min_interval_ms = 70
+		try:
+			self.vk_repeat_feedback_every = int(self.data.get('vk_repeat_feedback_every', 4))
+		except Exception:
+			self.vk_repeat_feedback_every = 4
+
+		# NEW: load Shift settings from saved data
+		try:
+			self.vk_shift_enabled = bool(self.data.get('vk_shift_enabled', True))
+			self.vk_shift_toggle_enabled = bool(self.data.get('vk_shift_toggle_enabled', True))
+			self.vk_shift_tap_timeout_ms = int(self.data.get('vk_shift_tap_timeout_ms', 300))
+			self.vk_shift_hold_threshold_ms = int(self.data.get('vk_shift_hold_threshold_ms', 220))
+		except Exception:
+			self.vk_shift_enabled = True
+			self.vk_shift_toggle_enabled = True
+			self.vk_shift_tap_timeout_ms = 300
+			self.vk_shift_hold_threshold_ms = 220
+
+		# Sync VK Tk variables with loaded values (no duplicates elsewhere)
+		try:
+			self.vk_feedback_v.set(self.vk_feedback)
+			self.vk_smart_spacing_v.set(self.vk_smart_spacing)
+			self.vk_repeat_enabled_v.set(self.vk_repeat_enabled)
+			self.vk_repeat_initial_delay_ms_v.set(self.vk_repeat_initial_delay_ms)
+			self.vk_repeat_interval_ms_v.set(self.vk_repeat_interval_ms)
+			self.vk_indent_size_v.set(self.vk_indent_size)
+			self.vk_feedback_modes_muted_v.set(self.vk_feedback_modes_muted)
+			self.vk_feedback_min_interval_ms_v.set(self.vk_feedback_min_interval_ms)
+			self.vk_repeat_feedback_every_v.set(self.vk_repeat_feedback_every)
+			self.vk_sound_path_v.set(self.vk_sound_path or '')
+			if hasattr(self.vk_sound_gain_db_v, 'set'):
+				self.vk_sound_gain_db_v.set(self.vk_sound_gain_db)
+			else:
+				self.vk_sound_gain_db_v = StringVar(value=str(self.vk_sound_gain_db))
+			self.vk_advanced_mode_v.set(self.vk_advanced_mode)
+			self.vk_shift_enabled_v.set(self.vk_shift_enabled)
+			self.vk_shift_toggle_enabled_v.set(self.vk_shift_toggle_enabled)
+			self.vk_shift_tap_timeout_ms_v.set(self.vk_shift_tap_timeout_ms)
+			self.vk_shift_hold_threshold_ms_v.set(self.vk_shift_hold_threshold_ms)
+		except Exception:
+			pass
+
 		if self.last_file_v.get():
 			self.file_name = self.data['open_last_file']
+
 
 	def text_decorators(self):
 		'''
