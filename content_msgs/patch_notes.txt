@@ -1,5 +1,228 @@
 Version - name - release date
 
+[1.13.6 - Magnificent tools - 20/09/25]
+
+Virtual keyboard (new standalone file)
+Added
+* Two layouts:
+  * Compact: classic rows with an “extras” bar (Space, Enter, Tab, Caps, Sym, Sym2).
+  * Advanced: full OSK-like layout with number row (Shift-aware), wide Tab/Caps/Enter/Shift, punctuation blocks, and a navigation/edit cluster (Home/End/Arrows/Delete/Backspace).
+* Smart Shift in advanced layout:
+  * One-shot Shift (single tap; auto‑revert after next text insert).
+  * Caps toggle on double‑tap.
+  * Press‑and‑hold for temporary uppercase and number-row symbol mapping; clean reset on release.
+* Sticky one‑shot modes for Caps, Sym, Sym2 (auto‑revert after one text insertion); unified reset routine to restore visuals, alpha mode, and number row.
+* Expanded symbol layers:
+  * Broad “sym” coverage across letters, punctuation, and optionally number row.
+  * “sym2” as a secondary symbol set.
+  * Advanced layout avoids duplicating characters already provided by the number row.
+* Smart spacing for punctuation and parentheses (no extra space before , . ; : ? !; sensible trailing spaces; spacing with ( ) around alphanumerics).
+* Smart Tab/Indent that follows app settings for tabs vs spaces and indent width (with a pluggable getter).
+* Feedback system with gentle click/beep and global debounce; optional host callback for sound/haptics.
+* Press‑and‑hold repeat for keys (configurable initial delay and interval) with throttled sound and subtle visual pulse.
+* Live updates hook:
+  * Rebind repeat handlers, reapply theme, and hot‑switch layouts in real time.
+* Theming and night mode integration for all keys, including consistent highlights on toggle keys (Caps/Sym/Sym2/Shift).
+* Editor‑friendly behavior:
+  * Selection‑aware insertion and caret placement.
+  * Cursor movement helpers and delete/backspace actions.
+* Startup/close flow:
+  * Tracks open state, sizes, and positions window near the main window bottom‑center with sensible screen‑edge fallback.
+  * Optional callbacks to notify host when the keyboard opens and when settings change.
+
+Changed / Improved
+* Mode/state model rewritten to coordinate alpha modes (upper/lower), Shift (tap, hold, double‑tap), Sym/Sym2 layers, and sticky behavior without leaking state across transitions.
+* Advanced layout polished:
+  * Number row remaps with Shift (1→! etc.) and restores precisely when Shift ends or when leaving symbol layers.
+  * Wider control keys for ergonomics; clearly structured rows with uniform column weights.
+* Symbol mapping logic:
+  * Intelligent target selection and restoration that protects letter-case mappings from being overwritten by sym layers.
+  * Keeps the number row intact when the symbol pool is insufficient and honors Shift ownership of that row.
+* Cleaner input pipeline:
+  * Handles selected text replacement vs caret insert consistently.
+  * Auto‑focuses and scrolls the editor to the caret after actions.
+* Performance and robustness:
+  * Feedback and repeats are globally debounced to reduce audio/UI spam.
+  * Repeat bindings are attached once and refreshed safely during live updates (no duplicate invokes).
+* Safer, more defensive fallbacks:
+  * Graceful behavior when optional libraries (e.g., audio) or host attributes are missing.
+
+Fixed
+* Stuck number-row states when toggling Shift or leaving Sym/Sym2.
+* Toggle-key highlight desyncs in night mode or after rapid mode switches (Caps/Sym/Sym2/Shift now remain visually consistent).
+* Residual letter/symbol mappings after switching modes (proper restoration for letters, punctuation, and number row).
+* Duplicate bindings and multi-fire issues during runtime reconfiguration (theme/option changes or layout switch).
+* Selection handling edge cases (replacing selection vs inserting at caret) and missed focus/see calls.
+* Crashes or noisy errors when sound paths, audio libraries, or host properties are unavailable (all now optional and safe).
+
+Web assistant (new standalone file)
+Added
+* Dedicated Web Assistant window with a clear, multi-tab layout:
+  * Search: query/URL input, engine selection, safe-search, open options, async title preview.
+  * Shorten: URL shorteners (TinyURL, is.gd, Bitly with token dialog), copy/insert actions.
+  * QR: inline QR code generator (size, ECC L/M/Q/H, FG/BG), save as PNG, copy URL, quick “Open QR in browser”.
+  * History: searchable/pinnable list with export/import, delete/clear/purge older-than-N-days, double‑click/Enter to use.
+* Custom search engines:
+  * Manage dialog for adding/removing engines with template placeholders ({q} or {}).
+  * “Bang” routing (!g, !ddg, !bing, etc.) to switch engine inline.
+* Browser control:
+  * Automatic detection of common browsers (default, firefox, chrome, edge, opera, brave).
+  * “Custom…” launcher using a saved command template with {url} placeholder.
+* Persistence:
+  * Remembers engine, safe-search, browser, tab mode, and QR size across sessions.
+  * History migration from legacy string lists to timestamped, pinnable entries.
+* URL handling and utilities:
+  * Robust URL normalizer (adds https:// for bare domains and “www.” inputs).
+  * Context helpers: paste from clipboard, fill from editor selection.
+* Keyboard shortcuts:
+  * Enter to open; Ctrl+Enter to shorten; Esc to close; Ctrl+L to focus input; Ctrl+K to clear input; Delete to delete selected history.
+
+Changed/Improved
+* Separated from the main window into a self-contained tool, keeping the main code lighter and easier to maintain.
+* Consolidated the “Browser” settings into an “Open options” panel in the Search tab (same capabilities, more discoverable).
+* Upgraded the “short URL” flow:
+  * Multiple providers with fallbacks; Bitly integrated via a dedicated token dialog; clear error reporting.
+* QR experience improved:
+  * Inline generator with advanced options (ECC, colors, size), plus a quick external-browser option.
+  * QR size is shared and remembered across the tool (context menu and inline generator stay in sync).
+* Search experience improved:
+  * Title previews for URLs (non-blocking).
+  * Bang shortcuts and custom engines make power usage quick without leaving the input box.
+  * Safer default behavior: scheme added automatically to bare domains.
+* History made actionable:
+  * Pin favorites, filter by substring/domain, and export/import JSON to move between sessions.
+  * Smart deduplication and migration from older formats.
+* Theming and UX:
+  * Honors app theme colors and transparency; pre-fills selection from editor where applicable.
+  * Validates combobox selections against current values to avoid stale state.
+
+Fixed
+* Resolved crash from referencing an undefined QR container by ensuring the QR panel is created before use.
+* Removed duplicated QR generator logic and redundant event handlers to avoid conflicts and override bugs.
+* Improved error handling when launching browsers and running custom commands; clearer feedback for missing dependencies (requests, qrcode/Pillow).
+* Prevented invalid or missing option values (engine, browser, tab mode) by validating against available choices.
+* Eliminated legacy inconsistencies by centralizing URL normalization and engine routing.
+
+Sort tool (new standalone file)
+Added
+* Header-aware sorting
+  * Keep the first N lines intact at the top (unsorted), configurable via a “Header lines” spinbox.
+* Grouped sorting
+  * Sort within groups only, keeping group boundaries intact.
+  * Supports blank-line grouping or a custom regex separator (configurable).
+* Single “Result” preview
+  * Streamlined Preview tab with a single result panel; the Input tab already shows the source.
+* Action bar improvements
+  * New clustered buttons (Sort/Preview/Apply; Insert/Copy/Clear/Undo/Close) with a live status summary on the right.
+  * “Apply to Input” to replace the current target text with the result in one click.
+* Quick delimiter helpers
+  * One‑click buttons for Tab, Space, and Comma in the Columns section.
+* Status enrichment
+  * Result stats added alongside input stats (chars/lines) and last operation time.
+* Keyboard shortcuts (popup-local)
+  * Enter (Sort), Ctrl+Enter/Cmd+Enter (Insert), Ctrl+C (Copy), Ctrl+L (Clear), Ctrl+Z (Undo), Esc/Ctrl+W (Close).
+* Tooltips
+  * Consistent, centralized tooltips for all major controls, including new features.
+
+Changed/Improved
+* Decoupled from main file into a standalone popup
+  * Uses the unified popup builders for consistent ownership/theming, and safer window behavior.
+* Safer, clearer sorting pipeline
+  * Words: stable dedupe flow; normalization options for case and accents; optional natural sort.
+  * Chars: alnum‑only mode preserves punctuation/spacing positions; stable and predictable.
+  * Lines: numeric‑aware path; multi‑key column sorting with per‑column direction; indentation‑aware comparisons; empty‑lines placement (none/top/bottom) preserved across workflows.
+* Preview update model
+  * Result-only preview reduces noise and focuses on net changes.
+  * Debounced live preview/status prevents overlapping updates on rapid edits.
+* Better UX ergonomics
+  * Granularity controls, header count, group options, and column selectors are organized clearly.
+  * Action status text reflects current mode (ASC/DESC, granularity, selection/unique flags).
+* Robust editor integration
+  * Insert and Replace flows respect selection/caret and avoid focus glitches.
+* Undo safety
+  * Local undo snapshot inside the popup (before destructive actions) with reliable restore.
+* Theming and layout
+  * Consistent colors, spacing, and sizing aligned with the rest of the tools.
+  * Buttons panel switched to a grid+clusters layout for clarity and responsive width.
+
+Fixed
+* Tooltip API mismatch
+  * Replaced per‑widget calls with a single batched call using the expected iterable of (widget, text) pairs.
+* Shortcut binding issues
+  * Removed reliance on a non‑matching centralized binds signature; bindings are now attached directly to this popup and inputs.
+* Preview duplication and redundancy
+  * Removed the “Before” panel from Preview; Input remains the definitive source view.
+* Stability guards
+  * Defensive try/except around UI ops (state toggles, focus, after_cancel, widget existence).
+  * Safe handling when selections don’t exist; index and state errors are avoided gracefully.
+* Columns/delimiter friction
+  * Added quick delimiter buttons to prevent common errors and speed up setup.
+
+Text style service (new):
+Added
+* Dedicated text_style_service module with a focused TextStyleService class.
+* Persistent base font management via ensure_base_font, guaranteeing immediate, global font updates in the editor.
+* Initialization hook initialize_from_widget to bind the base font and sync UI variables on startup.
+* Selection helpers:
+  * get_selection_bounds for safe, consistent index ranges.
+  * apply_to_lines_in_selection to run line-scoped operations across a selection.
+* Typeface toggles implemented with Text tags:
+  * weight-bold, slant-italic, underline, overstrike, and a normal clear action.
+* Color styling with tags:
+  * apply_text_color using a ‘colored_txt’ tag.
+  * apply_background_color using a ‘colored_bg’ tag.
+* Paragraph spacing support:
+  * set_line_spacing applies spacing1/spacing2/spacing3 via a ‘paragraph’ tag and persists metadata on the app.
+* Indentation utilities:
+  * get_indent_unit respects ‘tab’ vs spaces.
+  * indent_selection adds or removes one indent unit per selected line.
+* Alignment helpers using text tags for non-destructive alignment: left, center, right.
+* Presets system for text style:
+  * export_current_text_style, save_style_preset, load_style_preset, delete_style_preset, list_style_presets.
+* Toolbar wiring:
+  * wire_toolbar binds combobox changes to font updates and retains widget references in service attributes.
+* Convenience controls for size adjustments: increase_font_size and decrease_font_size.
+
+Changed/Improved
+* Refactored styling logic out of the main window into a standalone, reusable service with clear responsibilities.
+* Unified base font handling: the text widget is bound to one tkfont.Font so .configure changes apply instantly and consistently.
+* Robust, idempotent font setters:
+  * set_font_family, set_font_size, and set_font centralize updates and keep app variables (font_family, size_var) synchronized.
+* Safer operations:
+  * All UI and tag operations are guarded to avoid exceptions if optional widgets/vars are absent.
+  * Defensive fallbacks (e.g., defaulting to ‘Arial 16’) if current font info can’t be resolved.
+* Consistent snake_case naming and clear variable naming across the service.
+* Widgets and controls used by the service are saved to instance attributes to match the project conventions.
+* Logging integrated in key actions (append_record) with time-stamped entries for better traceability.
+* Tag-based formatting is strictly non-destructive to base font while allowing rich inline styling via copies.
+* Preset loading now applies fg/bg, paragraph spacing, and font in one path, with best‑effort UI state sync.
+* Alignment and color application work over selection or whole buffer seamlessly with reliable bounds detection.
+
+Fixed
+* Font re-binding inconsistencies when switching families/sizes by ensuring the text widget always uses the same persistent tkfont.Font.
+* Edge cases where alignment/color/tag operations would break without a selection; operations now gracefully default to the whole buffer.
+* Potential crashes on missing or malformed widget state (e.g., absent size_var/font_family) through guarded access.
+* Intermittent toggling errors in typeface tags by using tag_nextrange to reliably detect and flip tag presence.
+* Outdent logic for spaces vs tabs standardized to remove exactly one configured indent unit.
+* Preset integrity issues:
+  * Ensured stored dictionaries for paragraph spacing are round-tripped and applied safely.
+  * Prevented missing-preset crashes with clear user feedback and False return.
+* Toolbar bindings no longer depend on implicit globals; they attach safely once and store references to avoid duplicate or dangling bindings.
+
+EgonTE
+* Remade the methods of the new standalone tools to be their forwarders.
+* Added a new section in the “Advanced options” pop-up window related to the “Virtual keyboard”.
+  * Basic tab - sound hooks, smart insert mode, key repeat.
+  * Repeat & indent tab - repeat timings, indent method (moved from another tab) and spaces per indent.
+  * Feedback tab - mute modes keys, feedback’s debounce & repeat.
+  * sound & layout tab - feedback’s sound & volume, and layout modes
+    * compact layout - the default layout; small and packed, processes mainly output chars, highly efficient.
+    * advanced layout - large, has more modes, expanded special selections of chars & organization, highly improved navigation capabilities.
+  * shift tab - shift behaviour (active, tap to toggle), and shift timing of events.
+  * made all the options to be saved when closing the program and loaded when launching.
+* changed many text-related methods to adjust them to the new text service.
+* Fixed “predefined_checkbuttons” possible variables bug
+
 [1.13.5 - Sevices n' tools - 13/09/25]
 
 clipboard (new standalone file)
