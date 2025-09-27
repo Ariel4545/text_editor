@@ -166,6 +166,10 @@ from pop_ups.sort_popup import open_sort
 from pop_ups.virtual_keyboard_popup import open_virtual_keyboard
 from pop_ups.web_assistant_popup import open_web_tools
 
+from pop_ups.info_page_popup import open_info
+from pop_ups.search_functions_popup import open_search_functions
+from pop_ups.record_logs_popup import open_record_logs
+
 '''the optional libraries that can add a lot of extra content to the editor'''
 tes = ACTIVE
 try:
@@ -416,7 +420,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.5'
+		self.ver = '1.13.7'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -2041,236 +2045,7 @@ class Window(Tk):
 
 	# a window that have explanations confusing features
 	def info_page(self, path: str):
-		self.infp_occurs = False
-		'''
-		the UI for the help and patch notes pages
-		'''
-
-		def quit_page():
-			self.opened_windows.remove(info_root)
-			self.info_page_active = False
-			info_root.destroy()
-
-		# window creation
-		self.info_page_active = True
-		info_root = Toplevel()
-		info_root.attributes('-alpha', self.st_value)
-		self.opened_windows.append(info_root)
-		self.func_window[lambda: self.info_page(path)] = info_root
-		self.make_tm(info_root)
-		info_root.config(bg='white')
-		info_root.protocol('WM_DELETE_WINDOW', quit_page)
-
-		# putting the lines in order
-		def place_lines():
-			'''+
-			make scrollbars work with html-tkinter
-			'''
-			self.info_page_text.delete('1.0', END)
-			# Build a cross-platform path and read with robust encoding handling
-			try:
-				file_path = os.path.join('content_msgs', f'{path}.{self.content_mode}')
-			except Exception:
-				file_path = fr'content_msgs\{path}.{self.content_mode}'
-
-			def _read_file_text(p):
-				# Try UTF-8 first, then fall back to a common ANSI codepage with replacement
-				try:
-					with open(p, 'r', encoding='utf-8') as f:
-						return f.read()
-				except UnicodeDecodeError:
-					with open(p, 'r', encoding='cp1252', errors='replace') as f:
-						return f.read()
-
-			if self.content_mode == 'txt':
-				try:
-					content = _read_file_text(file_path)
-					# Strip potential UTF‑8 BOM
-					if content.startswith('\ufeff'):
-						content = content.lstrip('\ufeff')
-					self.info_page_text.insert('end', content)
-				except Exception:
-					# Best effort: leave the widget as-is if reading fails
-					pass
-			else:
-				try:
-					html_content = _read_file_text(file_path)
-					# Strip potential BOM
-					if html_content.startswith('\ufeff'):
-						html_content = html_content.lstrip('\ufeff')
-					self.info_page_text.set_html(html_content)
-				except Exception:
-					# If HTML rendering is unavailable or read failed, insert raw text as fallback
-					try:
-						self.info_page_text.insert('end', _read_file_text(file_path).lstrip('\ufeff'))
-					except Exception:
-						pass
-
-		def find_content(event=False):
-			global entry_content, starting_index, ending_index, offset
-			self.infp_occurs = False
-			entry_content = entry.get().lower()
-			data = self.info_page_text.get('1.0', END).lower()
-
-			# this condition is made to hide to result of blank \ white space characters
-			if entry_content and not (entry_content == ' '):
-				self.infp_occurs = data.count(entry_content)
-			else:
-				self.infp_occurs = False
-				found_label.configure(text='')
-
-			# display the times that the term is in the text
-			if self.infp_occurs:
-				found_label.configure(text=f'{str(self.infp_occurs)} occurrences')
-				if self.oc_color == self.dynamic_overall and self.night_mode.get():
-					self.oc_color = self.dynamic_bg
-
-			else:
-				found_label.configure(text='0 occurrences')
-				if self.oc_color == self.dynamic_bg and self.night_mode.get():
-					self.oc_color = self.dynamic_overall
-
-			found_label.configure(bg=self.oc_color)
-
-			untag_all_matches()
-
-			if self.infp_occurs:
-				# Thread(target=place_tags).start()
-				starting_index = self.info_page_text.search(entry_content, '1.0', END)
-				if starting_index:
-					offset = '+%dc' % len(entry_content)
-					ending_index = starting_index + offset
-					self.info_page_text.tag_add(SEL, starting_index, ending_index)
-					self.info_page_text.tag_add('highlight_all_result', starting_index, ending_index)
-
-		# def place_tags():
-		#     more_matches = True
-		#     while more_matches:
-		#         starting_index = self.info_page_text.search(entry_content, '1.0', END)
-		#         if starting_index:
-		#             new_st_index = self.info_page_text.search(entry_content, starting_index, END)
-		#             starting_index = new_st_index # new addition to fix the problems
-		#             offset = '+%dc' % len(entry_content)
-		#             ending_index = starting_index + offset
-		#             if ending_index == starting_index or ending_index == self.info_page_text.index('end'): # old condition ending_index == info_page_text.index('end')
-		#                 more_matches = False
-		#
-		#             else:
-		#                 self.info_page_text.tag_add('highlight_all_result', starting_index, ending_index)
-		#                 starting_index = ending_index
-
-		def tag_all_matches():
-			global starting_index, ending_index
-			find_upper()
-			for i in range(self.infp_occurs):
-				starting_index = self.info_page_text.search(entry_content, ending_index, END)
-				if starting_index:
-					offset = '+%dc' % len(entry_content)
-					ending_index = starting_index + offset
-					print(f'str:{starting_index} end:{ending_index}')
-					self.info_page_text.tag_add('highlight_all_result', starting_index, ending_index)
-					starting_index = ending_index
-
-		def untag_all_matches():
-			self.info_page_text.tag_remove('highlight_all_result', 1.0, END)
-			self.info_page_text.tag_config('highlight_all_result', background=self.highlight_search_c[0],
-										   foreground=self.highlight_search_c[1])
-
-		def find_lower():
-			global ending_index, starting_index
-			if int(self.infp_occurs) > 1:
-				try:
-					starting_index = self.info_page_text.search(entry_content, ending_index, END)
-				except Exception:
-					pass
-				if starting_index and starting_index != '':
-					self.info_page_text.tag_remove('highlight_all_result', '1.0', starting_index)
-					offset = '+%dc' % len(entry_content)
-					ending_index = starting_index + offset
-					print(f'str:{starting_index} end:{ending_index}')
-					self.info_page_text.tag_add('highlight_all_result', starting_index, ending_index)
-					starting_index = ending_index
-
-		def find_upper():
-			global ending_index, starting_index
-			if int(self.infp_occurs) > 1:
-				# experimental_ei = f'{starting_index}-{len()}c'
-				try:
-					starting_index = self.info_page_text.search(entry_content, '1.0', starting_index)
-				except Exception:
-					pass
-				if starting_index and starting_index != '':
-					offset = '+%dc' % len(entry_content)
-					ending_index = starting_index + offset
-					self.info_page_text.tag_remove('highlight_all_result', ending_index, END)
-					print(f'str:{starting_index} end:{ending_index}')
-					self.info_page_text.tag_add('highlight_all_result', starting_index, ending_index)
-					ending_index = starting_index
-
-		title_frame = Frame(info_root)
-		title_frame.pack(fill=X, expand=True)
-
-		if html_infop == 'txt' or self.content_preference_v.get() == 'txt':
-			self.content_mode = 'txt'
-		else:
-			self.content_mode = 'html'
-
-		# labels
-		self.info_page_title = Label(title_frame, text='Help', font='arial 16 bold underline', justify='left',
-									 fg=self.dynamic_text, bg=self.dynamic_bg)
-		info_root_frame, self.info_page_text, help_text_scroll = self.make_rich_textbox(info_root, font='arial 10',
-																						bd=3, relief=RIDGE, format=self.content_mode, wrap=WORD)
-
-		if path == 'patch_notes':
-			self.info_page_title.configure(text='Patch notes')
-
-		self.info_page_text.focus_set()
-		# add lines
-		place_lines()
-		self.info_page_text.config(state='disabled')
-		# placing
-		self.info_page_title.pack(fill=X, anchor=W, expand=True)
-
-		self.oc_color = 'SystemButtonFace'
-		if self.night_mode.get():
-			self.oc_color = self.dynamic_overall
-
-		find_frame = Frame(info_root, relief=FLAT, background=self.dynamic_overall)
-		entry = Entry(find_frame, relief=FLAT, background=self.dynamic_bg, fg=self.dynamic_text)
-		button_up = Button(find_frame, text='Reset', relief=FLAT, command=find_upper, background=self.dynamic_button,
-						   bd=1, fg=self.dynamic_text)
-		button_down = Button(find_frame, text='↓', relief=FLAT, command=find_lower, background=self.dynamic_button,
-							 bd=1, fg=self.dynamic_text)
-		tag_all_button = Button(find_frame, text='Highlight all', relief=FLAT, command=tag_all_matches,
-								background=self.dynamic_button, fg=self.dynamic_text)
-		untag_all_button = Button(find_frame, text='Lowlight all', relief=FLAT, command=untag_all_matches,
-								  background=self.dynamic_button, fg=self.dynamic_text)
-		found_label = Label(find_frame, text='', background=self.oc_color, fg=self.dynamic_text)
-		find_frame.pack(side='left', fill=X, expand=True)
-		entry.grid(row=0, column=0, padx=3, ipady=button_up.winfo_height())
-		button_down.grid(row=0, column=1, padx=3)
-		button_up.grid(row=0, column=2)
-		tag_all_button.grid(row=0, column=3, padx=3)
-		untag_all_button.grid(row=0, column=4, padx=3)
-		found_label.grid(row=0, column=5, padx=3)
-		# entry.configure(height=button_up.winfo_height())
-
-		# place window in the middle of ETE - if it's not too low
-		info_root.update_idletasks()
-		win_w, win_h = info_root.winfo_width(), info_root.winfo_height()
-		ete_x, ete_y = (self.winfo_x()), (self.winfo_y())
-		ete_w, ete_h = self.winfo_width(), self.winfo_height()
-		mid_x, mid_y = (round(ete_x + (ete_w / 2) - (win_w / 2))), (round(ete_y + (ete_h / 2) - (win_h / 2)))
-		# if the window will appear out of bounds, we will just change it to the middle of the screen
-		# bug if using your second display
-		if abs(mid_y - self.winfo_screenheight()) <= 80:
-			mid_y = (self.winfo_screenheight() // 2)
-		if self.open_middle_s.get():
-			info_root.geometry(f'{win_w}x{win_h}+{mid_x}+{mid_y}')
-		if self.limit_w_s.get():
-			info_root.resizable(False, False)
-
-		entry.bind('<KeyRelease>', find_content)
+		open_info(self, path)
 
 	def right_align_language_support(self):
 		if self.EgonTE.get('1.0', 'end'):
@@ -4413,76 +4188,7 @@ class Window(Tk):
 		this function captures all / most the main events that happened in the program and writes them
 		in order with the time of the occurrence
 		'''
-
-		def close_record():
-			self.opened_windows.remove(self.log_root)
-			self.record_active = False
-			self.log_root.destroy()
-
-		def save_info():
-			file_name = filedialog.asksaveasfilename(title='Save record as file') + '.txt'
-			info = record_tb.get(1.0, END)
-			with open(file_name, 'w') as f:
-				for record in self.record_list:
-					f.write(record + '\n')
-
-		def update_content():
-			while self.record_active:
-				time.sleep(1)
-				if self.record_active:
-					# condition is important if we want the tool to be a lot smoother, but it's also fine without it
-					record_string = ''.join(self.record_list).replace('\n', '')
-					record_textbox = record_tb.get(1.0, END).replace('\n', '')
-					if record_string != record_textbox:
-						record_tb.configure(state=NORMAL)
-						record_tb.delete(1.0, END)
-						for record in self.record_list:
-							record_tb.insert('end', record + '\n')
-						record_tb.configure(state=DISABLED)
-				else:
-					break
-
-		self.log_root = Toplevel()
-		self.make_tm(self.log_root)
-		self.log_root.title(self.title_struct + 'events\' record')
-		self.log_root.minsize(400, 250)
-		self.record_active = True
-		self.log_root.protocol('WM_DELETE_WINDOW', close_record)
-		self.log_root.attributes('-alpha', self.st_value)
-		self.opened_windows.append(self.log_root)
-		text_frame, record_tb, rc_scrollbar = self.make_rich_textbox(self.log_root)
-
-		# menu for functions
-		record_menu = Menu(self.log_root)
-		self.log_root.config(menu=record_menu)
-		record_menu.add_cascade(label='Copy', command=lambda: copy(record_tb.get(1.0, END)))
-		record_menu.add_cascade(label='Paste (ETE)',
-								command=lambda: self.EgonTE.insert(self.get_pos(), record_tb.get(1.0, END)))
-		record_menu.add_cascade(label='Save', command=save_info)
-
-		# initial output
-		for record in self.record_list:
-			record_tb.insert('end', record + '\n')
-
-		record_tb.configure(state=DISABLED)
-
-		Thread(target=update_content).start()
-
-		self.record_night = record_tb
-		self.log_root.mainloop()
-
-	def call_record(self):
-		'''
-		like the call settings function.
-		calls the function with a thread in a simplified block of code,
-		make that if the window is opened instead of calling the function again, it will show you the window
-		'''
-		if not self.record_active:
-			self.record_object = self.record_logs
-			self.record_object()
-		else:
-			self.log_root.attributes('-topmost', True)
-			self.log_root.attributes('-topmost', False)
+		open_record_logs(self)
 
 
 	def manage_menus(self, mode: str):
@@ -4554,7 +4260,7 @@ class Window(Tk):
 			_ensure_options_cascade()
 
 			if new_state:
-				_add_cascade_once(self.app_menu, 'Record', command=self.call_record)
+				_add_cascade_once(self.app_menu, 'Record', command=self.record_logs)
 				_add_check_once(self.options_menu, 'prefer gpu', variable=self.prefer_gpu)
 
 				if _find_entry_index_by_label(self.app_menu, 'Git') is None:
@@ -4602,7 +4308,7 @@ class Window(Tk):
 				self.create_menus(initial=False)
 
 				if self.dev_mode.get():
-					_add_cascade_once(self.app_menu, 'Record', command=self.call_record)
+					_add_cascade_once(self.app_menu, 'Record', command=self.record_logs)
 
 		elif mode == 'python':
 			# python menu
@@ -4649,6 +4355,7 @@ class Window(Tk):
 		its a UI for the detection and the via verse process, for the lists and for a random output of item
 		from the selected set of characters (emojis, emoticons, roman numbers)
 		'''
+
 		self.spc_mode = 'emojis'
 
 		def change_mode(b: str = 'emojis'):
@@ -5157,131 +4864,8 @@ class Window(Tk):
 		the list have mods based on category of the functions
 		'''
 
-		def close_search():
-			self.search_active = True
-			self.opened_windows.remove(fn_root)
-			fn_root.destroy()
+		open_search_functions(self)
 
-		def update_list():
-			entry_content = self.find_function.get().lower()
-			if entry_content:
-				self.functions_list.delete(0, END)
-				for term in self.functions_names:
-					if entry_content in term.lower():
-						self.functions_list.insert(END, term)
-
-		def keyrelease_events(events=False):
-			update_list()
-			enter()
-
-		def configure_modes(event=False):
-			'''+ others and all doesnt work'''
-			insert_list = []
-			self.functions_list.delete(0, END)
-			if self.fn_mode.get() and self.fn_mode.get() != 'all':
-				chosen_functions_names = list(self.conjoined_functions_only[self.fn_mode.get()].keys())
-				insert_list.extend(
-					[fixed_function_name.replace('|', ' ').replace('.', '').replace('!', '') for fixed_function_name in
-					 chosen_functions_names])
-			else:
-				insert_list.extend(
-					[fixed_function_name.replace('|', ' ').replace('.', '').replace('!', '') for fixed_function_name in
-					 self.functions_names])
-			for ins in insert_list:
-				self.functions_list.insert(END, f'{ins[0].upper()}{ins[1:]}')
-
-		def enter():
-			desired_func = self.find_function.get()
-			if desired_func:
-				func = self.combined_func_dict[desired_func]
-				if func:
-					func()
-
-		def make_c_dict(*dicts):
-			self.combined_func_dict = {}
-			for dictionary in dicts:
-				for key, value in dictionary.items():
-					key = key.replace('!', '').replace('.', '').replace('|', ' ').capitalize()
-					self.combined_func_dict[key] = value
-
-		# all vs file vs edit vs tool , etc.
-		make_c_dict(self.file_functions, self.edit_functions, self.tool_functions, self.nlp_functions,
-					self.color_functions
-					, self.links_functions, {'options': self.call_settings},
-					{'Help': lambda: self.open_windows_control(lambda: self.info_page('help'))},
-					{'Patch notes': lambda: self.open_windows_control(lambda: self.info_page('patch_notes'))}
-					, {'Search': self.search_functions})
-
-
-		self.conjoined_functions_only['others'] = self.other_functions
-		self.functions_names = []
-		for index, functions_groups in enumerate(self.conjoined_functions_only.values()):
-			if isinstance(functions_groups, dict):
-				self.functions_names.extend(functions_groups.keys())
-			else:
-				self.functions_names.append(list(self.conjoined_functions_only.keys())[index])
-
-		self.fn_mode = StringVar()
-
-		fn_root = self.make_pop_ups_window(self.search_functions, external_variable=True)
-		self.search_active = True
-		fn_root.protocol('WM_DELETE_WINDOW', close_search)
-		if self.limit_w_s.get():
-			fn_root.resizable(False, False)
-		else:
-			fn_root.maxsize(700, int(fn_root.winfo_screenheight()))
-
-		title = Label(fn_root, text='Search functions', font='arial 14 underline', fg=self.dynamic_text,
-					  bg=self.dynamic_bg)
-		self.find_function = Entry(fn_root)
-
-		list_title = Label(fn_root, text='Functions list', font='arial 12 underline', fg=self.dynamic_text,
-						   bg=self.dynamic_bg)
-		lists_frame = Frame(fn_root)
-		self.functions_list = Listbox(lists_frame, width=25, height=8)
-		list_scroll = ttk.Scrollbar(lists_frame, command=self.functions_list.yview)
-		self.functions_list.configure(yscrollcommand=list_scroll.set)
-
-		title_modes = Label(fn_root, text='Search from', font='arial 12 underline', fg=self.dynamic_text,
-							bg=self.dynamic_bg)
-		modes_combobox = ttk.Combobox(fn_root, width=20, textvariable=self.fn_mode, state='readonly', style='TCombobox')
-		modes_combobox['values'] = 'all', 'file', 'edit', 'tools', 'NLP', 'colors', 'others', 'links'
-
-		open_button = Button(fn_root, text='Run function', command=enter, fg=self.dynamic_text, bg=self.dynamic_button)
-
-		# for function in self.functions_names.keys():
-		#     self.functions_list.insert(END, function)
-
-		# title.grid(row=0, column=1, padx=100)
-		# self.find_function.grid(row=1, column=1)
-		# title_modes.grid(row=2, column=1)
-		# modes_combobox.grid(row=3, column=1)
-		# list_title.grid(row=4, column=1)
-		# lists_frame.grid(row=5, column=1)
-		# open_button.grid(row=6, column=1)
-
-		title.pack(padx=100)
-		self.find_function.pack()
-		title_modes.pack()
-		modes_combobox.pack()
-		list_title.pack()
-		lists_frame.pack(fill=Y, expand=True)
-		open_button.pack()
-
-		list_scroll.pack(side=RIGHT, fill=Y, expand=True)
-		self.functions_list.pack(fill=BOTH, expand=True)
-
-		self.functions_list.bind('<<ListboxSelect>>', lambda e: fill_by_click(self.find_function, e, self.functions_list))
-		self.find_function.bind('<KeyRelease>', keyrelease_events)
-		modes_combobox.bind('<<ComboboxSelected>>', configure_modes)
-		configure_modes()
-
-		self.search_widgets = title, title_modes, list_title, open_button
-		self.search_bg = fn_root
-
-		fn_root.update_idletasks()
-		# self.fn_original_size =
-		self.limit_list.append([fn_root, [fn_root.winfo_width(), fn_root.winfo_height()]])
 
 	def make_tm(self, root):
 		if root:
