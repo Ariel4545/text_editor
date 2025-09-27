@@ -210,19 +210,27 @@ class UIBuilders:
             pass
 
     def make_rich_textbox(
-        self,
-        parent_container: Optional[tk.Misc] = None,
-        place: Union[str, Tuple[int, int], list] = 'pack_top',
-        wrap: Any = tk.WORD,
-        font: str = 'arial 10',
-        size: Optional[Tuple[int, int]] = None,
-        selectbg: str = 'dark cyan',
-        bd: int = 0,
-        relief: str = '',
-        format: str = 'txt',
-        *,
-        # legacy alias to remain compatible with old calls/forwarders
-        root: Optional[tk.Misc] = None,
+            self,
+            parent_container: Optional[tk.Misc] = None,
+            place: Union[str, Tuple[int, int], list] = 'pack_top',
+            wrap: Any = tk.WORD,
+            font: str = 'arial 10',
+            size: Optional[Tuple[int, int]] = None,
+            selectbg: str = 'dark cyan',
+            bd: int = 0,
+            relief: str = '',
+            format: str = 'txt',
+            *,
+            # legacy alias to remain compatible with old calls/forwarders
+            root: Optional[tk.Misc] = None,
+            # new optional tuning flags (all default to original behavior)
+            show_xscroll: bool = True,
+            auto_hide_scrollbars: bool = True,
+            enable_mousewheel: bool = True,
+            initial_refresh_delays: Tuple[int, int] = (80, 180),  # extra visibility refreshes for HTML
+            # NEW: allow adopting external scrollbars instead of creating ours
+            external_y: Optional[ttk.Scrollbar] = None,
+            external_x: Optional[ttk.Scrollbar] = None,
     ) -> Tuple[tk.Frame, Any, ttk.Scrollbar]:
         '''
         Build a scrollable rich text box inside a container frame.
@@ -232,6 +240,17 @@ class UIBuilders:
 
         Returns:
             (container_frame, text_widget, y_scrollbar)
+
+        Notes:
+            - Adds an optional horizontal scrollbar (attached to container_frame as .x_scrollbar).
+            - Auto show/hide scrollbars to match content visibility if auto_hide_scrollbars=True.
+            - Smooth mouse-wheel scrolling via enable_mousewheel=True.
+            - Can adopt external scrollbars (external_y / external_x). The returned y_scrollbar is the effective one.
+            - API on container_frame:
+                .rebind_scrollbars(y=None, x=None)
+                .content_changed()
+                .scroll_to_top(), .scroll_to_bottom()
+                .set_html_safe(html_string), .set_text_safe(text_string)
         '''
         # Use legacy alias if provided
         container = parent_container or root
@@ -242,20 +261,24 @@ class UIBuilders:
         cursor_style = getattr(self.app, 'predefined_cursor', 'xterm')
 
         container_frame = tk.Frame(container)
-        y_scrollbar = ttk.Scrollbar(container_frame, orient='vertical')
 
         # Choose the text-like class
         text_cls: Any = tk.Text
+        using_html = False
         if isinstance(format, str) and format.lower() == 'html':
-            # Try to import HTMLText only when needed
             try:
                 from tkhtmlview import HTMLText as _HTMLText
                 text_cls = _HTMLText
+                using_html = True
             except Exception:
-                # Fallback to Text if tkhtmlview is not installed/available
                 text_cls = tk.Text
+                using_html = False
 
-        # Create the text widget (HTMLText is a Text subclass, so most options are supported)
+        # Create scrollbars (only if not externally provided)
+        y_scrollbar = external_y or ttk.Scrollbar(container_frame, orient='vertical')
+        x_scrollbar: Optional[ttk.Scrollbar] = external_x or (ttk.Scrollbar(container_frame, orient='horizontal') if show_xscroll else None)
+
+        # Create widget
         text_widget = text_cls(
             container_frame,
             wrap=wrap,
@@ -263,11 +286,23 @@ class UIBuilders:
             font=font,
             borderwidth=bd,
             cursor=cursor_style,
-            yscrollcommand=y_scrollbar.set,
             undo=True,
             selectbackground=selectbg,
         )
-        y_scrollbar.config(command=text_widget.yview)
+
+        # Two-way wiring helpers
+        def _wire_scrollbars(ybar: ttk.Scrollbar | None, xbar: ttk.Scrollbar | None):
+            try:
+                if ybar is not None:
+                    text_widget.configure(yscrollcommand=ybar.set)
+                    ybar.configure(command=text_widget.yview)
+                if xbar is not None:
+                    text_widget.configure(xscrollcommand=xbar.set)
+                    xbar.configure(command=text_widget.xview)
+            except Exception:
+                pass
+
+        _wire_scrollbars(y_scrollbar, x_scrollbar)
 
         # Optional explicit size
         if size:
@@ -278,9 +313,308 @@ class UIBuilders:
 
         # Place container and children
         self._place_container(container_frame, place)
-        y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Layout: if external bars are given, don't pack/grid them here
+        if external_x is None and x_scrollbar is not None:
+            x_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        if external_y is None:
+            y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         text_widget.pack(fill=tk.BOTH, expand=True)
 
+        # Auto-hide/show logic (supports both internal and external bars)
+        # We will only hide/show bars we manage (i.e., ones we created).
+        manages_y = (external_y is None)
+        manages_x = (x_scrollbar is not None and external_x is None)
+
+        def _read_views():
+            try:
+                y0, y1 = text_widget.yview()
+            except Exception:
+                y0, y1 = (0.0, 1.0)
+            try:
+                x0, x1 = text_widget.xview() if hasattr(text_widget, 'xview') else (0.0, 1.0)
+            except Exception:
+                x0, x1 = (0.0, 1.0)
+            return (x0, x1, y0, y1)
+
+        def _show_widget(w: tk.Misc, *, pack_opts: dict):
+            try:
+                # Only show if not mapped
+                if not w.winfo_ismapped():
+                    w.pack(**pack_opts)
+            except Exception:
+                pass
+
+        def _hide_widget(w: tk.Misc):
+            try:
+                if w.winfo_ismapped():
+                    w.pack_forget()
+            except Exception:
+                pass
+
+        def _update_scrollbar_visibility():
+            x0, x1, y0, y1 = _read_views()
+            if auto_hide_scrollbars:
+                if manages_y:
+                    if (y0, y1) != (0.0, 1.0):
+                        _show_widget(y_scrollbar, pack_opts={'side': tk.RIGHT, 'fill': tk.Y})
+                    else:
+                        _hide_widget(y_scrollbar)
+                if manages_x and x_scrollbar is not None:
+                    if (x0, x1) != (0.0, 1.0):
+                        _show_widget(x_scrollbar, pack_opts={'side': tk.BOTTOM, 'fill': tk.X})
+                    else:
+                        _hide_widget(x_scrollbar)
+
+        # Start hidden (only the bars we manage)
+        if auto_hide_scrollbars:
+            try:
+                if manages_y:
+                    _hide_widget(y_scrollbar)
+                if manages_x and x_scrollbar is not None:
+                    _hide_widget(x_scrollbar)
+            except Exception:
+                pass
+
+        # Debounced refresh queue
+        _after_id = {'id': None}
+
+        def _queue_refresh(delay=60):
+            if _after_id['id'] is not None:
+                try:
+                    container_frame.after_cancel(_after_id['id'])
+                except Exception:
+                    pass
+            _after_id['id'] = container_frame.after(delay, _update_scrollbar_visibility)
+
+        # Bind size/content changes
+        try:
+            text_widget.bind('<Configure>', lambda e: _queue_refresh(10), add='+')
+        except Exception:
+            pass
+
+        # HTMLText can finish layout asynchronously (images/styles). Schedule a couple of initial updates.
+        if using_html:
+            try:
+                d1, d2 = initial_refresh_delays
+            except Exception:
+                d1, d2 = (80, 180)
+            try:
+                container_frame.after(d1, _update_scrollbar_visibility)
+                container_frame.after(d2, _update_scrollbar_visibility)
+            except Exception:
+                pass
+
+        # Initial pass after packing
+        _queue_refresh(10)
+
+        # Smooth and complete scrolling UX (vertical, horizontal, page keys)
+        if enable_mousewheel:
+            def _bind_mousewheel(widget: tk.Misc):
+                # Local, widget-scoped bindings with defensive guards to avoid stale-callback crashes
+                def _safe_vert_scroll(units: int):
+                    try:
+                        if text_widget and text_widget.winfo_exists():
+                            text_widget.yview_scroll(units, 'units')
+                    except tk.TclError:
+                        # Widget may have been destroyed between event queue and handler
+                        pass
+
+                def _safe_horz_scroll(units: int):
+                    try:
+                        if text_widget and text_widget.winfo_exists() and hasattr(text_widget, 'xview'):
+                            text_widget.xview_scroll(units, 'units')
+                    except tk.TclError:
+                        pass
+
+                try:
+                    # Windows/macOS: <MouseWheel> with delta
+                    widget.bind(
+                        '<MouseWheel>',
+                        lambda e: (_safe_vert_scroll(-int(e.delta / 120)), 'break'),
+                        add='+'
+                    )
+                    # Horizontal via Shift+Wheel (on Win/mac)
+                    widget.bind(
+                        '<Shift-MouseWheel>',
+                        lambda e: (_safe_horz_scroll(-int(e.delta / 120)), 'break'),
+                        add='+'
+                    )
+                    # Linux (X11): buttons 4/5 for vertical
+                    widget.bind('<Button-4>', lambda e: (_safe_vert_scroll(-1), 'break'), add='+')
+                    widget.bind('<Button-5>', lambda e: (_safe_vert_scroll(+1), 'break'), add='+')
+                    # Optional: some X11 setups use Shift+Button-4/5 for horizontal
+                    widget.bind('<Shift-Button-4>', lambda e: (_safe_horz_scroll(-1), 'break'), add='+')
+                    widget.bind('<Shift-Button-5>', lambda e: (_safe_horz_scroll(+1), 'break'), add='+')
+                except Exception:
+                    pass
+
+            _bind_mousewheel(text_widget)
+
+        # Page up/down, home/end bindings for a better reading experience
+        def _page_up(_e=None):
+            try:
+                text_widget.yview_scroll(-1, 'page')
+                _queue_refresh(10)
+                return 'break'
+            except Exception:
+                return None
+
+        def _page_down(_e=None):
+            try:
+                text_widget.yview_scroll(+1, 'page')
+                _queue_refresh(10)
+                return 'break'
+            except Exception:
+                return None
+
+        def _home(_e=None):
+            try:
+                text_widget.yview_moveto(0.0)
+                _queue_refresh(10)
+                return 'break'
+            except Exception:
+                return None
+
+        def _end(_e=None):
+            try:
+                text_widget.yview_moveto(1.0)
+                _queue_refresh(10)
+                return 'break'
+            except Exception:
+                return None
+
+        try:
+            text_widget.bind('<Prior>', _page_up, add='+')   # PageUp
+            text_widget.bind('<Next>', _page_down, add='+')  # PageDown
+            text_widget.bind('<Home>', _home, add='+')
+            text_widget.bind('<End>', _end, add='+')
+            text_widget.bind('<Control-Home>', _home, add='+')
+            text_widget.bind('<Control-End>', _end, add='+')
+        except Exception:
+            pass
+
+        # Expose rebind + helpers on the container frame for runtime integration with other widgets
+        def _rebind_scrollbars(new_y: Optional[ttk.Scrollbar] = None, new_x: Optional[ttk.Scrollbar] = None):
+            nonlocal y_scrollbar, x_scrollbar
+            try:
+                if new_y is not None:
+                    # If we managed the old y bar (packed here), hide it first
+                    if manages_y and isinstance(y_scrollbar, ttk.Scrollbar):
+                        _hide_widget(y_scrollbar)
+                    y_scrollbar = new_y
+                if new_x is not None:
+                    if manages_x and isinstance(x_scrollbar, ttk.Scrollbar):
+                        _hide_widget(x_scrollbar)
+                    x_scrollbar = new_x
+                _wire_scrollbars(y_scrollbar, x_scrollbar)
+                _queue_refresh(10)
+            except Exception:
+                pass
+
+        def _content_changed():
+            # Call when content/HTML changes; re-check scrollbar ranges soon
+            _queue_refresh(30)
+            if using_html:
+                # Another nudge in case images reflow shortly after
+                try:
+                    container_frame.after(120, _update_scrollbar_visibility)
+                except Exception:
+                    pass
+
+        def _scroll_to_top():
+            try:
+                text_widget.yview_moveto(0.0)
+                _queue_refresh(10)
+            except Exception:
+                pass
+
+        def _scroll_to_bottom():
+            try:
+                text_widget.yview_moveto(1.0)
+                _queue_refresh(10)
+            except Exception:
+                pass
+
+        def _set_html_safe(html_text: str):
+            try:
+                if hasattr(text_widget, 'set_html'):
+                    text_widget.set_html(html_text or '')
+                else:
+                    text_widget.delete('1.0', 'end')
+                    if html_text:
+                        text_widget.insert('1.0', html_text)
+            except Exception:
+                # keep UI responsive even if parser fails
+                try:
+                    text_widget.delete('1.0', 'end')
+                    text_widget.insert('1.0', html_text or '')
+                except Exception:
+                    pass
+            _content_changed()
+
+        def _set_text_safe(text_value: str):
+            try:
+                text_widget.delete('1.0', 'end')
+                if text_value:
+                    text_widget.insert('1.0', text_value)
+            except Exception:
+                pass
+            _content_changed()
+
+        try:
+            container_frame.rebind_scrollbars = _rebind_scrollbars          # type: ignore[attr-defined]
+            container_frame.content_changed = _content_changed               # type: ignore[attr-defined]
+            container_frame.scroll_to_top = _scroll_to_top                   # type: ignore[attr-defined]
+            container_frame.scroll_to_bottom = _scroll_to_bottom             # type: ignore[attr-defined]
+            container_frame.set_html_safe = _set_html_safe                   # type: ignore[attr-defined]
+            container_frame.set_text_safe = _set_text_safe                   # type: ignore[attr-defined]
+            container_frame.x_scrollbar = x_scrollbar                        # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+        # If we manage the bars, ensure scrollbars react to mouse wheel when hovered
+        def _bind_scrollbar_hover(scrollbar_obj: Optional[ttk.Scrollbar]):
+            if not scrollbar_obj:
+                return
+            try:
+                scrollbar_obj.bind('<Enter>', lambda e: text_widget.focus_set(), add='+')
+
+                if enable_mousewheel:
+                    # Use local bindings (not bind_all) with the same safe guards
+                    scrollbar_obj.bind(
+                        '<MouseWheel>',
+                        lambda e: (
+                            text_widget.winfo_exists() and text_widget.yview_scroll(-int(e.delta / 120), 'units'),
+                            'break'),
+                        add='+'
+                    )
+                    scrollbar_obj.bind(
+                        '<Shift-MouseWheel>',
+                        lambda e: (text_widget.winfo_exists() and hasattr(text_widget,
+                                                                          'xview') and text_widget.xview_scroll(
+                            -int(e.delta / 120), 'units'), 'break'),
+                        add='+'
+                    )
+                    scrollbar_obj.bind('<Button-4>', lambda e: (
+                        text_widget.winfo_exists() and text_widget.yview_scroll(-1, 'units'), 'break'), add='+')
+                    scrollbar_obj.bind('<Button-5>', lambda e: (
+                        text_widget.winfo_exists() and text_widget.yview_scroll(+1, 'units'), 'break'), add='+')
+                    # Horizontal on X11 via Shift+Button-4/5 (best-effort)
+                    scrollbar_obj.bind('<Shift-Button-4>', lambda e: (
+                        text_widget.winfo_exists() and hasattr(text_widget, 'xview') and text_widget.xview_scroll(
+                            -1, 'units'), 'break'), add='+')
+                    scrollbar_obj.bind('<Shift-Button-5>', lambda e: (
+                        text_widget.winfo_exists() and hasattr(text_widget, 'xview') and text_widget.xview_scroll(
+                            +1, 'units'), 'break'), add='+')
+            except Exception:
+                pass
+        if manages_y:
+            _bind_scrollbar_hover(y_scrollbar)
+        if manages_x and x_scrollbar is not None:
+            _bind_scrollbar_hover(x_scrollbar)
+
+        # Return effective y scrollbar (external if provid
         return (container_frame, text_widget, y_scrollbar)
 
     def _place_container(self, frame: tk.Frame, place: Union[str, Tuple[int, int], list]) -> None:
