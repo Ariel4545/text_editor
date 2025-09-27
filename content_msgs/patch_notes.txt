@@ -1,5 +1,174 @@
 Version - name - release date
 
+[1.13.7 - supervise tools - 27/09/25]
+
+Information page tool (new standalone file):
+Added
+* Dedicated popup module and entry point
+  * Clean creation via popup builders with graceful Toplevel fallback
+  * Stable window registry key (info_page:{path}) for safe reopens
+* Content engine
+  * TXT and HTML rendering paths with automatic detection and preference honoring
+  * Robust file reading with UTF‑8 primary and ANSI fallback, BOM stripping
+  * Smart alternate extension fallback (switches to .txt ↔ .html when preferred is missing)
+* Action row
+  * Copy, Insert to editor, Export (TXT/HTML), Print, Scroll Top/Bottom
+* Powerful search bar
+  * Prev/Next navigation with wrap feedback
+  * Case, Whole Word, Regex, Diacritics‑insensitive, Selection‑only, Overlap toggles
+  * Debounced retagging, error surfacing for invalid regex
+  * Accurate match tagging and “current line” highlight
+* Persistence and state
+  * Per‑page search state (query + toggles)
+  * Y‑view restoration and window geometry persistence (w/h/x/y)
+  * Content mode persistence per page
+* UX polish
+  * Auto‑hiding scrollbars (when builders available), smooth scroll helpers
+  * Theming forwarder to sync colors and retag on theme change
+  * Tooltips integration for all controls (when tooltip backend is available)
+  * Keyboard shortcuts: F3/Shift+F3, Ctrl+F/L, Esc, Ctrl+W, Alt+toggles
+
+Changed/Improved
+* Architecture
+  * Extracted from the main window into a cohesive module with clear responsibilities and snake_case helpers
+  * Window management integrated with the app’s “limit sizes,” open‑in‑middle, topmost, and registry mechanisms
+* Rendering reliability
+  * HTML content gracefully falls back to stripped text if an HTML widget is unavailable
+  * Alternate extension fallback updates the effective mode and re-renders without user intervention
+* Search accuracy and performance
+  * Precise index conversion for matches, including diacritics‑insensitive mapping and optional overlap
+  * Debounced retagging to avoid work piling up while typing
+  * Distinct “all matches,” “current match,” and “current line” layers with palette blending for visibility
+* Stability and lifecycle
+  * Defensive guards around UI and after_cancel calls
+  * Centralized cleanup on close (search state, geometry, timers, registry entries)
+  * Theme changes reconfigure tags without losing state
+* Responsiveness
+  * Grid/resize policy with minimum sizes, live wraplength updates for labels, and throttled persistence
+  * Auto focus/see behavior for navigation and content updates
+
+Fixed
+* Blank view and mode drift
+  * Ensured help/patch notes render reliably in TXT/HTML and switch modes correctly when the preferred file is missing
+* Encoding edge cases
+  * BOM/encoding inconsistencies no longer produce empty or malformed output
+* Search robustness
+  * Invalid regex now reports a clear status instead of breaking the UI
+  * Selection‑only scope, diacritics mapping, and overlapping finds produce consistent tagging
+* Window lifecycle issues
+  * Eliminated stale timers and dangling registry entries on close
+  * Prevented geometry and state loss across open/close cycles
+* Theme/night‑mode visuals
+  * Correct, readable highlight colors for matches and current line under all palettes
+  * Consistent colors for toolbars, action row, and labels after theme flips
+
+Search functions (new standalone file)
+Added
+* "Smart" Mode: A new "Smart" category that uses a "frecency" algorithm to rank functions based on a weighted score of how frequently and recently they have been used. This list adapts to your personal workflow over time.
+* Function Pinning: Users can now pin their most-used functions. Pinned items are marked with a star (★) and always appear at the top of search results and in their own dedicated "Pinned" category.
+* Contextual Suggestions: When the search box is empty, the list now intelligently suggests actions based on the current application state (e.g., "Copy" and "Cut" are suggested if text is selected; "Save" is suggested if the file has unsaved changes).
+* Advanced Search Syntax: The search input now acts like a command-line interface with special prefixes:
+    * ^=query: Filters for functions that start with the query.
+    * *=query: Filters for functions that contain the query.
+    * mode:category: Switches the search category directly from the input field (e.g., mode:tools).
+* Shortcut Search: You can now find a function by typing its keyboard shortcut (e.g., typing ctrl+s will bring up the "Save" function).
+* Docstring Viewer: A new read-only text box was added to the bottom of the window. It automatically displays the documentation (__doc__) for the currently selected function, explaining what it does.
+* Enhanced UI & UX:
+    * A right-click context menu allows for pinning/unpinning functions and clearing history.
+    * A clear button (×) was added next to the search entry for quick resets.
+    * A hint label was added to inform users about the new advanced search syntax and shortcuts.
+    * A results count label in the footer shows how many functions match the current filter.
+    * The "All" mode now uses clear category separators (e.g., --- EDIT ---) to group functions visually.
+* Full State Persistence: The tool now saves the following to the EgonTE_settings.json file upon closing:
+    * The last search query and selected mode.
+    * The list of all pinned functions.
+    * The "Smart" mode's history of function usage (MRU list).
+
+Changed/Improved
+* Architecture: The feature was completely extracted from a large, monolithic method within the main Window class into its own open_search_functions function in a separate file. This greatly improves code organization, maintainability, and separation of concerns.
+* Search Algorithm: The original simple substring search (if entry_content in term) was replaced with a multi-layered system:
+    1. It first checks for exact shortcut matches.
+    2. It then applies the user's chosen strategy (fuzzy, prefix, or contains).
+    3. The default fuzzy scoring algorithm is much more powerful, ranking results by relevance and giving bonuses for matches at the start of words.
+* Performance:
+    * Debouncing: The search no longer filters on every single keystroke. Instead, it waits for a brief pause in typing (120ms) before updating the results, preventing UI lag and creating a much smoother experience.
+    * Caching: The comprehensive map of all functions and their shortcuts is now built once and cached, speeding up subsequent searches.
+* Function Discovery: The new implementation uses a robust ensure_command_sources helper to dynamically and reliably gather all function mappings from the main application, replacing the less reliable dictionary merging of the old version.
+* Keyboard Navigation: Navigation is significantly improved. The Up and Down arrow keys now work from within the search entry field to select items in the list, and Alt+Up/Down can be used to cycle through the search modes without using the mouse.
+
+Fixed
+* UI Responsiveness: The old implementation could become sluggish and unresponsive when typing quickly in the search box. The new debounced filtering completely resolves this issue.
+* List Population Logic: The original version had commented-out code and known issues with correctly displaying all functions, especially in "all" and "others" modes. The new structured list-building process fixes this, ensuring all functions are displayed correctly and in a more organized fashion.
+* State Management: The old version was stateless. The new version's persistence ensures a consistent and personalized experience across application restarts.
+
+Records logs (new standalone file)
+Added
+* Advanced UI:
+    * A tabbed interface (`Find & Filter`, `Navigate`, `Analysis`, `View & Stats`) to organize the numerous new features.
+    * A full menubar for file operations (`Import`, `Save`, `Tail File`) and accessing rules.
+    * A dedicated status bar showing log counts and the current tailed file.
+    * A collapsible control panel to maximize log viewing space.
+* Powerful Filtering & Searching:
+    * Text Filtering: Filter logs with support for `AND` (space-separated terms) and `NOT` (`-term`) logic.
+    * Regex Filtering: Use regular expressions for complex pattern matching.
+    * Quick Filters: One-click buttons to show only `Error/Critical`, `Warning`, or `Debug` level logs.
+    * Dedicated Search: A separate search function to navigate between matches (`F3`/`Shift+F3`) without altering the filtered view.
+* Live Log Tailing:
+    * Ability to open and "tail" a log file from disk, showing new lines in real-time as they are written to the file.
+* Bookmarks & Notes:
+    * Users can now bookmark important log lines.
+    * A dedicated "Bookmarks" panel lists all bookmarked items.
+    * A notes editor allows adding and saving annotations for each bookmark.
+* Log Analysis Tools:
+    * Correlation ID Finder: Automatically detects and extracts common correlation IDs (UUIDs, Request IDs, etc.) from selected logs.
+    * Time-Delta Analysis: Automatically calculates and displays the time difference between consecutive log entries, with configurable color-coding for warning and critical thresholds.
+    * Stack Trace Folding: Intelligently collapses multi-line stack traces into a single, expandable entry.
+    * Data Parsers:
+        * JSON Viewer: Pretty-prints any JSON found in a log line into a new window.
+        * Table Viewer: Automatically detects and displays columnar data (e.g., CSV, pipe-delimited) in a sortable table.
+* Custom Rules Engine:
+    * Custom Highlights: Users can define their own regex-based rules to apply custom background colors to matching log lines.
+    * Custom Alerts: Define rules that trigger a popup alert if a pattern appears a certain number of times within a time window.
+* State Persistence: The new log viewer saves its complete state (including UI settings, bookmarks, highlights, and alert rules) to `.json` files, which are reloaded on the next launch.
+* Virtualized View: Added a high-performance `ttk.Treeview` mode that can render tens of thousands of logs smoothly, fixing the performance issues of the old `Text` widget.
+
+Changed/Improved
+* Architecture: The feature was completely refactored from a single, monolithic method in `EgonTE.py` into a highly organized, standalone module. The new implementation uses a central `state` dictionary to manage its complex UI and data, making it far more robust and maintainable.
+* Performance:
+    * The old `time.sleep(1)` loop, which caused UI freezing, has been replaced by a modern, non-blocking architecture using background threads and a `queue` for filtering, searching, and file tailing.
+    * The introduction of the virtualized `Treeview` provides a massive performance boost for large log files.
+* User Experience (UX): The entire interface is more intuitive. It now includes tooltips, right-click context menus, and dedicated controls for every action, transforming it from a passive display into an interactive analysis tool.
+
+Fixed
+* UI Freezing: The primary issue of the old implementation—the UI becoming unresponsive while the log list updated—is completely resolved by moving all heavy processing to background threads.
+* Performance with Large Logs: The old `Text` widget would become extremely slow and consume significant memory with thousands of lines. The new virtualized `Treeview` handles this scenario efficiently.
+* Functionality: The original tool was merely a display. The new version is a proper utility with features essential for debugging and log analysis, such as advanced filtering, searching, tailing, and data parsing.
+
+UI builders (text box update)
+Added
+* Horizontal Scrolling: The make_rich_textbox method now includes a horizontal scrollbar, which can be enabled or disabled with the show_xscroll parameter.
+* Auto-Hiding Scrollbars: A new auto_hide_scrollbars flag controls whether scrollbars automatically hide when the content fits within the text area, providing a cleaner UI.
+* Advanced Scrolling Control:
+    * Full mouse wheel support (<MouseWheel>, <Shift-MouseWheel>, Linux buttons 4/5) was added for intuitive vertical and horizontal scrolling via the enable_mousewheel flag.
+    * Keyboard navigation has been implemented, allowing users to scroll with Page Up, Page Down, Home, and End keys.
+* External Scrollbar Integration: The text box can now be linked to scrollbars created outside the method using the external_y and external_x parameters, allowing for more complex layouts.
+* Container Frame API: The tk.Frame returned by make_rich_textbox is now equipped with a powerful API for runtime control:
+    * rebind_scrollbars(): Allows swapping the scrollbars dynamically.
+    * content_changed(): A method to manually trigger updates to scrollbar visibility, useful after programmatic content changes.
+    * scroll_to_top() / scroll_to_bottom(): Provides simple methods to navigate to the start or end of the content.
+    * set_html_safe() / set_text_safe(): Offers robust methods for safely updating the widget's content, handling potential errors gracefully.
+    * .x_scrollbar: The horizontal scrollbar instance is now exposed on the frame.
+
+Changed/Improved
+* Method Signature: The make_rich_textbox signature was expanded with new boolean flags and optional parameters (show_xscroll, auto_hide_scrollbars, enable_mousewheel, etc.) to control the new features, while defaulting to the original behavior.
+* Legacy root Parameter: The root parameter is now explicitly an alias for parent_container to maintain backward compatibility while encouraging the use of the new, clearer parameter name.
+* Internal Structure: The method's implementation was significantly refactored into smaller, dedicated helper functions (e.g., for binding events, updating scrollbars, and placing widgets), improving readability and robustness.
+* HTML Content Handling: For format='html', the method now schedules delayed refreshes to ensure scrollbars appear correctly after asynchronous elements like images have finished loading.
+
+Fixed
+* Scrollbar Interaction: The mouse wheel now works when hovering directly over the scrollbars, not just the text area, which aligns with standard user expectations.
+* Widget Destruction Errors: Event handling for scrolling is now wrapped in "safe" functions that check if a widget still exists before acting on it, preventing TclError exceptions if the widget is destroyed while an event is queued.
+
 [1.13.6 - Magnificent tools - 20/09/25]
 
 Virtual keyboard (new standalone file)
