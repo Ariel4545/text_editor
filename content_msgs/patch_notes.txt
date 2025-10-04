@@ -1,5 +1,210 @@
 Version - name - release date
 
+[1.13.8 - tools’ refinement - 04/10/25]
+
+Symbols translator (new standalone file)
+Added
+*   Dedicated Input/Output Fields: The tool no longer operates directly on the main editor's text. It now features distinct "Input" and "Output" text boxes, creating a dedicated workspace for transformations.
+*   Massive Expansion of Modes (4 → 30+): The tool's capabilities were vastly expanded and organized into categories:
+    *   Fun & Ciphers: emojis, emoticons, ascii_art, roman, leet, rot13.
+    *   Encodings & Web: morse, binary, nato, base64, hex, url, HTML Entities, Slugify.
+    *   Case Transformations: camelCase, PascalCase, snake_case, kebab-case, Capitalize, UPPERCASE, lowercase.
+    *   Hashing: md5, sha1, sha256, sha512, sha3_256, sha3_512.
+    *   Text Manipulation: Sort Lines, Natural Sort, Unique Lines, Shuffle Lines.
+    *   Data Generation: Lorem Ipsum and UUID generators, plus a Number Base converter.
+*   Full-Fledged Settings & Persistence:
+    *   An "Options" tab with multiple sub-tabs allows for deep customization of nearly every feature.
+    *   All settings are now automatically saved and reloaded, ensuring the tool remembers your preferred workflow, layout, and options between sessions.
+*   History and Favorites:
+    *   History: A Treeview log of your recent transformations that can be selected to instantly reload the input, output, and mode. This history can be saved on exit.
+    *   Favorites: A Listbox where you can save your most-used modes for quick access.
+*   Advanced Contextual Controls: The UI is now dynamic, showing specialized controls only when relevant:
+    *   Morse Code: Audio playback (Play/Save Audio) and sliders to fine-tune dot/dash/space timing.
+    *   ASCII Art: Dropdowns for art style and text justification (left/center/right).
+    *   Generators: Controls for Lorem Ipsum (count, unit) and Number Base (from/to base).
+*   File Operations: Added Load and Save buttons to read input from a file or write the output to a file directly from the tool.
+*   Enhanced List View: The "List" function is now a searchable Treeview that can be opened either in a separate popup or embedded directly into the main window for a seamless experience.
+
+Changed/Improved
+*   Core Architecture:
+    *   From Method to Module: The logic was completely extracted from the main EgonTE.py file into its own symbols_popup.py module. This decouples the feature from the main application, making both easier to maintain.
+    *   Scalable Logic: The rigid if/elif structure was replaced with a TRANSFORM_MAP dictionary. This design pattern makes adding, removing, or modifying transformations trivial without touching the core UI logic.
+*   User Interface & Experience:
+    *   Modern UI: The entire UI was rebuilt with modern ttk widgets, PanedWindows, and Notebooks, providing a clean, resizable, and professional interface that is far superior to the old static grid of buttons.
+    *   Bidirectional Live Update: The "Live Transform" feature is now bidirectional. Typing in the "Input" box updates the "Output" box, and typing in the "Output" box will perform a reverse transformation to update the "Input" box.
+    *   Clearer State Indication: The active mode is now clearly highlighted with a sunken style and an asterisk on its parent tab, providing better visual feedback than the simple color change in the old version.
+    *   Informative Tooltips: Detailed tooltips have been added to nearly every button and control, explaining its function.
+*   Workflow: The fundamental workflow has changed from direct manipulation of the main editor's text to a more robust copy-in, transform, copy-out model, facilitated by the new "Copy on Transform" option and dedicated Copy button.
+Fixed
+*   Modularity and Code Health: Fixed the poor practice of having a large, unrelated feature tightly coupled within the main application class. The new modular design is significantly cleaner and more maintainable.
+*   Lack of User Feedback: The old tool failed silently. The new version provides clear error messages in the output box for invalid transformations (e.g., decoding invalid Base64, incorrect binary input).
+*   Scalability: The original design was not scalable. Adding a fifth mode would have required significant UI and logic changes. The new design can accommodate dozens of modes with minimal effort.
+*   UI Rigidity: The old window was a fixed size with a static layout. The new window is fully resizable, with panes that can be adjusted by the user to suit their needs.
+
+Calculator (better UI and advanced mode)
+Added
+*   Multi-Tab Interface: The single-window layout has been replaced with a `ttk.Notebook` interface, organizing the tool into distinct, powerful modes:
+    *   Programmer Mode: A complete integer and bitwise calculator. It provides live-updating results in Hex, Decimal, Octal, and Binary, along with views for QWORD, DWORD, WORD, and BYTE sizes. Includes dedicated buttons for bitwise operations (`<<`, `>>`, `&`, `|`, `^`, `~`).
+    *   Converter Mode: A real-time unit converter for categories like Data Size, Length, Mass, Speed, Time, and Temperature.
+    *   Date & Time Mode: A utility for date calculations, including a bidirectional Unix timestamp converter and a tool to add/subtract time (days, hours, minutes) from a given date.
+    *   Variables Tab: A dedicated UI to create, save, and manage custom variables (e.g., `x = 50`) that can be used directly in your expressions.
+*   State Persistence: The calculator now saves its state to a `calc_state.json` file, automatically reloading your history, user-defined variables, and memory value between sessions.
+*   Advanced Math Capabilities:
+    *   Memory Functions: Full memory support has been added (`MC`, `MR`, `M+`, `M-`).
+    *   Expanded Function Library: The list of supported functions has grown significantly to include inverse and hyperbolic trig functions (`asin`, `acos`, `sinh`, etc.), logarithms (`log10`, `log1p`), and utility functions (`abs`, `ceil`, `floor`, `round`).
+*   Enhanced History System:
+    *   The history list is now in its own dedicated tab.
+    *   Added the ability to delete selected history items or clear the entire history with confirmation.
+    *   A rich right-click context menu allows for copying expressions/results and re-running calculations.
+*   Improved Insertion Options: The "Insert" button now has a right-click context menu, giving you fine-grained control over how results are inserted into the main editor (e.g., insert only the result, insert the full "expr = result" string, toggle trailing spaces/newlines).
+
+Changed/Improved
+*   Core Architecture: The tool was rewritten from a single function into a well-structured module, separating UI, state management, and logic for vastly improved maintainability and scalability.
+*   User Interface:
+    *   The UI has been completely modernized using `ttk` widgets for a cleaner, more professional look that integrates better with the application's theme.
+    *   The cluttered single-column layout was replaced by the organized tabbed interface.
+    *   Button styles are now standardized and cleaner, improving visual clarity.
+*   Calculation Engine:
+    *   The "Degrees" mode is now more robust, using `numexpr`'s built-in `deg2rad` and `rad2deg` functions instead of simple string replacement, making it safer and more accurate.
+*   User Experience:
+    *   History Navigation: You can now navigate through history using the Up/Down arrow keys in the main input field.
+    *   Debounced Auto-Calc: The "Auto-calc" feature is now debounced, preventing excessive recalculations while typing and improving performance.
+    *   Keyboard Shortcuts: Added more intuitive keyboard shortcuts, such as `<Delete>` for clearing history items and `<Ctrl-E>` for inserting the full equation.
+
+Fixed
+*   UI Scalability: The old, rigid UI could not easily accommodate new features. The new tabbed design is highly scalable and organized.
+*   State Management: The calculator no longer loses all history and context on close. The new persistence feature ensures your work is saved.
+*   Limited Functionality: The previous version was just a basic expression evaluator. The new version is a multi-purpose calculation and conversion utility.
+*   History Interaction: The old history was a simple, non-interactive list. The new system is a fully interactive tool for managing and reusing previous calculations.
+
+Email (remake, security, and privacy)
+Added
+*   Multi-Tab Advanced Interface: The single, cluttered window has been replaced by a modern ttk.Notebook interface, organizing functionality into distinct, powerful tabs:
+    *   Compose: The main email composition view, now with collapsible sections for better organization.
+    *   Contacts: A full-featured address book to add, remove, and search for contacts.
+    *   Templates: A system to save and load reusable email templates, complete with dynamic placeholders.
+    *   Drafts: A dedicated tab to save, load, and delete drafts, preserving the entire email state.
+    *   Decrypt: A utility to decrypt messages encrypted by the client's new encryption feature.
+    *   Settings: Centralized location for user credentials, SMTP server configuration, and email signature.
+    *   Privacy: Granular controls for data storage and management.
+    *   Security: A dashboard for advanced security features and logging.
+*   Comprehensive Security Module:
+    *   Brute-Force Protection: Automatically locks the login functionality after multiple failed attempts to prevent password guessing.
+    *   Login Anomaly Detection: A new system to detect and warn against potential password spraying attacks.
+    *   Password Strength Meter: Provides real-time visual feedback on the strength of the entered password.
+    *   Input Sanitization: Actively checks for and blocks header injection (\n, \r) and other potentially malicious characters in all input fields.
+    *   Security Log: A dedicated, read-only log that provides a timestamped record of all important security-related events (e.g., login attempts, data clearing, setting changes).
+    *   Simple Body Encryption: An optional feature to encrypt the email body with a password for basic privacy.
+*   Full Data & State Management:
+    *   State Persistence: The client now saves its entire state (contacts, templates, drafts, settings) to a local JSON file, which is reloaded on launch.
+    *   Data Portability: Users can now Import and Export their contacts and templates via a JSON file.
+    *   Granular Privacy Controls: The Privacy tab gives users explicit control over what data is stored locally, with options to clear credentials, contacts, templates, or all data.
+*   Enhanced Composition & Workflow:
+    *   Rich Text Editor: The "Custom Text" body option now includes a toolbar for Bold, Italic, and Underline formatting.
+    *   HTML Preview: A "Preview" button generates a full, interactive HTML preview of the final email (including headers and attachments) and opens it in the default web browser.
+    *   Template Placeholders: Templates support dynamic placeholders (e.g., {name}), which are automatically replaced with the recipient's name from your contacts upon loading.
+    *   Drafts System: Save the entire state of an email—recipients, subject, body, and attachments—to continue editing later.
+
+Changed/Improved
+*   Core Architecture: The entire tool was refactored from a single, monolithic function into a modern, modular structure. UI creation, event logic, and data handling are now separated into distinct, manageable functions and a dedicated SecurityService class, dramatically improving maintainability.
+*   User Interface (UI):
+    *   The UI has been completely rebuilt with modern ttk widgets and a custom CollapsibleFrame class, creating a clean, organized, and less cluttered user experience.
+    *   A ttk.Progressbar now provides clear visual feedback during long operations like sending an email or testing a login.
+*   Configuration:
+    *   Configurable SMTP: The client is no longer hardcoded to "smtp.gmail.com". The Settings tab allows the user to configure any SMTP Server and Port.
+    *   Multi-line Signature: The new signature box properly supports multi-line signatures.
+*   Workflow: The process of composing and sending an email is more streamlined and powerful. The ability to pull from contacts, load templates, and save drafts transforms it from a simple sender into a productive client.
+
+Fixed
+*   Hardcoded SMTP Settings: The client is no longer locked to a single email provider. This has been fixed by adding configurable server and port fields in the Settings tab.
+*   Critical Lack of Security: The complete absence of security features has been fixed with the addition of a comprehensive security model, including brute-force protection, input sanitization, and security logging.
+*   Ephemeral State: All work (custom text, attachments, recipients) was previously lost when the window was closed. This is fixed by the new Drafts system and persistent storage.
+*   Poor UI/UX: The cluttered, static UI has been replaced by a clean, organized, and dynamic tabbed interface that is more intuitive and scalable.
+*   No Data Management: Users had no way to manage their data. The new Privacy tab provides full control over importing, exporting, and deleting stored information, fixing this major oversight.
+
+
+Encryption (clarity and functionality, and service)
+Added
+* encryption_popup.py and encryption_service.py introduced as a clean split between UI and core logic.
+* Conceptual features implemented end-to-end:
+  * Quantum-Resistant: wraps data with algorithm header and SHA‑512 integrity digest; safe unpack with verification.
+  * Steganography: token-based embed/extract using URL-safe Base64 payloads.
+  * Secure Erase: simulated multi-pass overwrite report with method selection.
+* Expanded crypto operations:
+  * Symmetric: Fernet, AES‑GCM, ChaCha20‑Poly1305 (when available).
+  * Asymmetric: RSA hybrid (PyCryptodome) and plain rsa fallback.
+  * Digital signatures: RSA‑PSS sign/verify.
+  * Hashing: SHA‑256, SHA‑512, MD5, SHA‑1, BLAKE2b.
+  * Encodings: Base64/Base32/Base85/Hex/URL with validators.
+* UI polish:
+  * Rich text inputs via builder with tiny border (bd=1, relief='solid') and small horizontal padding.
+  * Status area with progress bar and unified status updates.
+  * Tooltips for key fields and selectors.
+  * Keyboard niceties: Escape to close, Enter to run.
+
+Changed/Improved
+* Architecture: core algorithms moved to encryption_service.py; UI now orchestrates and remains responsive.
+* RSA flow:
+  * Uses RSA+AES‑GCM hybrid path when available; falls back to basic rsa with strict size checks and messages.
+  * Clear errors for oversized plaintext with guidance.
+* Validation & UX:
+  * Dynamic UI gating per method; invalid inputs highlighted via Error.TEntry.
+  * Consistent font tuples to avoid Tk parsing issues.
+  * Long operations threaded (RSA keygen, heavy crypto); progress indicator + safe UI callbacks.
+  * Robust Base64 padding normalization and consistent to_bytes/to_text conversion.
+* Text box layout:
+  * Compact borders and padding; grid expansion for responsive resizing.
+
+Fixed
+* TclError “expected integer but got 'UI'” by standardizing font declarations to tuples, e.g., ('Segoe UI', 10).
+* Crashes on missing libraries via guarded capability checks and user-facing messages.
+* Decoding edge cases (Base64/32/85/Hex) with improved error messages and padding fixes.
+* RSA decryption and integrity errors now return clear, user-guiding messages instead of generic failures.
+* UI unresponsiveness during heavy tasks by moving work off the main thread and synchronizing via after().
+
+Security service (new standalone file)
+Added
+* Centralized security event logging with severity levels.
+* Legal acknowledgment gate for web operations, with explicit acknowledgement workflow.
+* Robots.txt compliance with user-agent consideration and permissive fallback on parser errors.
+* Meta robots warning for restrictive directives (noindex/nosnippet/noarchive).
+* Comprehensive URL policy enforcement: HTTPS-only, blocked TLDs, block credentials in URL, block literal IPs, and block hosts resolving to private/reserved/loopback/link-local/multicast ranges.
+* Same-origin redirect enforcement across the entire redirect chain.
+* Content-Type allowlist check with graceful rejection of disallowed types.
+* Streamed download with strict maximum size limit in KB.
+* HTML sanitization helper removing risky tags and inline event handlers; neutralizes javascript: URLs.
+* Secure fetch routine that integrates policy checks, robots compliance, redirects policy, content-type filtering, size limits, and structured error returns.
+* Simple XOR+Base64 data-at-rest scheme with prefix tagging and encryption activity state tracking.
+* JSON storage helpers to serialize/encrypt and detect/decrypt/persist, with safe defaults on malformed input.
+* Security audit report generator with timestamps, feature statuses, and recommendations.
+* Password strength analyzer with scored tiers and color hints.
+* Custom external browser command support with configurable template and safe invocation paths.
+* Bitly token getters/setters.
+* Policy link offering hook for UI integration.
+
+Changed/Improved
+* Brute-force protection logic with max attempts, timed lockout, and explicit reset pathway.
+* Anomaly detection via time-windowed source tracking (deque) and unique-source threshold escalation to trigger immediate lockout.
+* URL parsing hardened for scheme normalization, host extraction, and resilient DNS/IP evaluation.
+* Decrypt path reliability improved with prefix detection, detailed exceptions on key/corruption, and safe fallbacks for non-prefixed data.
+* Logging consistency and clarity across all flows (INFO/WARNING/ERROR).
+* HTML parsing safety with robust tag/attribute scrubbing and error-tolerant fallbacks.
+* Network request robustness with session usage, timeouts, redirects control, streaming reads, and explicit error surfaces.
+
+Fixed
+* Lockout state integrity by ensuring counters, timestamps, and source queues are coherently reset.
+* Command execution risks by validating custom command templates and handling platform-specific spawning safely.
+* Potential crashes on malformed stored data by guarding JSON parsing and returning safe empty structures.
+* Cross-origin redirect exposure via strict same-origin checks for the entire redirect history.
+* Oversized content risks by enforcing a hard size cap during streaming before full buffering.
+* Robots parsing failures defaulting to permissive behavior to avoid hard errors while still logging context.
+* Unsafe HTML execution vectors by removing dangerous tags/attributes and sanitizing scriptable URLs.
+
+EgonTE
+* Added a forwarder to the newly added “symbols” tool file and removed the old (and now obsolete) methods.
+* Added a way to activate the new “advanced” calculator’s variant via the tool’s drop-down menu.
+* Updated the “rich text box” forwarder to be in line with the update that the method has in the previous update.
+
 [1.13.7 - supervise tools - 27/09/25]
 
 Information page tool (new standalone file):
