@@ -196,7 +196,7 @@ def _generate_lorem_ipsum(text_value: str, is_reverse: bool, **kwargs) -> Tuple[
         else:
             return True, lorem.text(count)
     except Exception as e:
-        return False, f"Error: {e}"
+        return False, f'Error: {e}'
 
 
 def _generate_uuid(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -226,7 +226,7 @@ def _convert_base(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, st
         to_base = kwargs.get('to_base', 16)
         return True, str(int(text_value, from_base)).__format__(f'0{to_base}b')
     except ValueError:
-        return False, "Invalid number for the selected base."
+        return False, 'Invalid number for the selected base.'
 
 
 def _transform_emojis(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -247,7 +247,7 @@ def _transform_emojis(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool
             return True, emoji_lib.emojize(text_value, language=language_code)
         return True, text_value
     except Exception as e:
-        return False, f"Error: {e}"
+        return False, f'Error: {e}'
 
 
 def _transform_emoticons(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -264,7 +264,7 @@ def _transform_emoticons(text_value: str, is_reverse: bool, **kwargs) -> Tuple[b
             return True, text_value.replace(':)', ':smile:').replace(':(', ':sad:')
         return True, text_value.replace(':smile:', ':)').replace(':sad:', ':(')
     except Exception as e:
-        return False, f"Error: {e}"
+        return False, f'Error: {e}'
 
 
 def _transform_morse(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -282,7 +282,7 @@ def _transform_morse(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool,
         text_out = ' '.join(w for w in reconstructed_words if w)
         return True, text_out.lower().capitalize() if text_out else text_out
     except Exception as e:
-        return False, f"Morse Transformation Error: {e}"
+        return False, f'Morse Transformation Error: {e}'
 
 
 def _arabic_to_roman(value: int, pairs: List[Tuple[int, str]]) -> str:
@@ -325,7 +325,7 @@ def _transform_roman(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool,
             [_arabic_to_roman(int(token), roman_pairs) if token.isdigit() and int(token) > 0 else token for token in
              text_value.split()])
     except Exception as e:
-        return False, f"Error: {e}"
+        return False, f'Error: {e}'
 
 
 def _transform_ascii_art(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -336,7 +336,7 @@ def _transform_ascii_art(text_value: str, is_reverse: bool, **kwargs) -> Tuple[b
     justification = kwargs.get('justification', 'left')
     art_dict, _, line_height = characters_dict.get(art_style, ({}, [], 0))
     if not art_dict:
-        return False, "Invalid ASCII art style"
+        return False, 'Invalid ASCII art style'
 
     output_lines = [''] * line_height
     for char in text_value:
@@ -371,7 +371,7 @@ def _transform_nato(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, 
     if not text_value:
         return True, text_value
     if is_reverse:
-        return False, "NATO phonetic alphabet is a one-way transformation."
+        return False, 'NATO phonetic alphabet is a one-way transformation.'
     return True, ' '.join(NATO_PHONETIC_MAP.get(char.upper(), char) for char in text_value)
 
 
@@ -388,7 +388,7 @@ def _transform_binary(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool
             binary_text = ' '.join(binary_text[i:i + group_size] for i in range(0, len(binary_text), group_size))
         return True, binary_text
     except (ValueError, TypeError):
-        return False, "Invalid binary input for decoding."
+        return False, 'Invalid binary input for decoding.'
 
 
 def _transform_base64(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -400,7 +400,7 @@ def _transform_base64(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool
             return True, base64.b64decode(text_value.encode('utf-8')).decode('utf-8')
         return True, base64.b64encode(text_value.encode('utf-8')).decode('utf-8')
     except Exception as e:
-        return False, f"Base64 Error: {e}"
+        return False, f'Base64 Error: {e}'
 
 
 def _transform_hex(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -416,7 +416,7 @@ def _transform_hex(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, s
             hex_text = ' '.join(hex_text[i:i + group_size] for i in range(0, len(hex_text), group_size))
         return True, hex_text
     except Exception as e:
-        return False, f"Hex Error: {e}"
+        return False, f'Hex Error: {e}'
 
 
 def _transform_url(text_value: str, is_reverse: bool, **kwargs) -> Tuple[bool, str]:
@@ -467,8 +467,8 @@ def open_symbols_translator_popup(app) -> None:
     }
     transformation_history = collections.deque(maxlen=50)
 
-    favorites_file = "favorites.json"
-    history_file = "history.json"
+    favorites_file = 'favorites.json'
+    history_file = 'history.json'
 
     try:
         if os.path.exists(favorites_file):
@@ -492,7 +492,7 @@ def open_symbols_translator_popup(app) -> None:
     dash_duration_var = tk.IntVar(value=150)
     space_duration_var = tk.IntVar(value=50)
     lorem_count_var = tk.IntVar(value=1)
-    lorem_unit_var = tk.StringVar(value="paragraphs")
+    lorem_unit_var = tk.StringVar(value='paragraphs')
     from_base_var = tk.IntVar(value=10)
     to_base_var = tk.IntVar(value=16)
     live_transform_var = BooleanVar(value=False)
@@ -672,14 +672,14 @@ def open_symbols_translator_popup(app) -> None:
                 }
                 return transform_func(text_value, is_reverse=is_reverse, **kwargs)
             except Exception as e:
-                return False, f"Transformation Error: {e}"
+                return False, f'Transformation Error: {e}'
         return True, text_value
 
     def update_output(event=None):
         if state['_is_updating']:
             return
         if not live_transform_var.get():
-            set_output_text("Live transform is off. To enable it, check the box above.")
+            set_output_text('Live transform is off. To enable it, check the box above.')
             output_text.config(state='disabled', fg='grey')
             return
 
@@ -709,18 +709,18 @@ def open_symbols_translator_popup(app) -> None:
     def update_mode(new_mode: str):
         state['mode'] = new_mode
         for button in mode_buttons.values():
-            button.configure(style="TButton")
+            button.configure(style='TButton')
         if new_mode in mode_buttons:
-            mode_buttons[new_mode].configure(style="Active.TButton")
+            mode_buttons[new_mode].configure(style='Active.TButton')
 
         # Update tab titles to show the active one
         for tab_id in modes_notebook.tabs():
-            current_text = modes_notebook.tab(tab_id, "text")
+            current_text = modes_notebook.tab(tab_id, 'text')
             modes_notebook.tab(tab_id, text=current_text.replace(' *', ''))
 
         for tab_frame, button_keys in button_layout_config.items():
             if new_mode in button_keys:
-                current_text = modes_notebook.tab(tab_frame, "text")
+                current_text = modes_notebook.tab(tab_frame, 'text')
                 if not current_text.endswith(' *'):
                     modes_notebook.tab(tab_frame, text=current_text + ' *')
                 break
@@ -748,7 +748,7 @@ def open_symbols_translator_popup(app) -> None:
             widgets_to_show = contextual_widgets[new_mode]
             for i, widget in enumerate(widgets_to_show):
                 contextual_controls_frame.grid_columnconfigure(i, weight=1)
-                widget.grid(row=0, column=i, padx=2, pady=2, sticky="ew")
+                widget.grid(row=0, column=i, padx=2, pady=2, sticky='ew')
         update_output()
 
     def run_transform(is_reverse: bool = False):
@@ -781,10 +781,10 @@ def open_symbols_translator_popup(app) -> None:
             else:
                 set_output_text(new_text, is_error=True)
         except Exception as e:
-            set_output_text(f"An unexpected error occurred: {e}", is_error=True)
+            set_output_text(f'An unexpected error occurred: {e}', is_error=True)
 
     def add_to_history(mode, input_text, output_text, is_reverse):
-        direction = "Reverse" if is_reverse else "Forward"
+        direction = 'Reverse' if is_reverse else 'Forward'
         entry = (mode, direction, input_text, output_text)
         if entry not in transformation_history:
             transformation_history.appendleft(entry)
@@ -794,7 +794,7 @@ def open_symbols_translator_popup(app) -> None:
         for i in history_tree.get_children():
             history_tree.delete(i)
         for i, (mode, direction, input_text, output_text) in enumerate(transformation_history):
-            history_tree.insert("", "end", iid=i, values=(mode, direction, input_text[:30], output_text[:30]))
+            history_tree.insert("", 'end', iid=i, values=(mode, direction, input_text[:30], output_text[:30]))
 
     def on_history_select(event):
         if not history_tree.selection():
@@ -807,7 +807,7 @@ def open_symbols_translator_popup(app) -> None:
 
     def clear_history():
         if confirm_clear_history_var.get():
-            if not messagebox.askyesno("Confirm", "Are you sure you want to clear the history?"):
+            if not messagebox.askyesno('Confirm', 'Are you sure you want to clear the history?'):
                 return
         transformation_history.clear()
         update_history_display()
@@ -830,7 +830,7 @@ def open_symbols_translator_popup(app) -> None:
         selected_indices = favorites_listbox.curselection()
         if selected_indices:
             if confirm_remove_favorite_var.get():
-                if not messagebox.askyesno("Confirm", "Are you sure you want to remove this favorite?"):
+                if not messagebox.askyesno('Confirm', 'Are you sure you want to remove this favorite?'):
                     return
             selected_mode = favorites_listbox.get(selected_indices[0])
             if selected_mode in favorite_modes:
@@ -865,7 +865,7 @@ def open_symbols_translator_popup(app) -> None:
         if not items:
             return
 
-        list_root = _get_popup_window(app, f'List of {state["mode"]}')
+        list_root = _get_popup_window(app, f"List of {state['mode']}")
         list_root.transient(root)
         list_root.grab_set()
 
@@ -878,8 +878,8 @@ def open_symbols_translator_popup(app) -> None:
         tree_frame = ttk.Frame(list_root)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
 
-        tree = ttk.Treeview(tree_frame, columns=("Item",), show="headings", selectmode='extended')
-        tree.heading("Item", text="Item")
+        tree = ttk.Treeview(tree_frame, columns=('Item',), show='headings', selectmode='extended')
+        tree.heading('Item', text='Item')
         tree.pack(side='left', fill='both', expand=True)
 
         scrollbar = ttk.Scrollbar(tree_frame, orient='vertical', command=tree.yview)
@@ -892,7 +892,7 @@ def open_symbols_translator_popup(app) -> None:
             for item in items:
                 if search_term in str(item).lower():
                     try:
-                        tree.insert("", "end", values=(str(item),))
+                        tree.insert("", 'end', values=(str(item),))
                     except tk.TclError:
                         pass
 
@@ -917,9 +917,9 @@ def open_symbols_translator_popup(app) -> None:
         button_frame = ttk.Frame(list_root)
         button_frame.pack(fill='x', padx=10, pady=(0, 10))
 
-        insert_button = ttk.Button(button_frame, text="Insert", command=insert_items)
-        copy_button_popup = ttk.Button(button_frame, text="Copy", command=copy_items)
-        copy_close_button = ttk.Button(button_frame, text="Copy & Close", command=copy_and_close)
+        insert_button = ttk.Button(button_frame, text='Insert', command=insert_items)
+        copy_button_popup = ttk.Button(button_frame, text='Copy', command=copy_items)
+        copy_close_button = ttk.Button(button_frame, text='Copy & Close', command=copy_and_close)
 
         insert_button.pack(side='left', expand=True, fill='x', padx=2)
         copy_button_popup.pack(side='left', expand=True, fill='x', padx=2)
@@ -932,14 +932,14 @@ def open_symbols_translator_popup(app) -> None:
 
     def show_embedded_list():
         embedded_list_visible.set(True)
-        list_button.configure(style="Active.TButton")
+        list_button.configure(style='Active.TButton')
         output_section_frame.pack_forget()
         embedded_list_frame.pack(fill='both', expand=True)
         update_embedded_list()
 
     def hide_embedded_list():
         embedded_list_visible.set(False)
-        list_button.configure(style="TButton")
+        list_button.configure(style='TButton')
         embedded_list_frame.pack_forget()
         output_section_frame.pack(fill='both', expand=True)
 
@@ -950,7 +950,7 @@ def open_symbols_translator_popup(app) -> None:
         for item in items:
             if search_term in str(item).lower():
                 try:
-                    embedded_list_tree.insert("", "end", values=(str(item),))
+                    embedded_list_tree.insert("", 'end', values=(str(item),))
                 except tk.TclError:
                     pass
 
@@ -973,7 +973,7 @@ def open_symbols_translator_popup(app) -> None:
             item = random.choice(list(collection))
             set_input_text(get_input_text() + f'{item} ')
         except Exception as e:
-            messagebox.showerror("Error", f"Could not insert random item: {e}")
+            messagebox.showerror('Error', f'Could not insert random item: {e}')
 
     def swap_texts():
         """Swaps the text between the input and output boxes."""
@@ -989,17 +989,17 @@ def open_symbols_translator_popup(app) -> None:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     set_input_text(f.read())
             except Exception as e:
-                messagebox.showerror("File Error", f"Could not read file: {e}")
+                messagebox.showerror('File Error', f'Could not read file: {e}')
 
     def save_to_file():
-        filepath = filedialog.asksaveasfilename(defaultextension=".txt",
-                                                filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+        filepath = filedialog.asksaveasfilename(defaultextension='.txt',
+                                                filetypes=[('Text files', '*.txt'), ('All files', '*.*')])
         if filepath:
             try:
                 with open(filepath, 'w', encoding='utf-8') as f:
                     f.write(get_output_text())
             except Exception as e:
-                messagebox.showerror("File Error", f"Could not write to file: {e}")
+                messagebox.showerror('File Error', f'Could not write to file: {e}')
 
     def on_close():
         save_settings()
@@ -1025,9 +1025,9 @@ def open_symbols_translator_popup(app) -> None:
         text_to_play = get_output_text()
         audio = _generate_morse_audio(text_to_play, dot_duration_var.get(), dash_duration_var.get(),
                                       space_duration_var.get())
-        filepath = filedialog.asksaveasfilename(defaultextension=".wav", filetypes=[("WAV files", "*.wav")])
+        filepath = filedialog.asksaveasfilename(defaultextension='.wav', filetypes=[('WAV files', '*.wav')])
         if filepath:
-            audio.export(filepath, format="wav")
+            audio.export(filepath, format='wav')
 
     def toggle_tabs():
         # Correctly hide or show the History tab
@@ -1073,11 +1073,11 @@ def open_symbols_translator_popup(app) -> None:
             row = i // max_cols
             col = i % max_cols
             action_buttons_frame.grid_columnconfigure(col, weight=1)
-            button.grid(row=row, column=col, padx=2, pady=2, sticky="ew")
+            button.grid(row=row, column=col, padx=2, pady=2, sticky='ew')
 
     def on_main_tab_changed(event=None):
         if shrink_to_fit_var.get():
-            selected_tab_name = nb.tab(nb.select(), "text")
+            selected_tab_name = nb.tab(nb.select(), 'text')
             light_content_tabs = ['History', 'Favorites', 'Options']
             if selected_tab_name in light_content_tabs:
                 if io_paned_window in main_paned_window.panes():
@@ -1089,16 +1089,16 @@ def open_symbols_translator_popup(app) -> None:
     def toggle_compact_mode():
         is_compact = compact_mode_var.get()
         button_map = {
-            'Run': ("Run", "▶"),
-            'Reverse': ("Reverse", "◀"),
-            'Swap': ("Swap", "⇄"),
-            'List': ("List", "☰"),
-            'Random': ("Random", "🎲"),
-            'Clear': ("Clear", "🗑️"),
-            'Favorite': ("Favorite", "⭐"),
-            'Copy': ("Copy", "📋"),
-            'Load': ("Load", "📂"),
-            'Save': ("Save", "💾"),
+            'Run': ('Run', '▶'),
+            'Reverse': ('Reverse', '◀'),
+            'Swap': ('Swap', '⇄'),
+            'List': ('List', '☰'),
+            'Random': ('Random', '🎲'),
+            'Clear': ('Clear', '🗑️'),
+            'Favorite': ('Favorite', '⭐'),
+            'Copy': ('Copy', '📋'),
+            'Load': ('Load', '📂'),
+            'Save': ('Save', '💾'),
         }
         for name, (text, icon) in button_map.items():
             if name in action_buttons:
@@ -1106,7 +1106,7 @@ def open_symbols_translator_popup(app) -> None:
 
     # 5. --- UI Widget Creation ---
     style = ttk.Style()
-    style.configure("Active.TButton", background="#d0d0d0", relief="sunken")
+    style.configure('Active.TButton', background='#d0d0d0', relief='sunken')
 
     main_paned_window = ttk.PanedWindow(root, orient=tk.VERTICAL)
     nb = ttk.Notebook(main_paned_window)
@@ -1118,12 +1118,12 @@ def open_symbols_translator_popup(app) -> None:
     modes_tabs = {name: ttk.Frame(modes_notebook) for name in
                   ['Fun & Ciphers', 'Encodings & Web', 'Case', 'Hashing', 'Text Manipulation', 'Data']}
 
-    input_frame = ttk.Labelframe(io_paned_window, text="Input")
-    input_text = Text(input_frame, height=10, relief="flat", borderwidth=0)
+    input_frame = ttk.Labelframe(io_paned_window, text='Input')
+    input_text = Text(input_frame, height=10, relief='flat', borderwidth=0)
     
     output_container = ttk.Frame(io_paned_window)
-    output_section_frame = ttk.Labelframe(output_container, text="Output")
-    embedded_list_frame = ttk.Labelframe(output_container, text="List")
+    output_section_frame = ttk.Labelframe(output_container, text='Output')
+    embedded_list_frame = ttk.Labelframe(output_container, text='List')
 
     options_frame = tabs['Options']
     options_notebook = ttk.Notebook(options_frame)
@@ -1144,7 +1144,7 @@ def open_symbols_translator_popup(app) -> None:
         'Random': ttk.Button(action_buttons_frame, text='Random'),
         'Clear': ttk.Button(action_buttons_frame, text='Clear'),
         'Favorite': ttk.Button(action_buttons_frame, text='Favorite'),
-        'Copy': ttk.Button(action_buttons_frame, text="Copy"),
+        'Copy': ttk.Button(action_buttons_frame, text='Copy'),
         'Load': ttk.Button(action_buttons_frame, text='Load'),
         'Save': ttk.Button(action_buttons_frame, text='Save')
     }
@@ -1160,15 +1160,15 @@ def open_symbols_translator_popup(app) -> None:
     morse_controls_frame = ttk.Frame(contextual_controls_frame)
     lorem_ipsum_frame = ttk.Frame(contextual_controls_frame)
     number_base_frame = ttk.Frame(contextual_controls_frame)
-    natural_sort_check = ttk.Checkbutton(contextual_controls_frame, text="Natural Sort", variable=natural_sort_var)
+    natural_sort_check = ttk.Checkbutton(contextual_controls_frame, text='Natural Sort', variable=natural_sort_var)
     lorem_count_spinbox = ttk.Spinbox(lorem_ipsum_frame, from_=1, to=100, textvariable=lorem_count_var)
     lorem_unit_menu = ttk.Combobox(lorem_ipsum_frame, textvariable=lorem_unit_var,
-                                   values=["paragraphs", "sentences", "words"], state='readonly')
+                                   values=['paragraphs', 'sentences', 'words'], state='readonly')
     from_base_menu = ttk.Combobox(number_base_frame, textvariable=from_base_var, values=[2, 8, 10, 16],
                                   state='readonly')
     to_base_menu = ttk.Combobox(number_base_frame, textvariable=to_base_var, values=[2, 8, 10, 16], state='readonly')
-    play_morse_button = ttk.Button(morse_controls_frame, text="Play Morse")
-    save_morse_button = ttk.Button(morse_controls_frame, text="Save Audio")
+    play_morse_button = ttk.Button(morse_controls_frame, text='Play Morse')
+    save_morse_button = ttk.Button(morse_controls_frame, text='Save Audio')
     dot_slider = ttk.Scale(morse_controls_frame, from_=10, to=200, orient=tk.HORIZONTAL, variable=dot_duration_var)
     dash_slider = ttk.Scale(morse_controls_frame, from_=50, to=400, orient=tk.HORIZONTAL, variable=dash_duration_var)
     space_slider = ttk.Scale(morse_controls_frame, from_=10, to=200, orient=tk.HORIZONTAL, variable=space_duration_var)
@@ -1189,30 +1189,30 @@ def open_symbols_translator_popup(app) -> None:
             row, col = i // MAX_COLS, i % MAX_COLS
             button = ttk.Button(frame, text=button_key)
             mode_buttons[button_key] = button
-            button.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
+            button.grid(row=row, column=col, padx=2, pady=2, sticky='nsew')
         for i in range(MAX_COLS):
             frame.grid_columnconfigure(i, weight=1)
 
-    live_transform_check = ttk.Checkbutton(transformation_options_tab, text="Live Transform", variable=live_transform_var)
-    output_reverse_check = ttk.Checkbutton(transformation_options_tab, text="Reverse", variable=output_reverse_var)
-    output_text_frame = ttk.Frame(output_section_frame, relief="sunken", borderwidth=1)
+    live_transform_check = ttk.Checkbutton(transformation_options_tab, text='Live Transform', variable=live_transform_var)
+    output_reverse_check = ttk.Checkbutton(transformation_options_tab, text='Reverse', variable=output_reverse_var)
+    output_text_frame = ttk.Frame(output_section_frame, relief='sunken', borderwidth=1)
     output_text = Text(output_text_frame, height=10, relief='flat', borderwidth=0)
     
     # Embedded List View Widgets
     embedded_list_search_entry = ttk.Entry(embedded_list_frame, textvariable=embedded_search_var)
     embedded_list_tree_frame = ttk.Frame(embedded_list_frame)
-    embedded_list_tree = ttk.Treeview(embedded_list_tree_frame, columns=("Item",), show="headings", selectmode='extended')
+    embedded_list_tree = ttk.Treeview(embedded_list_tree_frame, columns=('Item',), show='headings', selectmode='extended')
     embedded_list_scrollbar = ttk.Scrollbar(embedded_list_tree_frame, orient='vertical', command=embedded_list_tree.yview)
     embedded_list_tree.configure(yscrollcommand=embedded_list_scrollbar.set)
     embedded_list_button_frame = ttk.Frame(embedded_list_frame)
-    embedded_list_insert_button = ttk.Button(embedded_list_button_frame, text="Insert")
-    embedded_list_copy_button = ttk.Button(embedded_list_button_frame, text="Copy")
-    embedded_list_close_button = ttk.Button(embedded_list_button_frame, text="Close List", command=hide_embedded_list)
+    embedded_list_insert_button = ttk.Button(embedded_list_button_frame, text='Insert')
+    embedded_list_copy_button = ttk.Button(embedded_list_button_frame, text='Copy')
+    embedded_list_close_button = ttk.Button(embedded_list_button_frame, text='Close List', command=hide_embedded_list)
 
-    history_tree = ttk.Treeview(tabs['History'], columns=("Mode", "Direction", "Input", "Output"), show="headings")
+    history_tree = ttk.Treeview(tabs['History'], columns=('Mode', 'Direction', 'Input', 'Output'), show='headings')
     favorites_listbox = Listbox(tabs['Favorites'])
-    clear_history_button = ttk.Button(tabs['History'], text="Clear History")
-    remove_favorite_button = ttk.Button(tabs['Favorites'], text="Remove Favorite")
+    clear_history_button = ttk.Button(tabs['History'], text='Clear History')
+    remove_favorite_button = ttk.Button(tabs['Favorites'], text='Remove Favorite')
 
     # 6. --- UI Layout ---
     main_paned_window.pack(fill='both', expand=True, padx=10, pady=5)
@@ -1220,7 +1220,7 @@ def open_symbols_translator_popup(app) -> None:
     main_paned_window.add(io_paned_window, weight=1)
 
     contextual_controls_frame.pack(pady=5, fill='x', padx=10)
-    top_controls_frame.pack(side="bottom", fill="x", padx=10, pady=(0, 5))
+    top_controls_frame.pack(side='bottom', fill='x', padx=10, pady=(0, 5))
 
     io_paned_window.add(input_frame, weight=1)
     io_paned_window.add(output_container, weight=1)
@@ -1246,34 +1246,34 @@ def open_symbols_translator_popup(app) -> None:
 
     live_transform_check.pack(anchor='w', padx=10, pady=2)
     output_reverse_check.pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(transformation_options_tab, text="Clear Input on Transform", variable=clear_on_transform_var).pack(
+    ttk.Checkbutton(transformation_options_tab, text='Clear Input on Transform', variable=clear_on_transform_var).pack(
         anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(transformation_options_tab, text="Copy to Clipboard on Transform", variable=copy_on_transform_var).pack(
+    ttk.Checkbutton(transformation_options_tab, text='Copy to Clipboard on Transform', variable=copy_on_transform_var).pack(
         anchor='w', padx=10, pady=2)
 
-    ttk.Checkbutton(appearance_options_tab, text="Show List in Window", variable=list_in_window_var).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(appearance_options_tab, text="Keep Window on Top", variable=keep_on_top_var,
+    ttk.Checkbutton(appearance_options_tab, text='Show List in Window', variable=list_in_window_var).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(appearance_options_tab, text='Keep Window on Top', variable=keep_on_top_var,
                     command=lambda: root.attributes('-topmost', keep_on_top_var.get())).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(appearance_options_tab, text="Show History Tab", variable=show_history_tab_var, command=toggle_tabs).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(appearance_options_tab, text="Show Favorites Tab", variable=show_favorites_tab_var, command=toggle_tabs).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(appearance_options_tab, text="Shrink to Fit Content", variable=shrink_to_fit_var, command=on_main_tab_changed).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(appearance_options_tab, text="Compact Mode", variable=compact_mode_var, command=toggle_compact_mode).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(appearance_options_tab, text='Show History Tab', variable=show_history_tab_var, command=toggle_tabs).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(appearance_options_tab, text='Show Favorites Tab', variable=show_favorites_tab_var, command=toggle_tabs).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(appearance_options_tab, text='Shrink to Fit Content', variable=shrink_to_fit_var, command=on_main_tab_changed).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(appearance_options_tab, text='Compact Mode', variable=compact_mode_var, command=toggle_compact_mode).pack(anchor='w', padx=10, pady=2)
 
-    ttk.Checkbutton(history_options_tab, text="Auto-load last history entry on startup",
+    ttk.Checkbutton(history_options_tab, text='Auto-load last history entry on startup',
                     variable=autoload_history_var).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(history_options_tab, text="Confirm before clearing history",
+    ttk.Checkbutton(history_options_tab, text='Confirm before clearing history',
                     variable=confirm_clear_history_var).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(history_options_tab, text="Save history on exit", variable=save_history_var).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(history_options_tab, text='Save history on exit', variable=save_history_var).pack(anchor='w', padx=10, pady=2)
 
-    ttk.Checkbutton(favorites_options_tab, text="Confirm before removing a favorite",
+    ttk.Checkbutton(favorites_options_tab, text='Confirm before removing a favorite',
                     variable=confirm_remove_favorite_var).pack(anchor='w', padx=10, pady=2)
-    ttk.Checkbutton(favorites_options_tab, text="Sort Favorites Alphabetically", variable=sort_favorites_var, command=update_favorites_display).pack(anchor='w', padx=10, pady=2)
+    ttk.Checkbutton(favorites_options_tab, text='Sort Favorites Alphabetically', variable=sort_favorites_var, command=update_favorites_display).pack(anchor='w', padx=10, pady=2)
 
-    ttk.Label(action_buttons_options_tab, text="Number of Columns:").pack(anchor='w', padx=10, pady=(10, 2))
+    ttk.Label(action_buttons_options_tab, text='Number of Columns:').pack(anchor='w', padx=10, pady=(10, 2))
     action_buttons_cols_combo = ttk.Combobox(action_buttons_options_tab, textvariable=action_buttons_cols_var, state='readonly')
     action_buttons_cols_combo.pack(anchor='w', padx=10, pady=2, fill='x')
 
-    action_buttons_visibility_frame = ttk.Labelframe(action_buttons_options_tab, text="Visible Buttons")
+    action_buttons_visibility_frame = ttk.Labelframe(action_buttons_options_tab, text='Visible Buttons')
     action_buttons_visibility_frame.pack(fill='x', expand=True, padx=10, pady=10)
     MAX_COLS_ACTION_OPTIONS = 2
     for i, name in enumerate(optional_action_buttons):
@@ -1282,22 +1282,22 @@ def open_symbols_translator_popup(app) -> None:
         ttk.Checkbutton(action_buttons_visibility_frame, text=name, variable=var, command=update_action_buttons_layout).grid(row=row, column=col, sticky='w', padx=5, pady=2)
         action_buttons_visibility_frame.columnconfigure(col, weight=1)
 
-    ttk.Label(morse_controls_frame, text="Dot (ms)").grid(row=0, column=0, sticky="ew")
-    ttk.Label(morse_controls_frame, text="Dash (ms)").grid(row=0, column=1, sticky="ew")
-    ttk.Label(morse_controls_frame, text="Space (ms)").grid(row=0, column=2, sticky="ew")
-    dot_slider.grid(row=1, column=0, padx=2, pady=2, sticky="ew")
-    dash_slider.grid(row=1, column=1, padx=2, pady=2, sticky="ew")
-    space_slider.grid(row=1, column=2, padx=2, pady=2, sticky="ew")
-    play_morse_button.grid(row=2, column=0, columnspan=2, padx=2, pady=2, sticky="ew")
-    save_morse_button.grid(row=2, column=2, padx=2, pady=2, sticky="ew")
+    ttk.Label(morse_controls_frame, text='Dot (ms)').grid(row=0, column=0, sticky='ew')
+    ttk.Label(morse_controls_frame, text='Dash (ms)').grid(row=0, column=1, sticky='ew')
+    ttk.Label(morse_controls_frame, text='Space (ms)').grid(row=0, column=2, sticky='ew')
+    dot_slider.grid(row=1, column=0, padx=2, pady=2, sticky='ew')
+    dash_slider.grid(row=1, column=1, padx=2, pady=2, sticky='ew')
+    space_slider.grid(row=1, column=2, padx=2, pady=2, sticky='ew')
+    play_morse_button.grid(row=2, column=0, columnspan=2, padx=2, pady=2, sticky='ew')
+    save_morse_button.grid(row=2, column=2, padx=2, pady=2, sticky='ew')
     lorem_ipsum_frame.grid_columnconfigure(0, weight=1)
     lorem_ipsum_frame.grid_columnconfigure(1, weight=1)
-    lorem_count_spinbox.grid(row=0, column=0, padx=2, pady=2, sticky="ew")
-    lorem_unit_menu.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
+    lorem_count_spinbox.grid(row=0, column=0, padx=2, pady=2, sticky='ew')
+    lorem_unit_menu.grid(row=0, column=1, padx=2, pady=2, sticky='ew')
     number_base_frame.grid_columnconfigure(0, weight=1)
     number_base_frame.grid_columnconfigure(1, weight=1)
-    from_base_menu.grid(row=0, column=0, padx=2, pady=2, sticky="ew")
-    to_base_menu.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
+    from_base_menu.grid(row=0, column=0, padx=2, pady=2, sticky='ew')
+    to_base_menu.grid(row=0, column=1, padx=2, pady=2, sticky='ew')
 
     output_text_frame.pack(fill='both', expand=True, padx=5, pady=5)
     output_text.pack(fill='both', expand=True)
@@ -1317,14 +1317,14 @@ def open_symbols_translator_popup(app) -> None:
     history_tree.grid(row=0, column=0, sticky='nsew')
     clear_history_button.grid(row=1, column=0, sticky='ew')
 
-    history_tree.heading("Mode", text="Mode", anchor='w')
-    history_tree.heading("Direction", text="Direction", anchor='w')
-    history_tree.heading("Input", text="Input", anchor='w')
-    history_tree.heading("Output", text="Output", anchor='w')
-    history_tree.column("Mode", width=100)
-    history_tree.column("Direction", width=80)
-    history_tree.column("Input", width=200)
-    history_tree.column("Output", width=200)
+    history_tree.heading('Mode', text='Mode', anchor='w')
+    history_tree.heading('Direction', text='Direction', anchor='w')
+    history_tree.heading('Input', text='Input', anchor='w')
+    history_tree.heading('Output', text='Output', anchor='w')
+    history_tree.column('Mode', width=100)
+    history_tree.column('Direction', width=80)
+    history_tree.column('Input', width=200)
+    history_tree.column('Output', width=200)
 
     favorites_frame = tabs['Favorites']
     favorites_frame.rowconfigure(0, weight=1)
@@ -1397,7 +1397,7 @@ def open_symbols_translator_popup(app) -> None:
         var.trace_add('write', save_settings)
 
     # 8. --- Finalization ---
-    root.protocol("WM_DELETE_WINDOW", on_close)
+    root.protocol('WM_DELETE_WINDOW', on_close)
     builders = getattr(app, 'ui_builders', None)
     if builders:
         try:
