@@ -170,6 +170,8 @@ from pop_ups.info_page_popup import open_info
 from pop_ups.search_functions_popup import open_search_functions
 from pop_ups.record_logs_popup import open_record_logs
 
+from pop_ups.symbols_popup import open_symbols_translator_popup
+
 '''the optional libraries that can add a lot of extra content to the editor'''
 tes = ACTIVE
 try:
@@ -420,7 +422,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.7'
+		self.ver = '1.13.8'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -430,7 +432,7 @@ class Window(Tk):
 		self.start_stopwatch()
 		Thread(target=self.load_links, daemon=True).start()
 		# variables for the (UI) style of the program
-		self.titles_font = '@Microsoft YaHei Light', 16, 'underline'
+		self.titles_font = ('@Microsoft YaHei Light', 16, 'underline')
 		self.title_struct = 'EgonTE - '
 		self.style_combobox = ttk.Style(self)
 
@@ -886,7 +888,7 @@ class Window(Tk):
 							   'sort by characters': self.sort_by_characters, 'sort by words.': self.sort_by_words,
 							   'clipboard history.': self.clipboard_history, 'insert images': self.insert_image
 							   }
-		self.tool_functions = {'current datetime|(F5)': get_time(),
+		self.tool_functions = {'current datetime|(F5)': get_time(), 'Advanced calculator' : lambda: self.ins_calc('advanced'),
 							   'randomness tools!': self.ins_random, 'Web assistant': self.url,
 							   'sort input': self.sort,
 							   'dictionary': lambda: Thread(target=self.knowledge_window('dict'), daemon=True).start(),
@@ -1279,10 +1281,52 @@ class Window(Tk):
 		if getattr(self, 'theme_service', None):
 			return self.theme_service.custom_ui_colors(components=components)
 
-	def make_rich_textbox(self, root, place='pack_top', wrap=None, font='arial 10', size=None,
-			selectbg='dark cyan', bd=0, relief='', format='txt',):
-		return self._popup.make_rich_textbox(root=root, place=place, wrap=wrap, font=font,
-			size=size, selectbg=selectbg, bd=bd, relief=relief, format=format,)
+
+	def make_rich_textbox(self, root=None, place='pack_top', wrap=None, font='arial 10',
+			size=None, selectbg='dark cyan', bd=0, relief='', format='txt', *,
+			# new kwargs mapped to ui_builders.UIBuilders.make_rich_textbox
+			parent_container=None,
+			show_xscroll=True,
+			auto_hide_scrollbars=True,
+			enable_mousewheel=True,
+			initial_refresh_delays=(80, 180),
+			external_y=None,
+			external_x=None,
+		):
+		'''
+		Forwarder updated to match ui_builders.UIBuilders.make_rich_textbox signature.
+
+		Notes:
+		  - `root` kept for backward compatibility and mapped to `parent_container` if not provided.
+		  - Returns (container_frame, text_widget, y_scrollbar) just like the builder.
+		'''
+		# Prefer explicit parent_container; fall back to legacy root
+		parent_container = parent_container or root
+
+		# Default wrap to WORD if None while keeping backward-compat behavior (tk.WORD already imported via *)
+		try:
+			eff_wrap = wrap if wrap is not None else WORD
+		except Exception:
+			eff_wrap = wrap
+
+		return self._popup.make_rich_textbox(
+			parent_container=parent_container,
+			place=place,
+			wrap=eff_wrap,
+			font=font,
+			size=size,
+			selectbg=selectbg,
+			bd=bd,
+			relief=relief,
+			format=format,
+			root=root,  # legacy alias supported by builder
+			show_xscroll=show_xscroll,
+			auto_hide_scrollbars=auto_hide_scrollbars,
+			enable_mousewheel=enable_mousewheel,
+			initial_refresh_delays=initial_refresh_delays,
+			external_y=external_y,
+			external_x=external_x,
+		)
 
 	def print_file(self):
 		'''
@@ -1761,13 +1805,13 @@ class Window(Tk):
 	def replace(self, event=None):
 		return self.find_replace(event)
 
-	def ins_calc(self):
+	def ins_calc(self, mode='basic'):
 		'''
 		a claculator using eval that gives the user option to see his equation, and an option to paste the result to
 		the text editor
 		NEW : claculator buttons
 		'''
-		open_calculator(self)
+		open_calculator(self, mode)
 
 	def dt(self, event=None):
 		'''
@@ -4336,19 +4380,6 @@ class Window(Tk):
 		except Exception:
 			pass
 
-	def emoticons(self, reverse : bool):
-		content = self.EgonTE.get('1.0', 'end').split(' ')
-		new_content = []
-		for word in content:
-			if reverse:
-				word = demoticon(word)
-			else:
-				word = emoticon(word)
-			new_content.append(word)
-		new_content = ' '.join(new_content)
-		self.EgonTE.delete('1.0', 'end')
-		self.EgonTE.insert('1.0', new_content)
-
 	def emojicons_hub(self):
 		'''
 		this function is used the connect all the operation with emojis, emoticons and roman numbers
@@ -4356,184 +4387,7 @@ class Window(Tk):
 		from the selected set of characters (emojis, emoticons, roman numbers)
 		'''
 
-		self.spc_mode = 'emojis'
-
-		def change_mode(b: str = 'emojis'):
-			self.spc_mode = b
-			for button in b_mode_dict.values():
-				button.configure(background='SystemButtonFace')
-			b_mode_dict[b].configure(bg='light grey')
-			list_of.configure(text=f'List of {self.spc_mode}')
-			transform.configure(text=f'Transform to {self.spc_mode}')
-			random_e.configure(text=f'Random {self.spc_mode}')
-
-		def transf(reverse: bool = False):
-			if self.spc_mode == 'emojis':
-				self.emoji_detection(via_settings=True, reverse=reverse)
-			elif self.spc_mode == 'morse':
-				self.morse_c_translator(reverse=reverse)
-			elif self.spc_mode == 'roman':
-				self.roman_numbers_translator(reverse=reverse)
-			else:
-				self.emoticons(reverse=reverse)
-
-		def random_ejc():
-			rdm_e = (self.ejc_values[self.spc_mode])
-
-			if rdm_e:
-				rdm_e = choice(list(rdm_e)) + ' '
-				self.EgonTE.insert('end', rdm_e)
-
-		ejc_root = self.make_pop_ups_window(self.emojicons_hub, 'Symbols translator')
-		m_title = Label(ejc_root, text='Choose a mode', font=self.titles_font)
-		emojis = Button(ejc_root, text='Emojis', command=lambda: change_mode('emojis'), borderwidth=1)
-		emoticons = Button(ejc_root, text='Emoticons', command=lambda: change_mode('emoticons'), borderwidth=1,
-						   state=emoticons_library)
-		morse_c = Button(ejc_root, text='Morse Code', command=lambda: change_mode('morse'), borderwidth=1)
-		roman_numbers = Button(ejc_root, text='Roman numbers', command=lambda: change_mode('roman'), borderwidth=1)
-		f_title = Label(ejc_root, text='Functions', font=self.titles_font)
-		transform = Button(ejc_root, text=f'Transform to {self.spc_mode}', borderwidth=1, command=transf)
-		return_to_text = Button(ejc_root, text='Return to normal', borderwidth=1, command=lambda: transf(True))
-		list_of = Button(ejc_root, text=f'List of {self.spc_mode}', borderwidth=1,
-						 command=lambda: self.e_list(mode=self.spc_mode))
-		random_e = Button(ejc_root, text=f'Random {self.spc_mode}', borderwidth=1, command=random_ejc)
-
-		m_title.grid(row=0, column=1, pady=10)
-		emojis.grid(row=1, column=0)
-		morse_c.grid(row=1, column=1)
-		emoticons.grid(row=1, column=2)
-		roman_numbers.grid(row=2, column=1, pady=3)
-		f_title.grid(row=3, column=1, pady=10)
-		transform.grid(row=4, column=0, padx=5)
-		list_of.grid(row=4, column=1)
-		return_to_text.grid(row=4, column=2, padx=5)
-		random_e.grid(row=5, column=1, pady=5)
-
-		b_mode_dict = {'emojis': emojis, 'emoticons': emoticons, 'morse': morse_c, 'roman': roman_numbers}
-		b_func_list = transform, list_of, random_e
-		ejc_list = emoji.get_emoji_unicode_dict('en')
-		self.ejc_values = {'emojis': ejc_list.values(), 'morse': morse_code_dict.values(), 'roman': roman_dict.keys()}
-		change_mode()
-
-	# according to the morse code chart
-	def morse_c_translator(self, reverse=False):
-		'''
-		translator of morse code and vice versa
-
-		:param reverse:
-		'''
-		if not (reverse):
-			content = reSplit('; |, |\*|\n', self.EgonTE.get('1.0', 'end'))
-		else:
-			content = reSplit('[^.-]|\s', self.EgonTE.get('1.0', 'end'))
-		new_content = []
-		new_word = ''
-		if reverse:
-			reverse_morse_dict = {}
-			for key, value in morse_code_dict.items():
-				reverse_morse_dict[value] = key
-			reverse_morse_dict[''] = ' '
-
-		for word in content:
-
-			if new_word:
-				new_content.append(new_word)
-				new_word = ''
-
-			if not reverse:
-				for character in word:
-					if character.upper() in morse_code_dict.keys():
-						if morse_code_dict[character.upper()] == '/' or word == content[-1]:
-							spc = ''
-						else:
-							spc = ' '
-						new_word += morse_code_dict[character.upper()] + spc
-
-
-			else:
-
-				if word in morse_code_dict.values() or word == '':
-					# accessing the keys using their values (reverse of encryption)
-					new_word += reverse_morse_dict[word]
-
-		# output
-		if reverse:
-			new_content = ''.join(new_content).lower().capitalize()
-		else:
-			new_content = ' '.join(new_content)
-		self.EgonTE.delete('1.0', 'end')
-		self.EgonTE.insert('1.0', new_content)
-
-	def roman_numbers_translator(self, reverse=False):
-		'''
-		translator of roman numbers and vice versa
-		:param reverse:
-		'''
-		# reverse:false - roman to arabic, reverse:true - vice versa
-		content = self.EgonTE.get(1.0, 'end')
-		new_content = []
-		# converting roman numbers arabic numbers
-		if reverse:
-			print('roman to arabic')
-			content = content.replace('IV', 'IIII').replace('IX', 'VIIII').replace('XL', 'XXXX').replace('XC', 'LXXXX')
-			content = content.replace('CD', 'CCCC').replace('CM', 'DCCCC')
-			content = reSplit('; |, |\*|\n', content)  # reSplit('; |, |\*|\n', content)
-			content = (''.join(content)).split(' ')
-
-			for roman_value in content:
-				word_value = 0
-				if roman_value.isalpha():
-					if len(roman_value) > 1:
-						for separated_roman_value in roman_value:
-							print(separated_roman_value)
-							if separated_roman_value.upper() in roman_dict.keys():
-								word_value += roman_dict[separated_roman_value.upper()]
-							else:
-								new_content.append(roman_value)
-
-						# value of an entire word full of roman numbers values
-						new_content.append(str(word_value))
-
-					else:
-						if roman_value.upper() in roman_dict.keys():
-							new_content.append(str(roman_dict[roman_value.upper()]))
-						else:
-							new_content.append(roman_value)
-
-					new_content.append(' ')
-
-		# converting arabic numbers to roman numbers
-		else:
-			# works on a really limited list of numbers !!
-			print('arabic to roman')
-			rev_roman_dict = {}
-			for key, value in roman_dict.items():
-				rev_roman_dict[value] = key
-
-			content = reSplit('; |, |\*|\n', content)  # reSplit('; |, |\*|\n', content)
-			content = ''.join(content)
-			content = content.split(' ')
-
-			for word in content:
-				if word.isdigit():
-					word = int(word)
-					if word in rev_roman_dict.keys():
-						new_content.append(rev_roman_dict[word])
-					else:
-						new_content.append(word)
-				else:
-					new_content.append(word)
-
-				if word == content[-1]:
-					if word != ' ':
-						new_content.append(' ')
-				else:
-					new_content.append(' ')
-
-		# outputting the results
-		new_content = ''.join(new_content)
-		self.EgonTE.delete(1.0, 'end')
-		self.EgonTE.insert('1.0', new_content)
+		open_symbols_translator_popup(self)
 
 	def run_code(self):
 		'''
