@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Dict, Optional, Tuple
-from tkinter import colorchooser, messagebox, TclError
+from tkinter import colorchooser, messagebox, TclError, ttk
 
 try:
 	from dependencies.universal_functions import get_time
@@ -536,6 +536,64 @@ class ThemeService:
 					pass
 		except Exception:
 			pass
+
+	def apply_handwriting_style(self, root_window: Any) -> Dict[str, Any]:
+		"""Configures the ttk styles for the handwriting popup window."""
+		COLOR_BG = '#f0f0f0'
+		COLOR_FG = '#333333'
+		COLOR_ACCENT = '#0078d4'
+		COLOR_SECONDARY_BG = '#e0e0e0'
+		COLOR_BORDER = '#cccccc'
+		COLOR_SELECTED_BG = COLOR_ACCENT
+		CANVAS_BG = '#ffffff'
+		GRID_COLOR = '#e0e0e0'
+		SELECTION_RECT_OUTLINE_COLOR = '#005a9e'
+
+		style = ttk.Style(root_window)
+		style.theme_use('clam')
+		root_window.configure(bg=COLOR_BG)
+
+		style.configure('.', background=COLOR_BG, foreground=COLOR_FG, bordercolor=COLOR_BORDER,
+						focuscolor=COLOR_ACCENT, font=('Segoe UI', 8))
+		style.configure('TFrame', background=COLOR_BG)
+		style.configure('TLabel', background=COLOR_BG, foreground=COLOR_FG, padding=3)
+		style.configure('TNotebook', background=COLOR_BG, borderwidth=0)
+		style.configure('Tool.TNotebook', padding=0)
+		style.configure('Tool.TNotebook.Tab', padding=[5, 2], font=('Segoe UI', 8, 'bold'))
+		style.map('Tool.TNotebook.Tab', padding=[('selected', [8, 4])])
+
+		style.configure('TButton', background=COLOR_SECONDARY_BG, foreground=COLOR_FG, padding=(8, 4), relief='flat',
+						borderwidth=0, focusthickness=0, font=('Segoe UI', 8))
+		style.map('TButton', background=[('active', COLOR_ACCENT), ('pressed', COLOR_ACCENT)])
+		style.configure('Selected.TButton', background=COLOR_SELECTED_BG, foreground='white')
+		style.configure('Toggle.TButton', padding=(8, 4), relief='flat', borderwidth=0, focusthickness=0)
+		style.map('Toggle.TButton', background=[('selected', COLOR_SELECTED_BG), ('active', COLOR_ACCENT)])
+
+		style.configure('TLabelframe', background=COLOR_BG, bordercolor=COLOR_BORDER, padding=5)
+		style.configure('TLabelframe.Label', background=COLOR_BG, foreground=COLOR_FG, font=('Segoe UI', 9, 'bold'))
+		style.configure('TCombobox', fieldbackground=CANVAS_BG, background=COLOR_SECONDARY_BG,
+						arrowcolor=COLOR_FG, bordercolor=COLOR_BORDER, padding=4)
+		style.map('TCombobox', fieldbackground=[('readonly', CANVAS_BG)])
+		style.configure('Vertical.TScrollbar', background=COLOR_BG, troughcolor=COLOR_SECONDARY_BG,
+						bordercolor=COLOR_BG, arrowcolor=COLOR_FG)
+		style.configure('Horizontal.TScrollbar', background=COLOR_BG, troughcolor=COLOR_SECONDARY_BG,
+						bordercolor=COLOR_BG, arrowcolor=COLOR_FG)
+		style.configure('TCheckbutton', background=COLOR_BG, foreground=COLOR_FG, font=('Segoe UI', 8))
+		style.map('TCheckbutton', indicatorbackground=[('selected', COLOR_ACCENT)], background=[('active', COLOR_BG)])
+
+		return {
+			'CANVAS_BG': CANVAS_BG, 'GRID_COLOR': GRID_COLOR,
+			'SELECTION_RECT_OUTLINE_COLOR': SELECTION_RECT_OUTLINE_COLOR,
+			'COLOR_BG': COLOR_BG, 'COLOR_FG': COLOR_FG,
+			'OCR_STATUS_COLORS': {
+				'ACTIVE': 'green',
+				'DISABLED': '#a0a0a0',
+				'INITIALIZING': 'orange',
+				'DOWNLOADING': 'blue',
+				'EXTRACTING': 'purple',
+				'ERROR': 'red'
+			}
+		}
 
 	# ------------- Presets & persistence -------------
 
