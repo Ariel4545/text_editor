@@ -1,5 +1,321 @@
 Version - name - release date
 
+[EgonTE 1.13.9 - tools refinement 2 - 19/10/25]
+
+handwriting (DTT) tool
+handwriting_popup.py
+Added
+  * Two-pane layout: a rich drawing area on the right and a left notebook with tabs for Live OCR, Settings, Languages, and Shortcuts.
+  * Live OCR pipeline from the canvas (whole canvas or selection) with controls for PSM mode, multi-language support, invert/binarization, and confidence threshold.
+  * Post-processing tools for OCR text: Upper, Lower, Clean Space, and Find & Replace.
+  * Contextual text toolbar with font family, size, bold/italic toggles, and alignment; dynamically appears for the text tool or selected text.
+  * Status bar showing tool, width, zoom, coordinates, and OCR status (with color-coded states).
+  * Session persistence for canvas content, OCR settings, custom colors, and shortcuts.
+  * Custom color manager: add/edit/remove/reorder colors; quick apply and clipboard copy.
+  * Comprehensive shortcuts for file actions, editing, view, and tools; fine/coarse selection movement with arrows/Shift.
+  * Grid overlay with synced toggle and size controls; zoom in/out/reset controls.
+  * Undo/redo with buttons that enable/disable based on history.
+
+Changed/Improved
+  * Upgraded from a single popup to a stateful, modular UI with clear boundaries between canvas, OCR, theming, and configuration.
+  * Tool system centralized (pencil/eraser/line/text/select) with unified width, color, cursor, and status updates.
+  * OCR moved from one-off conversion to Live OCR with threshold-based low-confidence highlighting and auto-copy option.
+  * Language handling revamped: multi-select via '+', UI syncing, and instant availability after install/uninstall.
+  * Image uploads integrate into the canvas and participate in OCR immediately.
+  * Event bindings grouped and toggleable per category (file/edit/tools/view) for better control.
+
+Fixed
+  * Tool width/cursor desynchronization when switching tools.
+  * Missing OCR dependency flows; now surfaced with a dedicated install manager and stateful feedback.
+  * Session load ordering causing drift (grid state, PSM, mouse-wheel width toggle, shortcuts).
+  * OCR output handling: low-confidence tagging accuracy, view position persistence, and focus behavior.
+  * Selection lifecycle issues across copy/paste/delete and tool changes.
+
+UI.canvas_builder.RichCanvas
+Added
+  * A reusable canvas widget with undo/redo, selection rectangle, clipboard (copy/paste), image loading, and on-canvas text editing (double-click).
+  * Zoom and pan with mouse and keys; optional mouse-wheel width control; auto-hiding scrollbars and a coordinates bar.
+  * Grid rendering with configurable spacing and non-persistent tagging.
+  * Serialization/loading of canvas content plus camera (zoom and views).
+  * Context menu: copy, delete, bring to front, send to back, undo/redo.
+
+Changed/Improved
+  * Drawing model updated with stroke smoothing, performance guardrails, and consistent tagging for save/no-save/selection.
+  * Option preservation across copy/paste and serialization improved for stable re-creation.
+  * Scrollregion and scrollbar visibility now respond reliably to changes.
+
+Fixed
+  * Selection visuals not clearing consistently.
+  * Text editing overlay lifecycle and font scaling relative to zoom.
+  * Image/path handling and z-order actions stability.
+
+services.OCR_service
+Added
+  * Asynchronous initialization with clear states: INITIALIZING, ACTIVE, DISABLED, DOWNLOADING, EXTRACTING, ERROR.
+  * Portable Windows installer with progress, robust extraction, and tessdata discovery.
+  * Remote language list with caching; install/uninstall single language packs with per-language progress callbacks.
+  * Canvas-region OCR via screen grab, with invert/binarize pre-processing, PSM selection, multi-language composition, and structured error returns.
+
+Changed/Improved
+  * Centralized pytesseract configuration with discovered executable and tessdata; environment and path handling made explicit.
+  * Language enumeration cached and stable, with graceful fallbacks if direct enumeration fails.
+Fixed
+  * Handling when Tesseract isn’t on PATH; better search across common/portable locations.
+  * Errors during download/extraction now produce actionable messages and proper state transitions.
+  * Safe handling of invalid bboxes, missing Pillow components, or missing language packs.
+
+services.theme_service.ThemeService
+Added
+  * Centralized theming for the handwriting window, including canvas background, status elements, and OCR status colors.
+
+Changed/Improved
+  * Consistent styling across panes, toolbars, grids, and status indicators.
+
+dependencies.large_variables
+Added
+  * Centralized constants for grid sizes, tool width options, OCR PSM modes, default color options, left-pane sizing, session keys, delay timings, and item tags.
+Changed/Improved
+  * UI controls (grid sizes, PSM selector, widths) now driven by configuration for consistency and easier tuning.
+
+Web scraping tool
+web_scrapping_popup.py
+Added
+  * Tabbed interface
+    * Source: load content from link, current editor, or local file with clear labels.
+    * Scrape: two modes—Simple (tag/class + return format) and Structured (row selector + multi-column schema).
+    * Request & Pagination: custom headers, limits, and pagination controls.
+    * Policy: robots/ToS helpers and legal acknowledgement.
+  * Simple mode
+    * Tag and class filters.
+    * Return formats: Text Only, HTML (prettified), Attributes (with specific attribute), Inner Content (sanitizable).
+    * Separator toggle and result limits.
+  * Structured mode
+    * Row CSS selector; add/remove columns with: name, selector, format, optional attribute.
+    * Export results to CSV or JSON.
+    * Context menu for copying cell or row values.
+  * Pagination
+    * Optional follow-next-page selector.
+    * Max pages limit.
+    * Animated progress bar and live status.
+  * Profiles
+    * Save/load full scraping profiles (modes, selectors, columns, headers, limits, policies).
+  * UX and feedback
+    * Status bar with counts (results, characters, pages), HTTP info when applicable.
+    * Modern styling, better resizing, and placeholder text in outputs.
+
+Changed/Improved
+  * Clear separation of concerns: scraping UI, request/pagination setup, and policy/legal.
+  * Result rendering supports per-column formats and attributes; consistent sanitization path.
+  * Safer, centralized networking via the security service for policy enforcement.
+  * Robust copy/insert/save flows for simple content; export-ready structured results.
+  * Mode switching cleanly resets UI state and summaries.
+
+Fixed
+  * Error paths for invalid selectors, empty sources, and fetch issues now provide actionable alerts.
+  * Clipboard and file operations are more tolerant and consistent across platforms.
+  * Treeview and text outputs no longer retain stale state between searches/modes.
+
+services.security_service.SecurityService
+Added
+  * Policy enforcement
+    * HTTPS-only, block credentials in URLs, block IP-literal and private/reserved hosts, same-origin redirects.
+    * robots.txt compliance and optional meta-robots warning.
+    * Content-type allowlist and max download size.
+  * Legal workflow
+    * One-time user acknowledgement with helper to open robots.txt and terms.
+  * HTML sanitization
+    * Strips unsafe tags and JS-injection vectors; used by the scraper when selected.
+  * Logging
+    * Structured callback logging back into the UI for warnings and errors.
+
+Changed/Improved
+  * URL policy validation now returns a (status, reason, host) triple for clear UI feedback.
+  * Request flow encapsulated: redirects checked, size enforced, content parsed safely.
+
+Fixed
+  * Network/parse exceptions produce user-friendly messages instead of crashes.
+  * robots.txt retrieval failures degrade gracefully without blocking legitimate paths.
+
+File template generator tool
+Added
+* New subjects and richer presets
+  * Subjects expanded to include: meeting notes, project proposal, cover letter, and code review (alongside resume, personal info, computer stats, letter).
+  * Structured, ready-to-edit contexts with meaningful headings and grouped fields.
+* Tabbed UI and scalable content editing
+  * Settings and Content split into tabs for clarity.
+  * Scrollable, collapsible sections for placeholders; smart multi-line editors for long-form fields.
+* Advanced generation paths
+  * PDF: dedicated generators per subject (with headings, sections, bullet points, tables where relevant).
+  * Word: subject-specific formatting (margins, headings, bullet lists, tables for budgets).
+  * Jinja: subject-tailored templates and a generic template path; outputs saved as text for easy reuse.
+  * Optional docxtpl: render directly from a .docx template when supplied.
+* Context processing
+  * Resume: parse “experience” and “education” into structured lists from simple text blocks.
+  * Project proposal: parse budget lines into table rows with computed totals.
+* System info integration (best-effort)
+  * Computer stats: gather RAM, storage, GPU, OS, and Python version when libraries/system info are available.
+* UX improvements
+  * Result actions: open folder, open file, copy path.
+  * Live status feedback and clear errors for missing dependencies or invalid inputs.
+  * Quick seed of template path from the editor selection when applicable.
+
+Changed/Improved
+* UI/UX
+  * Upgraded to a notebook layout with distinct “Settings” and “Content” tabs; content area is scrollable and organized into collapsible groups.
+  * Smart field widgets: single-line entries for small values, multi-line editors for bodies, lists, and addresses.
+  * Clearer labels, consistent fonts, and better spacing; responsive resizing across platforms.
+* Generation architecture
+  * Centralized dispatch table for format/subject combinations; clean fallbacks to generic generators.
+  * Consistent filename strategy with timestamped outputs and auto-created “outputs” directory.
+  * Subject-specific Word/PDF rendering with headings, bullets, and tables for better readability.
+* Dependency handling
+  * Clear “require_*” helpers with actionable instructions (python-docx, fpdf, jinja2, docxtpl).
+  * Graceful degradation: best-effort system stats; informative guidance when optional libs are missing.
+* Workflow ergonomics
+  * Docxtpl section shown/hidden dynamically based on toggle; template browsing auto-enables docxtpl mode.
+  * Changing options resets the result state to avoid accidental reuse.
+
+Fixed
+* Robust error handling
+  * Meaningful messages for missing packages, invalid formats/subjects, nonexistent template files, and file I/O errors.
+  * Safer clipboard and OS-open operations with platform-aware fallbacks and guarded exceptions.
+* State and layout issues
+  * Prevented stale result paths after settings change; action buttons correctly enable/disable.
+  * Reliable scroll/resize behavior for large forms; content wrapping and placeholder selection cues.
+* Data parsing edge cases
+  * More tolerant parsing for resume and project proposal inputs (ignores malformed lines; avoids crashes).
+  * Defensive handling for system info retrieval (RAM, storage, GPU) to ensure stable outputs.
+
+Natural language processor tool
+nlp_popup.py
+Added
+  * Split-pane workspace
+    * Left: compact controls with grouped sections (Analysis Function, Quick Access, Options & Execution, Actions, Status).
+    * Right: input editor and multi-tab output notebook (Image, Table, Text, Scratchpad).
+  * Function discovery and quick access
+    * Searchable function list with live filtering.
+    * Recent and Favorites panels (toggleable) with compact buttons; star to favorite/unfavorite.
+  * Execution and automation
+    * Auto-run mode with debounce to re-run after parameter changes.
+    * Background execution with a cancel button and progress bar.
+    * Deferred spaCy model loading in a background thread; UI elements enable when ready.
+  * Output tabs and tools
+    * Table: filter (case toggle), multi-column sorting with persistent order, palette-based heatmap tagging, context menu (copy cell/row/column), export-ready CSV/TSV copy.
+    * Image: zoom, pan, rotate, grayscale, invert, checkerboard background, open externally, save, copy.
+    * Text: wrapping toggle, result-to-editor insert, scratchpad tab for notes.
+  * Status and metrics
+    * Live input metrics (chars, words, sentences) from input editor.
+    * Live output metrics for text results; consolidated bottom status bar for operation states.
+
+Changed/Improved
+  * Parameter controls are adaptive to the selected function (Top N, n-gram min/max, summary ratio, query, cutoff, second text).
+  * Cleaner, responsive layout with compact styles; better spacing and readability; pane width constraints enforced during resize.
+  * Consistent results pipeline: the UI consumes a single (text, table, image) contract; robust tab switching depending on which payloads exist.
+  * Clear actions section for IO flows (load input, copy input, save output, insert output, copy TSV/CSV, clear, full reset).
+  * Tooltips for controls and tab actions to improve discoverability without crowding the UI.
+
+Fixed
+  * UI reset paths avoid stale content across tabs and function switches.
+  * Clipboard operations and file dialogs handle platform differences cleanly.
+  * Sorting and filtering interplay preserves sort context after filtering; reapplying sort on filter-clear.
+  * Pane resizing avoids collapsing either side below minimum functional widths.
+
+nlp_service.py
+Added
+  * Modular service layer
+    * Centralized pipeline management, function normalization, text utilities (wrap, CSV/TSV), and unified analyze() API.
+    * Multiple result modalities supported at once: returns (text, table, image) with None for non-applicable parts.
+  * Expanded feature set (auto-degrade if deps are missing)
+    * Language detection, spelling correction, emotion analysis.
+    * Readability metrics (scores, grade levels) and visualization (bar chart).
+    * Polarity/subjectivity, sentence-level sentiment, text statistics, key sentences, summarization.
+    * Word cloud image generation, keyword extraction, POS sequences, POS-tagged text.
+    * Fuzzy search (with cutoff), regex search, concordance (KWIC), collocations.
+    * Topic modeling (lightweight noun-chunk topics) and optional LDA (via gensim) when available.
+    * Similarity checks (document-to-document) and “find similar sentences” using vectors.
+    * Complexity and density: syntactic depth, entity density, type-token ratio, lexical density, stopword percentage, sentence complexity, punctuation and emphasis analysis.
+    * Named entity helpers and extractions: organizations, locations, facilities, events, laws, NORPs, MONEY, DATE/TIME, quantities, ordinals, percentages, products, works of art, languages/codes.
+    * Structural and grammar patterns: SVO triplets, dependency paths, root verbs, verb tense analysis, passive voice, subordinate clauses, prepositional phrases, adjective–noun and adverb–adjective pairs, nominalizations, gerunds/participles, common POS sequences, sentence-final POS, clause counts.
+    * Content utilities: expand contractions, remove HTML, extract emails/URLs/IPs/numbers/hashtags, unique words/lemmas, hapax legomena, concreteness score, formality score, paragraph statistics, discourse connectives, word ambiguity (polysemy), gender pronoun analysis, question detection, hedges, similes, read time estimation, comprehensive text profile.
+  * Image outputs
+    * Word clouds and readability charts are returned as PIL images for the UI to render in the Image tab.
+
+Changed/Improved
+  * Pipeline initialization
+    * Prefers transformer model when available (e.g., en_core_web_trf); falls back to small model; lazy download if missing.
+    * Selective component enabling (e.g., disable NER when not needed) for performance.
+  * Execution control
+    * Thread-based timeout wrapper around pipeline work to avoid long stalls.
+    * Early exits and size limits for very large inputs; configurable time limits from UI.
+  * Normalization and mapping
+    * Unified function key normalization across the large function set; robust routing in analyze() to appropriate handler.
+  * Output consistency
+    * All handlers return structured text/table/image forms; CSV/TSV generation utilities handle varied data safely.
+    * Heuristics and validation around numeric columns and frequency data to ensure stable table rendering.
+
+Fixed
+* Dependency gating
+    * Clean, actionable messages when optional libraries are missing; avoids hard crashes in their handlers.
+  * Regex and parsing edge cases
+    * More tolerant URL/regex handling; sanitized extraction routines for common formats.
+  * Stability across analyses
+    * Guarded calculations (e.g., division by zero, empty spans), resilient NER/path operations, and safe fallbacks when vectors or resources are absent.
+
+Library installer
+Added
+* Multiple modes and workflows
+  * Standard install flow and an optional “management_mode” for ongoing package maintenance.
+  * Environment picker with discovery of available Python interpreters and quick refresh.
+  * Per-package actions via context menu: install exact version, pin version, open on PyPI, copy install command.
+* Rich UI and UX
+  * Filter bar with “select all/none” for quick selection.
+  * Split panes: package list (with groups for required/optional) and a diagnostics area (“Problems”) for hints and errors.
+  * Persistent log area with leveled messages (success, warning, error, info).
+  * Progress bar and detailed status messages throughout operations.
+  * Export/import of requirements files; export pins or selected packages; import selections from a file.
+* Package insights and updates
+  * Load installed packages and versions; label state per package (installed/not found).
+  * Check for available updates and auto-mark outdated packages with version hints.
+* Robust operations
+  * Force re-install toggle; optional pip upgrade; optional skip-installed behavior.
+  * Restart program button after successful operations (configurable entry point).
+  * Thread-safe UI updates using after(); safe, blocking show with hidden root if needed.
+
+Changed/Improved
+* Architecture and threading
+  * Never runs mainloop from background threads; UI always built and updated on the main thread.
+  * All long-running tasks (pip queries, installs, updates) executed in background threads with safe callbacks.
+* Input normalization
+  * Normalizes package lists with alias mapping, blocklist filtering, and version pin application.
+  * Deduplicates packages while preserving constraints (==, >=, <=).
+* Environment handling
+  * Flexible interpreter selection, including discovery via “py” tags on Windows and common python binaries.
+  * Commands consistently executed against the active environment.
+* Package management flow
+  * Management mode reveals update checks, problem hints, and per-package interactive actions.
+  * Grouped sections for required and optional libraries with default selections for missing required packages.
+* Feedback and diagnostics
+  * Improved status and error messaging with actionable hints (build tools, SSL, permissions, Python version).
+  * Problems panel aggregates diagnostics and suggestions; logs capture detailed output safely.
+
+Fixed
+* Main thread runtime errors
+  * Eliminated “main thread is not in main loop” and Tk thread-safety issues by marshalling UI work properly.
+* Unreliable subprocess handling
+  * Standardized command execution with captured output; surfaced errors and suggested fixes.
+* Window lifecycle and closing
+  * Clean shutdown on close; safe cancellation and state resets without leaving background tasks dangling.
+* State drift and UI inconsistencies
+  * Buttons, progress, and selections reliably reflect current operation; disabled/enabled states are consistent.
+  * Package list refresh and environment switching no longer produce stale or mismatched states.
+* Cross-environment robustness
+  * Better resilience on systems with multiple Python installations; tolerant to missing pip in selected envs.
+  * Improved file dialogs and clipboard usage with guarded exceptions.
+
+EgonTE:
+* Added Canvas’ API forwarder
+* Improved and updated the “Library installer” implementation
+
 [1.13.8 - tools’ refinement - 04/10/25]
 
 Symbols translator (new standalone file)
