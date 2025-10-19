@@ -11,7 +11,7 @@ city_list = ['Agra', 'buenos aires', 'Amsterdam', 'los angeles', 'Antalya', 'Ath
 
 
 # symbols translator
-morse_code_dict = {'A': '.-', 'B': '-...',
+MORSE_CODE_MAP = {'A': '.-', 'B': '-...',
                            'C': '-.-.', 'D': '-..', 'E': '.',
                            'F': '..-.', 'G': '--.', 'H': '....',
                            'I': '..', 'J': '.---', 'K': '-.-',
@@ -26,13 +26,28 @@ morse_code_dict = {'A': '.-', 'B': '-...',
                            '0': '-----', ', ': '--..--', '.': '.-.-.-',
                            '?': '..--..', '/': '-..-.', '-': '-....-',
                            '(': '-.--.', ')': '-.--.-', ' ': '/'
-                           # ,'Á': '.--.-', 'Ä': '.-.-', 'É': '..-..', 'Ñ': '- - . - -',
-                           # 'Ö': '- - - .', 'Ü': '. . - -'
                            }
-'''+ can write an algo that can detected the order of the characters and config any value of combination'''
-roman_dict = {
-    'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000,
-    'IV': 4, 'IX': 9, 'XL': 40, 'XC': 90, 'CD': 400, 'CM': 900}
+
+ROMAN_MAP = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}
+ROMAN_PAIRS = [
+        (1000, 'M'), (900, 'CM'), (500, 'D'), (400, 'CD'),
+        (100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'),
+        (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I'),
+    ]
+
+LEET_MAP = {
+    'A': '4', 'B': '8', 'E': '3', 'G': '6', 'L': '1', 'O': '0', 'S': '5', 'T': '7', 'Z': '2'
+}
+LEET_MAP_REV = {v: k for k, v in LEET_MAP.items()}
+
+NATO_PHONETIC_MAP = {
+    'A': 'Alpha', 'B': 'Bravo', 'C': 'Charlie', 'D': 'Delta', 'E': 'Echo',
+    'F': 'Foxtrot', 'G': 'Golf', 'H': 'Hotel', 'I': 'India', 'J': 'Juliett',
+    'K': 'Kilo', 'L': 'Lima', 'M': 'Mike', 'N': 'November', 'O': 'Oscar',
+    'P': 'Papa', 'Q': 'Quebec', 'R': 'Romeo', 'S': 'Sierra', 'T': 'Tango',
+    'U': 'Uniform', 'V': 'Victor', 'W': 'Whiskey', 'X': 'X-ray', 'Y': 'Yankee',
+    'Z': 'Zulu',
+}
 
 # virtual keyboard
 sym_n = ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
@@ -40,7 +55,7 @@ sym_n = ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
                  '#', '!', '&', '?', ':', '/', '~')
 
 syn_only = ('`', '_', '|', '$', '@', '£', '€', '¢', '¥', '§',
-         '%', '°', r'\\', ';', '"', '\'', '®', '¿', 'ƒ',
+         '%', '°', r'\'', ';', '"', "'", '®', '¿', 'ƒ',
          '√', '™', '©', '±', '≈', 'Ω', 'Φ')
 
 # text decorators
@@ -253,7 +268,7 @@ library_list = [
     'pyaudio', 'pydub', 'ffmpeg-downloader', 'PyPDF2', 'nltk', 'PyDictionary',
     'tkinter-tooltip', 'pyperclip', 'pytesseract', 'pyttsx3', 'pywin32', 'spacy',
     'SpeechRecognition', ' ssl', 'win32print', 'fast-autocomplete[levenshtein]',
-    'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr', 'smtplib'
+    'textblob', 'urllib', 'webbrowser', 'wikipedia', 'win32api', 'requests', 'numexpr', 'smtplib', 'numpy'
 ]
 
 library_optional = [
@@ -282,6 +297,7 @@ library_alias_map = {
     'ffmpeg-downloader': 'ffmpeg-downloader',
     # Known better pin for many envs:
     'googletrans': 'googletrans==4.0.0rc1',
+    'numpy': 'numpy'
 }
 
 # Things we should NOT attempt to pip install (stdlib or core)
@@ -382,8 +398,9 @@ library_blocklist = {
 # Keys are lowercased canonical names
 # Values are exact spec strings (e.g., 'package==1.2.3' or 'package>=1.0')
 library_pins = {
-    # 'numpy': 'numpy==1.26.4',
-    # 'spacy': 'spacy>=3.7',
+    'numpy': 'numpy==1.26.4',
+    'spacy': 'spacy>=3.7',
+    'googletrans': 'googletrans==4.0.0rc1'
 }
 
 data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
@@ -393,9 +410,9 @@ data = {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xt
                      'night_type': 'black', 'preview_cc': False, 'fun_numbers': True, 'usage_report': False,
                      'check_version': False, 'window_c_warning' : True, 'allow_duplicate': False}
 
-special_files = (('excel', '*.xlsx'), ('csv', '*.csv'), ('pdf', '*.pdf')
-																 , ('json', '*.json'), ('xml', '*.xml'),
-																 ('all', '*.*'))
+special_files = (('excel', '*.xlsx'), ('csv', '*,csv'), ('pdf', '*.pdf'), 
+ ('json', '*.json'), ('xml', '*.xml'),
+ ('all', '*.*'))
 
 night_mode_colors = {'black' : ['#110022', '#373737', '#27374D', 'green'], 'blue' : ['#041C32', '#04293A', '#064663', '#ECB365']
     , 'default' : ['SystemButtonFace', 'SystemButtonFace', 'SystemButtonFace', 'black']}
@@ -419,3 +436,41 @@ function_map = {
     'Key phrases (noun chunks)': 'KEY_PHRASES', 'N-grams (2–3)': 'NGRAMS',
     'Sentence split': 'SENTENCE_SPLIT', 'POS distribution': 'POS_DISTRIBUTION', 'Sentiment (VADER)': 'SENTIMENT',
 }
+
+# --- handwriting_popup constants ---
+HW_LEFT_PANE_WIDTH = 280
+HW_GRID_LINE_DASH = (1, 6)
+HW_SELECTION_RECT_DASH = (4, 2)
+HW_GRID_CONFIG = {'Off': 0, 'Small': 15, 'Medium': 25, 'Large': 40}
+HW_OCR_TRIGGER_DELAY_MS = 800
+HW_DEFAULT_COLOR_OPTIONS = ['black', 'gray50', 'red', 'blue', 'green', 'yellow', 'white']
+HW_WIDTH_OPTIONS = [1, 2, 3, 5, 8, 13, 21, 34, 55]
+HW_FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 48, 64]
+HW_ZOOM_IN_FACTOR = 1.2
+HW_ZOOM_OUT_FACTOR = 0.8
+
+HW_OCR_PSM_MODES = {
+    'Auto': '3',
+    'Single Block': '6',
+    'Single Line': '7',
+    'Single Word': '8',
+    'Single Char': '10',
+}
+
+# Session Data Keys
+HW_KEY_CAMERA, HW_KEY_ZOOM, HW_KEY_XVIEW, HW_KEY_YVIEW = 'camera', 'zoom', 'xview', 'yview'
+HW_KEY_TYPE, HW_KEY_COORDS, HW_KEY_OPTIONS, HW_KEY_STATE = 'type', 'coords', 'options', 'state'
+HW_KEY_OCR_SETTINGS = 'ocr_settings'
+HW_KEY_CUSTOM_COLORS = 'custom_colors'
+HW_KEY_SHORTCUTS = 'shortcuts'
+
+# Canvas Item Tags
+HW_TAG_GRID_LINE = 'grid_line'
+HW_TAG_NO_SAVE = 'no_save'
+HW_TAG_SELECTION_RECT = 'selection_rect'
+HW_TAG_SELECTED_ITEM = 'selected'
+HW_TAG_TEXT = 'text'
+HW_TAG_ALL = 'all'
+
+HW_SAVABLE_ITEM_TYPES = ('line', HW_TAG_TEXT, 'stroke', 'oval', 'rectangle')
+HW_ITEM_OPTIONS_TO_SAVE = ('fill', 'outline', 'width', HW_TAG_TEXT, 'font', 'anchor', 'justify', 'tags', 'smooth')
