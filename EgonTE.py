@@ -31,6 +31,7 @@ from string import (
 )
 from sys import exit as exit_
 from threading import Thread
+from typing import Optional, Tuple, Union
 
 # GUI (tkinter)
 from tkinter import *
@@ -39,7 +40,15 @@ from tkinter import ttk  # same as `import tkinter.ttk as ttk`
 
 # local modules
 from UI import ui_builders
-from UI.library_installer_ui import show_library_installer
+# Prefer functional installer API; keep class fallback only if present
+try:
+	from UI.library_installer_ui import show_library_installer
+except Exception:
+	show_library_installer = None
+try:
+	from UI.library_installer_ui import LibraryInstallerUI
+except Exception:
+	LibraryInstallerUI = None
 from dependencies.large_variables import *
 from dependencies.universal_functions import *
 from dependencies.version_guard import ensure_supported_python
@@ -47,19 +56,11 @@ from dependencies.version_guard import ensure_supported_python
 def library_installer(parent=None):
 	'''
 	Top-level installer entry point (safe with `from tkinter import *`).
-
-	- parent: optional Tk widget to parent the dialog (e.g., a Tk or Toplevel instance).
-			  If None, the installer tries to use the default Tk root; if not found,
-			  it will create its own root window.
-	Returns:
-		result dict from show_library_installer.
+	Uses the functional installer; falls back to class if needed.
 	'''
-
-	# Copy so we never mutate module-level lists
 	required = list(library_list)
 	optional = list(library_optional)
 
-	# Helper: is this object a Tk widget?
 	def _is_tk_widget(obj):
 		try:
 			from tkinter import Misc as _Misc
@@ -67,36 +68,38 @@ def library_installer(parent=None):
 		except Exception:
 			return False
 
-	# If no parent provided, try to use the default Tk root (works even with star-import)
+	# Try default Tk root as parent
 	if parent is None:
 		try:
-			import tkinter as _tk  # local, won’t pollute your global namespace
-			parent = getattr(_tk, "_default_root", None)
+			import tkinter as _tk
+			parent = getattr(_tk, '_default_root', None)
 		except Exception:
 			parent = None
 
-	return show_library_installer(
-		parent=parent if _is_tk_widget(parent) else None,
-		base_libraries=required,
-		optional_libraries=optional,
-		allow_upgrade_pip=True,
-		allow_optional=bool(optional),
-		title='ETE - Install Required',
-		# Normalization + checks (all data lives in large_variables.py)
-		alias_map=library_alias_map,
-		blocklist=library_blocklist,
-		pins=library_pins,
-		skip_installed=True,
-		# Ensure restart launches the main app script explicitly
-		restart_script='EgonTE.py',
-		restart_args=[],
-	)
-
+	if callable(show_library_installer):
+		return show_library_installer(
+			parent=parent if _is_tk_widget(parent) else None,
+			base_libraries=required,
+			optional_libraries=optional,
+			allow_upgrade_pip=True,
+			allow_optional=bool(optional),
+			title='ETE - Install Required',
+			alias_map=library_alias_map,
+			blocklist=library_blocklist,
+			pins=library_pins,
+			skip_installed=True,
+			restart_script='EgonTE.py',
+			restart_args=[],
+			app=parent if _is_tk_widget(parent) else None,
+		)
+	return {'installed': 0, 'failed': 0, 'attempted': 0, 'cancelled': True, 'packages': []}
 
 # required libraries that aren't by default
-
 req_lib = False
 try:
+	# Minimal probe first: do not import all heavy third-party modules here.
+	import importlib
+	# If all required present, import the actual heavy modules now
 	import pytesseract.pytesseract
 	from win32print import GetDefaultPrinter  # install pywin32
 	from win32api import ShellExecute, GetShortPathName
@@ -106,7 +109,6 @@ try:
 	import webbrowser
 	import urllib.request, urllib.error
 	from urllib.parse import urlparse
-	# matplotlib (graphs library) in a way that suits tkinter
 	import matplotlib
 	import requests
 	from smtplib import SMTP_SSL
@@ -133,14 +135,12 @@ try:
 	from nltk.corpus import words
 	from PyDictionary import PyDictionary
 	import numexpr
-	# import autocomplete
 	from fast_autocomplete import AutoComplete
 
 	req_lib = True
 
-except (ModuleNotFoundError) as e:
-	print(e)
-	library_installer()
+except (ModuleNotFoundError, ImportError) as e:
+    library_installer()
 
 # Local applications
 from pop_ups.ai_popups import open_chatgpt, open_dalle
@@ -422,7 +422,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.8'
+		self.ver = '1.13.9'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -521,7 +521,7 @@ class Window(Tk):
 						(self.TTS_IMAGE, lambda: Thread(target=self.text_to_speech).start()),
 						(self.STT_IMAGE, lambda: self.after(0, self.start_speech_to_text)),
 						(self.KEY_IMAGE, lambda: Thread(target=self.virtual_keyboard()).start()),
-						(self.DTT_IMAGE, lambda: self.open_windows_control(self.handwriting)),
+						(self.DTT_IMAGE, self.handwriting),
 						(self.CALC_IMAGE, self.ins_calc),
 						(self.TRANSLATE_IMAGE, self.translate))
 		self.bold_button, self.italics_button, self.underline_button, self.color_button, self.align_left_button, \
@@ -1326,6 +1326,52 @@ class Window(Tk):
 			initial_refresh_delays=initial_refresh_delays,
 			external_y=external_y,
 			external_x=external_x,
+		)
+
+
+	def forward_make_rich_canvas(self,
+			parent_container: Optional[Misc] = None,
+			place: Union[str, Tuple[int, int], list] = 'pack_top',
+			size: Optional[Tuple[int, int]] = (500, 400),
+			bg: Optional[str] = None,
+			cursor: str = 'pencil',
+			*,
+			enable_drawing: bool = True,
+			initial_tool: str = 'pencil',
+			pencil_color: str = 'black',
+			pencil_width: int = 2,
+			eraser_width: int = 10,
+			shape_width: int = 2,
+			enable_undo: bool = True,
+			mousewheel_action: str = 'scroll',
+			enable_pan: bool = True,
+			enable_arrow_pan: bool = True,
+			show_scrollbars: bool = True,
+			auto_hide_scrollbars: bool = True,
+			show_coords: bool = False,
+	):
+		"""
+		Forwarder to ui_buildres.make_rich_canvas to keep main module API stable.
+		"""
+		return self._popup.make_rich_canvas(
+			parent_container=parent_container,
+			place=place,
+			size=size,
+			bg=bg,
+			cursor=cursor,
+			enable_drawing=enable_drawing,
+			initial_tool=initial_tool,
+			pencil_color=pencil_color,
+			pencil_width=pencil_width,
+			eraser_width=eraser_width,
+			shape_width=shape_width,
+			enable_undo=enable_undo,
+			mousewheel_action=mousewheel_action,
+			enable_pan=enable_pan,
+			enable_arrow_pan=enable_arrow_pan,
+			show_scrollbars=show_scrollbars,
+			auto_hide_scrollbars=auto_hide_scrollbars,
+			show_coords=show_coords,
 		)
 
 	def print_file(self):
