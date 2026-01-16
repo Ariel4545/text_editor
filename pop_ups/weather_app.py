@@ -17,7 +17,7 @@ except Exception:
     Image, ImageTk = None, None
 
 from dependencies.universal_functions import get_time, fill_by_click
-from large_variables import city_list as provided_city_list
+from dependencies.large_variables import city_list as provided_city_list
 
 try:
     from pyperclip import copy as copy_to_clipboard
