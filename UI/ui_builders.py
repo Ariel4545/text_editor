@@ -6,6 +6,121 @@ try:
 except ModuleNotFoundError:
     pass
 
+class ToolTip:
+    """
+    Internal fallback ToolTip implementation using standard tkinter.
+    Used when tktooltip is not available.
+    """
+    def __init__(self, widget, text, delay=600, fg='black', bg='#ffffe0'):
+        self.widget = widget
+        self.text = text
+        self.delay = delay
+        self.fg = fg
+        self.bg = bg
+        self.tip_window = None
+        self.id = None
+        self.x = self.y = 0
+        self._bind()
+
+
+
+    def showtip(self):
+        if self.tip_window or not self.text:
+            return
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(tw, text=self.text, justify='left',
+                       background=self.bg, foreground=self.fg,
+                       relief='solid', borderwidth=1,
+                       font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+
+    def _bind(self):
+        self.widget.bind('<Enter>', self.on_enter, add='+')
+        self.widget.bind('<Leave>', self.on_leave, add='+')
+        self.widget.bind('<ButtonPress>', self.on_leave, add='+')
+
+    def on_enter(self, event=None):
+        self.schedule()
+
+    def on_leave(self, event=None):
+        self.unschedule()
+        self.hidetip()
+
+    def schedule(self):
+        self.unschedule()
+        self.id = self.widget.after(self.delay, self.showtip)
+
+    def unschedule(self):
+        id_ = self.id
+        self.id = None
+        if id_:
+            self.widget.after_cancel(id_)
+
+
+    def hidetip(self):
+        tw = self.tip_window
+        self.tip_window = None
+        if tw:
+            tw.destroy()
+        self._registry = {}
+
+class RichToolTip(ToolTip):
+    """
+    Enhanced 'External-style' ToolTip implementation.
+    Features: Fade-in animation, nice padding, custom colors.
+    """
+    def __init__(self, widget, text, delay=600, fg='#ffffff', bg='#2b2b2b', follow=True):
+        super().__init__(widget, text, delay, fg, bg)
+        self.follow = follow
+        self.alpha = 0.0
+
+    def showtip(self):
+        if self.tip_window or not self.text:
+            return
+        
+        # Calculate position
+        x, y = 0, 0
+        if self.follow:
+            x, y = self.widget.winfo_pointerxy()
+            x += 10
+            y += 10
+        else:
+            x = self.widget.winfo_rootx() + 20
+            y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        
+        # Start fully transparent for fade-in
+        tw.attributes("-alpha", 0.0)
+        self.alpha = 0.0
+        
+        label = tk.Label(tw, text=self.text, justify='left',
+                       background=self.bg, foreground=self.fg,
+                       relief='flat', borderwidth=0,
+                       font=("Segoe UI", "9"),
+                       padx=10, pady=6)
+        label.pack()
+        
+        # Modern border (lighter grey than bg)
+        tw.configure(bg="#505050")
+        label.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+
+        # Start fade-in animation
+        self._fade_in()
+
+    def _fade_in(self):
+        if self.tip_window and self.alpha < 1.0:
+            self.alpha += 0.1
+            self.tip_window.attributes("-alpha", self.alpha)
+            self.tip_window.after(30, self._fade_in)
+
 class UIBuilders:
     def __init__(self, app: Any) -> None:
         self.app = app
@@ -659,9 +774,10 @@ class UIBuilders:
 
         Backends (mutually exclusive for the whole session):
           - 'external': tktooltip.ToolTip (preferred)
-          - 'tix': tkinter.tix.Balloon
+          - 'internal': Built-in ToolTip class (fallback)
         '''
         # Resolve targets
+
         if targets is None:
             targets = self._collect_default_tooltip_targets()
         items = [(w, text) for (w, text) in targets if self._is_widget(w)]
@@ -683,10 +799,10 @@ class UIBuilders:
         # Attach for chosen backend only
         if backend == 'external':
             self._attach_tooltips_external(items, delay_ms, follow_mouse, fg, bg)
-        elif backend == 'tix':
-            self._attach_tooltips_tix(items)
+        elif backend == 'internal':
+            self._attach_tooltips_internal(items, delay_ms)
         else:
-            # Neither external nor Tix is available; do nothing by design
+            # No backend available
             pass
 
     # ---------- Backend selection and guards ----------
@@ -694,23 +810,15 @@ class UIBuilders:
     def _select_tooltip_backend(self, *, prefer_external: bool, allow_tix: bool) -> str:
         if prefer_external and self._external_available():
             return 'external'
-        if allow_tix and self._tix_available():
-            return 'tix'
-        return 'none'
+        # Fallback to internal/native implementation
+        return 'internal'
 
     def _external_available(self) -> bool:
-        try:
-            import tktooltip  # noqa: F401
-            return True
-        except Exception:
-            return False
+        # We always have the local RichToolTip now
+        return True
 
     def _tix_available(self) -> bool:
-        try:
-            import tkinter.tix as _  # noqa: F401
-            return True
-        except Exception:
-            return False
+        return False
 
     # ---------- External: tktooltip backend ----------
 
@@ -722,60 +830,41 @@ class UIBuilders:
         fg: Optional[str],
         bg: Optional[str],
     ) -> None:
-        from tktooltip import ToolTip as TkToolTip  # type: ignore
+
         handles = self._tooltip_handles  # type: ignore[attr-defined]
 
         for widget, text in items:
             if widget in handles:
                 continue  # prevent double-binding
 
-            handle = None
-            # Try full-featured signature first
-            try:
-                handle = TkToolTip(widget, msg=text, delay=delay_ms, follow=follow_mouse, fg=fg, bg=bg)
-            except TypeError:
-                # Version variance: fall back to minimal supported signature
-                handle = TkToolTip(widget, msg=text)
-            except Exception:
-                # Safety: minimal usage if even signature differs
-                try:
-                    handle = TkToolTip(widget, msg=text)
-                except Exception:
-                    handle = None
-            if handle is not None:
-                handles[widget] = handle
+            # Use local RichToolTip instead of external library
+            handle = RichToolTip(
+                widget, 
+                text=text, 
+                delay=delay_ms, 
+                fg=fg if fg else '#ffffff', 
+                bg=bg if bg else '#2b2b2b',
+                follow=follow_mouse
+            )
+            handles[widget] = handle
 
-    # ---------- Tix: Balloon backend (single instance, shared delay) ----------
+    # ---------- Internal: Custom ToolTip backend ----------
 
-    def _ensure_tix_balloon(self, delay_ms: int) -> None:
-        import tkinter.tix as tix
-        # Ensure Tix package loaded; ignore errors if already present
-        try:
-            self.app.tk.eval('package require Tix')
-        except Exception:
-            pass
-        self._tix_balloon = tix.Balloon(self.app)  # type: ignore[attr-defined]
-        try:
-            # Set global initial wait (milliseconds) for this balloon instance
-            self._tix_balloon.configure(initwait=delay_ms)  # type: ignore[attr-defined]
-        except Exception:
-            pass
-
-    def _attach_tooltips_tix(self, items: Iterable[Tuple[tk.Widget, str]]) -> None:
-        balloon = getattr(self, '_tix_balloon', None)
-        if balloon is None:
-            return
-        bound = self._tooltip_bound_widgets  # type: ignore[attr-defined]
-
+    def _attach_tooltips_internal(self, items: Iterable[Tuple[tk.Widget, str]], delay_ms: int) -> None:
+        # Use the global ToolTip class defined above
+        # Store references in _tooltip_handles to prevent GC and allow cleanup if needed
+        handles = getattr(self, '_tooltip_handles', {})
+        
         for widget, text in items:
-            if widget in bound:
+            if widget in handles:
                 continue
             try:
-                balloon.bind_widget(widget, balloonmsg=text)
-                bound.add(widget)
+                # Our internal class signature: ToolTip(widget, text, delay)
+                t = ToolTip(widget, text, delay=delay_ms)
+                handles[widget] = t
             except Exception:
-                # If binding fails for this widget, skip it safely
                 pass
+        self._tooltip_handles = handles
 
     # ---------- Shared helpers ----------
 

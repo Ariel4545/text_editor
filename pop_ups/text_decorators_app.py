@@ -3,7 +3,7 @@ import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
 from typing import Dict, List, Tuple, Optional
 
-from large_variables import characters_dict
+from dependencies.large_variables import characters_dict
 
 
 def open_text_decorators(app) -> None:

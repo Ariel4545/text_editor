@@ -3,7 +3,7 @@ import webbrowser
 from typing import Tuple
 
 RECOMMENDED = (3, 10)
-MAX_EXCLUSIVE = (3, 11)  # allow 3.10.x only
+MAX_EXCLUSIVE = (3, 14)  # allow up to 3.13.x
 
 def version_in_range(
     ver: Tuple[int, int, int],

@@ -6,7 +6,7 @@ import os
 from time import monotonic
 
 try:
-	from large_variables import characters_str, sym_n, syn_only
+	from dependencies.large_variables import characters_str, sym_n, syn_only
 except Exception:
 	characters_str = tuple('QWERTYUIOPASDFGHJKLZXCVBNM')
 	sym_n = ()

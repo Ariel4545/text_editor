@@ -3,6 +3,7 @@ import webbrowser
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from ctypes import WinDLL
+from dependencies.large_variables import languages
 
 @staticmethod
 def fill_by_click(ui_element, event, listbox):

@@ -53,6 +53,8 @@ from dependencies.large_variables import *
 from dependencies.universal_functions import *
 from dependencies.version_guard import ensure_supported_python
 
+from services.config_service import ConfigService
+
 def library_installer(parent=None):
 	'''
 	Top-level installer entry point (safe with `from tkinter import *`).
@@ -207,12 +209,7 @@ try:
 except (ImportError, AttributeError, ModuleNotFoundError) as e:
 	short_links = False
 
-try:
-	from tktooltip import ToolTip
-	neo_tt = True
-except:
-	neo_tt = False
-	import tkinter.tix as tkt
+
 
 try:
 	from tkhtmlview import HTMLText, RenderHTML
@@ -385,26 +382,53 @@ class Window(Tk):
 		self.content_preference_v = StringVar()
 		self.content_preference_v.set('html')
 		# opening the saved settings early can make us create some widgets with the settings initially
-		try:
-			self.default_needed = self.saved_settings()
-			saved_settings_viable = True
-		except KeyError:
-			saved_settings_viable = False
-			if messagebox.askyesno('EgonTE',
-								   'There is key-error with the saved settings\ndo you wish to reset the file?'):
-				if os.path.exists('EgonTE_settings.json'):
-					os.remove('EgonTE_settings.json')
-					print('Corrupted file has been reset - program needed to be closed for that')
-					self.exit_app()
-		if saved_settings_viable:
-			if self.default_needed:
-				self.bars_active.set(True), self.show_statusbar.set(True), self.show_toolbar.set(True)
-				self.custom_cursor_v.set('xterm'), self.cs.set('clam')
-				self.word_wrap_v.set(True)
-				self.auto_save_v.set(True)
-				self.nm_palette.set('black')
-				# pre-defined variables for the options of the program
-				self.predefined_cursor, self.predefined_style, self.predefined_relief = 'xterm', 'clam', 'ridge'
+		self.config_service = ConfigService()
+		self.default_needed = self.config_service.load_settings()
+		self.data = self.config_service.data
+		if self.default_needed:
+			self.bars_active.set(True), self.show_statusbar.set(True), self.show_toolbar.set(True)
+			self.custom_cursor_v.set('xterm'), self.cs.set('clam')
+			self.word_wrap_v.set(True)
+			self.auto_save_v.set(True)
+			self.nm_palette.set('black')
+			# pre-defined variables for the options of the program
+			self.predefined_cursor, self.predefined_style, self.predefined_relief = 'xterm', 'clam', 'ridge'
+		else:
+			# Main Settings
+			self.predefined_cursor = self.data.get('cursor', 'xterm')
+			self.predefined_style = self.data.get('style', 'clam')
+			self.predefined_relief = self.data.get('relief', 'ridge')
+			
+			self.night_mode.set(self.data.get('night_mode', False))
+			self.show_statusbar.set(self.data.get('status_bar', True))
+			self.bars_active.set(self.data.get('file_bar', True))
+			self.word_wrap_v.set(self.data.get('word_wrap', True))
+			self.reader_mode_v.set(self.data.get('reader_mode', False))
+			self.auto_save_v.set(self.data.get('auto_save', True))
+			self.show_toolbar.set(self.data.get('toolbar', True))
+			
+			# Palette (handle legacy key mismatch if any)
+			self.nm_palette.set(self.data.get('night_type', self.data.get('night_mode_palette', 'black')))
+
+			# Advanced & Others
+			try:
+				self.st_value = float(self.data.get('transparency', 100)) / 100
+			except (ValueError, TypeError):
+				self.st_value = 1.0
+
+			self.fun_numbers.set(self.data.get('fun_numbers', True))
+			self.usage_report_v.set(self.data.get('usage_report', False))
+			self.check_ver_v.set(self.data.get('check_version', False))
+			self.win_count_warn.set(self.data.get('window_c_warning', True))
+			self.adw.set(self.data.get('allow_duplicate', False))
+			self.texttwisters_functions_v.set(self.data.get('text_twisters', False))
+			
+			# Virtual Keyboard
+			self.vk_feedback_v.set(self.data.get('vk_feedback', False))
+			self.vk_smart_spacing_v.set(self.data.get('vk_smart_spacing', False))
+			self.vk_repeat_enabled_v.set(self.data.get('vk_repeat_enabled', True))
+			self.vk_indent_size_v.set(self.data.get('vk_indent_size', 4))
+			self.vk_advanced_mode_v.set(self.data.get('vk_advanced_mode', False))
 
 		self.last_cursor = 'cursors', self.custom_cursor_v.get()
 		self.last_style = 'styles', self.cs.get()
@@ -422,7 +446,7 @@ class Window(Tk):
 		variables for the mains window UI 
 		'''
 		# window's title
-		self.ver = '1.13.9'
+		self.ver = '1.14 beta'
 		self.title(f'Egon Text editor - {self.ver}')
 		# function thats loads all the toolbar images
 		self.load_images()
@@ -543,6 +567,11 @@ class Window(Tk):
 				padx, sticky = 5, ''
 			button.grid(row=0, column=index, sticky=sticky, padx=padx)
 
+
+		# Initialize UI Builders helper
+		self.ui_builders = ui_builders.UIBuilders(self)
+		# Enable tooltips (native or external)
+		self.ui_builders.place_toolt()
 
 		# ui tuples (and list) to make management of some UI events (like night mode) easier
 		self.menus_components = [self.file_menu, self.edit_menu, self.tool_menu, self.color_menu, self.options_menu, \
@@ -822,7 +851,7 @@ class Window(Tk):
 
 		# buttons' icons - size=32x32 pixels
 		image_names = (
-			'bold', 'underline', 'italics', 'colors', 'left_align', 'center_align', 'right_align', 'tts', 'stt',
+			'bold', 'underline', 'italics', 'colors', 'left_align', 'scenter_align', 'right_align', 'tts', 'stt',
 			'keyboard', 'drawToText_icon', 'calc_icon', 'translate_icon')
 		self.BOLD_IMAGE, self.UNDERLINE_IMAGE, self.ITALICS_IMAGE, self.COLORS_IMAGE, self.ALIGN_LEFT_IMAGE, self.ALIGN_CENTER_IMAGE \
 			, self.ALIGN_RIGHT_IMAGE, self.TTS_IMAGE, self.STT_IMAGE, self.KEY_IMAGE, self.DTT_IMAGE, self.CALC_IMAGE, self.TRANSLATE_IMAGE = \
@@ -897,7 +926,7 @@ class Window(Tk):
 							   'inspirational quote': self.insp_quote, 'get weather': self.get_weather,
 							   'send email': self.send_email,
 							   'use chatgpt': self.chatGPT, 'use dalle': self.dallE, 'transcript': self.transcript,
-							   'symbols translator': self.emojicons_hub, 'encryption \ decryption': self.encryption,
+							   'symbols translator': self.emojicons_hub, 'encryption \\ decryption': self.encryption,
 							   'Generate document' : self.file_template_generator
 							   }
 
@@ -1804,7 +1833,7 @@ class Window(Tk):
 		exit function to warn the user if theres a potential for content to be lost, save the settings that are intended
 		for it, and make sure that everything closes
 		'''
-		self.saved_settings(special_mode='save')
+		self.config_service.save_settings()
 		self._stopwatch_running = False
 		# Cancel any scheduled stopwatch update to avoid "invalid command name" after destroy
 		try:
@@ -2363,7 +2392,10 @@ class Window(Tk):
 
 			if messagebox.askyesno(self.title_struct + 'reset settings',
 								   'Are you sure you want to reset all your current\nand saved settings?'):
-				self.data = self.make_default_data()
+				new_defaults = self.config_service.make_default_data()
+				self.data.clear()
+				self.data.update(new_defaults)
+				self.config_service.save_settings()
 				self.match_saved_settings()
 
 				self.bars_active.set(True)
@@ -3682,7 +3714,7 @@ class Window(Tk):
 			print(word)
 			if word.isalpha():  # first problem
 				print('1')
-				if reSearch('\w*[A-Z]\w*[A-Z]\w*', word):
+				if reSearch(r'\w*[A-Z]\w*[A-Z]\w*', word):
 					words = findall('[A-Z][^A-Z]*', word)
 					print('word' + words)
 					if words in words.words():
@@ -3748,82 +3780,7 @@ class Window(Tk):
 		open_nlp(self, preset_function=function)
 
 
-	def saved_settings(self, special_mode: str =None):
 
-		'''+ shorten'''
-
-		'''
-		the saved settings function managed a huge portion of the functionality of the saved variables,
-		likes assigning them, check if the file exists, have the default dictionary of the files values,
-		save the file, etc.
-		'''
-		file_name = 'EgonTE_settings.json'
-
-		if special_mode == 'save':
-			# Write safely without removing the file first; use UTF-8
-			try:
-				with open(file_name, 'w', encoding='utf-8') as f:
-					dump(self.data, f)
-					print('save 1', self.data)
-			except Exception:
-				# Fallback to atomic replace if direct write fails
-				try:
-					tmp = file_name + '.tmp'
-					with open(tmp, 'w', encoding='utf-8') as f:
-						dump(self.data, f)
-					os.replace(tmp, file_name)
-				except Exception:
-					pass
-
-			if self.data['open_last_file']:
-				self.save_last_file()
-
-		else:
-
-			if os.path.exists(file_name):
-				print('saved settings file exist')
-				with open(file_name, 'r', encoding='utf-8') as f:
-					self.data = load(f)
-					print(self.data)
-				self.match_saved_settings()
-
-				return False
-
-			else:
-				print('saved settings file doesn\'t exist')
-				self.data = self.make_default_data()
-
-				with open(file_name, 'w', encoding='utf-8') as f:
-					dump(self.data, f)
-
-				return True
-
-	@staticmethod
-	def make_default_data():
-		return {'night_mode': False, 'status_bar': True, 'file_bar': True, 'cursor': 'xterm',
-				'style': 'clam',
-				'word_wrap': True, 'reader_mode': False, 'auto_save': True, 'relief': 'ridge',
-				'transparency': 100, 'toolbar': True, 'open_last_file': '', 'text_twisters': False,
-				'night_type': 'black', 'preview_cc': False, 'fun_numbers': True, 'usage_report': False,
-				'check_version': False, 'window_c_warning': True, 'allow_duplicate': False,
-				'vk_feedback': False,
-				'vk_smart_spacing': False,
-				'vk_repeat_enabled': True,
-				'vk_repeat_initial_delay_ms': 550,
-				'vk_repeat_interval_ms': 85,
-				'vk_indent_size': 4,
-				# Newly added VK defaults
-				'vk_feedback_modes_muted': True,
-				'vk_advanced_mode': False,
-				'vk_sound_path': '',
-				'vk_sound_gain_db': -8.0,
-				'vk_feedback_min_interval_ms': 70,
-				'vk_repeat_feedback_every': 4,
-				'vk_shift_enabled': True,
-				'vk_shift_toggle_enabled': True,
-				'vk_shift_tap_timeout_ms': 300,
-				'vk_shift_hold_threshold_ms': 220,
-		}
 
 	def match_saved_settings(self):
 
@@ -4148,7 +4105,7 @@ class Window(Tk):
 
 		# count the specific word / character in the text
 
-		words_per_line = reSplit('; |, |\*|\n', content)
+		words_per_line = reSplit(r'; |, |\*|\n', content)
 
 		print(f'splitted content: {words_per_line}')
 
@@ -5033,6 +4990,13 @@ def new_window(app):
 
 
 if __name__ == '__main__':
+	# Ensure we run from the script's directory so relative paths work
+	import os
+	try:
+		os.chdir(os.path.dirname(os.path.abspath(__file__)))
+	except Exception:
+		pass
+
 	# python version guard
 	if not ensure_supported_python():
 		sys.exit(1)
